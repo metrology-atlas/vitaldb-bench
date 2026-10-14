@@ -156,7 +156,7 @@ def shape_lag(aa, cv, taus, lo, hi):
     smoothing), searched in [lo, hi]; returns (lag, r)."""
     a = ndimage.uniform_filter1d(np.nan_to_num(aa), 10)
     c = ndimage.uniform_filter1d(np.nan_to_num(cv), 10)
-    best = (None, -2.0)
+    best = (None, -2.0)  # noqa: F841 - unused; kept as written
     rs = []
     lags = np.arange(int(np.floor(lo / G)), int(np.ceil(hi / G)) + 1)
     core = (taus >= -1.0) & (taus <= 4.0)

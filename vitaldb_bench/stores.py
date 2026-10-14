@@ -18,6 +18,7 @@ from timenet.dataset.axis import RegularAxis
 
 @dataclass
 class TrackData:
+    """One track of one case as a store returns it, in a shape every store shares."""
     raw: np.ndarray
     """Values as stored (counts, lattice integers, or floats)."""
     decoded: np.ndarray
@@ -29,7 +30,21 @@ class TrackData:
 
 
 def floor_mul(i: np.ndarray, num: int, den: int) -> np.ndarray:
-    """floor(i * num / den) for an int64 index array, exact and without int64 overflow."""
+    """Compute ``floor(i * num / den)`` for an int64 index array, exactly and without int64 overflow.
+
+    Args:
+        i: Non-negative int64 indices.
+        num: Numerator of the multiplier.
+        den: Denominator of the multiplier (positive).
+
+    Returns:
+        int64 array of the same shape as ``i``.
+
+    Examples:
+        >>> import numpy as np
+        >>> floor_mul(np.array([0, 1, 2, 3]), 1000, 3).tolist()
+        [0, 333, 666, 1000]
+    """
     q, r = divmod(num, den)
     if r == 0:
         return i * q
@@ -39,14 +54,34 @@ def floor_mul(i: np.ndarray, num: int, den: int) -> np.ndarray:
 
 
 def regular_times_us(axis: RegularAxis, n: int, a: int = 0, b: int | None = None) -> np.ndarray:
-    """RegularAxis.time_offset_us for indices a..b-1 (default all n), vectorised and exact."""
+    """Per-sample times of a regular TimeNet axis in microseconds, vectorised and exact.
+
+    Args:
+        axis: The signal's ``RegularAxis``.
+        n: Number of values in the signal.
+        a: First index (default 0).
+        b: One past the last index (default ``n``).
+
+    Returns:
+        int64 times in us, as ``RegularAxis.time_offset_us`` gives them one at a time.
+    """
     b = n if b is None else b
     i = np.arange(axis.start_index + a, axis.start_index + b, dtype=np.int64)
     return axis.offset_us + floor_mul(i, axis.period_us.numerator, axis.period_us.denominator)
 
 
 def decode_signal(signal: Signal, values: np.ndarray) -> np.ndarray:
-    """Back to the source's representation: lattice integers -> floats; counts and floats unchanged."""
+    """Return stored values in the source's own representation.
+
+    Lattice integers (a float track stored as integers) become floats again; counts and floats are unchanged.
+
+    Args:
+        signal: The TimeNet signal (its metadata holds ``scale``, ``offset`` and ``float_dtype``).
+        values: Values as stored.
+
+    Returns:
+        The decoded values.
+    """
     md = signal.metadata
     if md.get("float_dtype"):
         return (values.astype(np.float64) * md["scale"] + md["offset"]).astype(md["float_dtype"])
@@ -54,8 +89,14 @@ def decode_signal(signal: Signal, values: np.ndarray) -> np.ndarray:
 
 
 class TimeNetStore:
-    """All partitions of one TimeNet build directory. One partition is held open at a time, so memory
-    stays bounded by the largest partition; the build log maps each case to its partition."""
+    """All partitions of one TimeNet build directory, read one partition at a time.
+
+    Only one partition is held open, so memory stays bounded by the largest partition; the build log
+    (``build_log.jsonl``) maps each case to its partition.
+
+    Args:
+        build_dir: The build folder written by ``python -m vitaldb_bench.build timenet``.
+    """
 
     def __init__(self, build_dir: str | Path) -> None:
         import json  # noqa: PLC0415
@@ -73,9 +114,18 @@ class TimeNetStore:
 
     @cached_property
     def caseids(self) -> list[int]:
+        """Case ids the build holds, sorted."""
         return sorted(self._part_of)
 
     def record(self, caseid: int) -> Record:
+        """Open the TimeNet record of one case (opening its partition if another one is open).
+
+        Args:
+            caseid: VitalDB case id.
+
+        Returns:
+            The case's ``timenet.dataset.Record``.
+        """
         part = self._part_of[caseid]
         if part != self._open_part:
             self._records = {}  # drop the previous partition (and any values its loaders cached)
@@ -85,10 +135,28 @@ class TimeNetStore:
         return self._records[f"vitaldb-{caseid:04d}"]
 
     def signals(self, caseid: int, dtname: str) -> list[Signal]:
+        """The signals one VitalDB track was stored as, in time order.
+
+        Args:
+            caseid: VitalDB case id.
+            dtname: VitalDB track name, e.g. ``"SNUADC/ART"``.
+
+        Returns:
+            The signals (one per stored piece); empty when the case has no such track.
+        """
         sigs = [s for s in self.record(caseid).signals if s.metadata.get("vital_track") == dtname]
         return sorted(sigs, key=lambda s: (s.metadata.get("segment", s.metadata.get("piece", 0))))
 
     def track(self, caseid: int, dtname: str) -> TrackData | None:
+        """Read one whole track of one case.
+
+        Args:
+            caseid: VitalDB case id.
+            dtname: VitalDB track name.
+
+        Returns:
+            The track as :class:`TrackData`, or None when the case has no such track.
+        """
         sigs = self.signals(caseid, dtname)
         if not sigs:
             return None
@@ -105,7 +173,18 @@ class TimeNetStore:
         return TrackData(raw=np.concatenate(raws), decoded=np.concatenate(decs), times_ns=np.concatenate(times), pieces=len(sigs))
 
     def window(self, caseid: int, dtname: str, start_us: int, end_us: int) -> tuple[np.ndarray, np.ndarray]:
-        """Values and times (us) of one track inside [start_us, end_us), reading only what is needed."""
+        """Values and times (us) of one track inside ``[start_us, end_us)``, reading only what is needed.
+
+        Args:
+            caseid: VitalDB case id.
+            dtname: VitalDB track name.
+            start_us: Window start, microseconds from the case origin.
+            end_us: Window end (exclusive).
+
+        Returns:
+            ``(values, times_us)``: physical float64 values and int64 times; both empty when nothing falls in the
+            window.
+        """
         vals, times = [], []
         for s in self.signals(caseid, dtname):
             span = s.span_us
@@ -133,7 +212,15 @@ class TimeNetStore:
 
 
 def physical(signal: Signal, raw: np.ndarray) -> np.ndarray:
-    """Physical float64 values of stored values, by the rule in the Signal's metadata."""
+    """Physical float64 values of stored values, by the rule in the signal's metadata.
+
+    Args:
+        signal: The TimeNet signal.
+        raw: Values as stored.
+
+    Returns:
+        ``raw * scale + offset`` (rounded through the source's float type where it had one), else ``raw``.
+    """
     md = signal.metadata
     if "scale" in md:
         v = raw.astype(np.float64) * md["scale"] + md["offset"]

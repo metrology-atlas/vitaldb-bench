@@ -23,3 +23,15 @@ packages = ["vitaldb_bench"]
 
 [tool.ruff]
 line-length = 120
+extend-exclude = ["tools/adhoc"]   # provenance scripts kept as written (see tools/adhoc/README.md)
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "D"]   # pyflakes, imports and Google docstrings (ruff 0.17 defaults are broader)
+ignore = ["D105", "D107", "EXE002"]   # EXE002: the Windows-mounted files look executable
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["D"]
+"tools/**" = ["D", "E701", "E702", "E731", "E741", "I001"]   # analysis scripts: compact style, module docstrings only

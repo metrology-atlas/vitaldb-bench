@@ -175,7 +175,7 @@ def main() -> None:
                 res["rate_source"] = m.qc.get("rate_source")
                 res["tooth_rate_ppm"] = [round(r_ * 1e6, 2) for r_ in m.tooth_rate]
                 t0 = float(z["ppg_t0"])
-                up_t = t0 + up / FS  # upstroke times
+                up_t = t0 + up / FS  # upstroke times  # noqa: F841 - kept for interactive inspection
                 slips = [s_ for s_ in m.tooth_edges[1:-1] if s_ not in m.inserted_t]
                 # a slip between beats k-1 and k of the PAT series appears in the PPG between their
                 # upstrokes (the PPG lags the ECG by the PAT)

@@ -46,6 +46,11 @@ def _du(path: Path) -> int:
 
 
 def cmd_size(a) -> None:
+    """Sizes on disk and build costs of a TimeNet and an AtriumDB build of the same cases (``size``).
+
+    Args:
+        a: Parsed arguments: ``timenet``, ``atriumdb``, ``root`` and ``out``.
+    """
     built = sorted(int(e["unit"]) for e in map(json.loads, (Path(a.atriumdb) / "build_log.jsonl").read_text().splitlines())
                    if e.get("kind") == "atriumdb" and e.get("status") == "ok")
     tn_cases = sorted(c for e in map(json.loads, (Path(a.timenet) / "build_log.jsonl").read_text().splitlines())
@@ -90,6 +95,14 @@ def _window(db: str, store, caseid: int, origin_ns: int, dtname: str, start_us: 
 
 
 def cmd_reads(a) -> None:
+    """Time opening, whole-track, window and aligned reads on one build (``reads``).
+
+    Appends one JSON line per call to ``a.out`` and prints medians.
+
+    Args:
+        a: Parsed arguments: ``db``, ``build``, ``root``, ``cases``, ``out``, ``seed``, ``n_cases``,
+            ``windows`` and ``order``.
+    """
     from fractions import Fraction  # noqa: PLC0415
 
     rng = random.Random(a.seed)
@@ -152,6 +165,13 @@ def cmd_reads(a) -> None:
 
 
 def cmd_map(a) -> None:
+    """Mean arterial pressure over 60 s windows from the reader, TimeNet and AtriumDB (``map``).
+
+    Resumable: per-case rows go to ``<out>.jsonl``; ``out`` holds the totals.
+
+    Args:
+        a: Parsed arguments: ``timenet``, ``atriumdb``, ``root``, ``out``, ``time_budget`` and ``exclude``.
+    """
     from fractions import Fraction  # noqa: PLC0415
 
     tn, adb = _open("timenet", a.timenet), _open("atriumdb", a.atriumdb)
@@ -210,6 +230,7 @@ def cmd_map(a) -> None:
 
 
 def main() -> None:
+    """Command-line entry point: ``python -m vitaldb_bench.perf size|reads|map ...``."""
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("size")

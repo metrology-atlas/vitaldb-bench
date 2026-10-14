@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import argparse
 from collections import Counter, defaultdict
-import glob
 import json
 from pathlib import Path
 import sqlite3

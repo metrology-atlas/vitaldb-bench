@@ -21,12 +21,28 @@ from vitaldb_bench.stores import TimeNetStore
 
 
 def wquantiles(x: np.ndarray, w: np.ndarray, qs=(0.05, 0.25, 0.5, 0.75, 0.95)) -> list[float]:
+    """Weighted quantiles: the smallest value whose cumulative weight share reaches each q.
+
+    Args:
+        x: Values.
+        w: Non-negative weights, one per value (here: samples per signal).
+        qs: Quantiles in [0, 1].
+
+    Returns:
+        One value of ``x`` per quantile.
+
+    Examples:
+        >>> import numpy as np
+        >>> wquantiles(np.array([1.0, 2.0, 3.0]), np.array([1.0, 1.0, 8.0]), (0.5,))
+        [3.0]
+    """
     o = np.argsort(x)
     cw = np.cumsum(w[o]) / w.sum()
     return [float(x[o][min(len(x) - 1, np.searchsorted(cw, q))]) for q in qs]
 
 
 def main() -> None:
+    """Command-line entry point: ``python -m vitaldb_bench.timing_report --timenet DIR --out FILE``."""
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--timenet", required=True)
     ap.add_argument("--out", required=True)

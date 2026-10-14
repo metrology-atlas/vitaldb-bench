@@ -42,7 +42,23 @@ def _f(x):
 
 
 def time_of_day(row: dict) -> dict:
-    """One clinical_data row -> {"tod_s", "minute_s", "second", "events_agree", "status"}."""
+    """Recover the case start's clock time of day from one row of ``clinical_data.csv``.
+
+    Args:
+        row: The case's row, as ``csv.DictReader`` gives it (values are strings); ``adm`` and the four EMR
+            times ``anestart``, ``aneend``, ``opstart`` and ``opend`` are used.
+
+    Returns:
+        ``{"tod_s", "minute_s", "second", "events_agree", "status": "ok"}`` when a clock is recovered, else
+        ``{"status": <reason>}``. ``tod_s`` is seconds after local midnight on the EMR clock.
+
+    Examples:
+        >>> adm = -(2 * 86400 + 7 * 3600 + 43 * 60)     # admission date, two days before a 07:43 start
+        >>> row = {"adm": str(adm), "anestart": "-552", "aneend": "10848", "opstart": "1668", "opend": "10368"}
+        >>> r = time_of_day(row)
+        >>> r["status"], r["tod_s"] == 7 * 3600 + 43 * 60 + 12
+        ('ok', True)
+    """
     adm = _f(row.get("adm"))
     if adm is None:
         return {"status": "no adm"}
@@ -62,16 +78,46 @@ def time_of_day(row: dict) -> dict:
 
 
 def clock_table(clinical_csv: str | Path) -> dict[int, dict]:
+    """Recover the clock time of day of every case in ``clinical_data.csv``.
+
+    Args:
+        clinical_csv: Path to the release's ``clinical_data.csv``.
+
+    Returns:
+        ``{caseid: time_of_day(row)}`` for every row.
+    """
     with open(clinical_csv, encoding="utf-8-sig", newline="") as fh:
         return {int(r["caseid"]): time_of_day(r) for r in csv.DictReader(fh)}
 
 
 def shift_seconds(tod_s: int, tz_hours: float) -> int:
+    """Anchor shift (s) that puts a case's start at its clock time of day, expressed in UTC.
+
+    Args:
+        tod_s: Case start's time of day on the local clock, seconds after midnight.
+        tz_hours: Local time zone offset from UTC in hours (Korea Standard Time is 9).
+
+    Returns:
+        Seconds to add to every stored time stamp of the case.
+
+    Examples:
+        >>> shift_seconds(7 * 3600, 9)      # 07:00 KST is 22:00 UTC the day before
+        -7200
+    """
     return int(round(tod_s - tz_hours * 3600))
 
 
 def write_table(path: str | Path, table: dict[int, dict], tz_hours: float) -> dict:
-    """Write the per-case anchor shifts (only cases with a clock) beside an AtriumDB dataset."""
+    """Write the per-case anchor shifts (only cases with a clock) beside an AtriumDB dataset.
+
+    Args:
+        path: The ``case_clock.json`` file to write.
+        table: Output of :func:`clock_table`.
+        tz_hours: Local time zone offset from UTC in hours.
+
+    Returns:
+        The document written: method, anchor, the cases left unshifted, and ``shift_s`` per shifted case.
+    """
     cases = {str(c): {**v, "shift_s": shift_seconds(v["tod_s"], tz_hours)} for c, v in table.items() if v.get("status") == "ok"}
     doc = {"enabled": True, "tz_hours": tz_hours, "method": METHOD,
            "anchor": "2100-01-01 00:00 local time at the case's clock time of day; date fictional",
@@ -81,7 +127,15 @@ def write_table(path: str | Path, table: dict[int, dict], tz_hours: float) -> di
 
 
 def load_shifts_ns(dataset_dir: str | Path) -> dict[int, int]:
-    """Per-case anchor shift in ns from ``<dataset>/case_clock.json``; empty when the dataset is unshifted."""
+    """Per-case anchor shift in ns from ``<dataset>/case_clock.json``.
+
+    Args:
+        dataset_dir: The AtriumDB dataset folder.
+
+    Returns:
+        ``{caseid: shift_ns}``; empty when the dataset has no ``case_clock.json`` or it is disabled (the
+        default build, on the 2100-01-01 anchor).
+    """
     p = Path(dataset_dir) / FILE
     if not p.exists():
         return {}

@@ -36,7 +36,17 @@ from vitaldb_bench.stores import TimeNetStore, TrackData
 
 
 def truth_times_ns(track: VitalTrack, origin: float) -> np.ndarray:
-    """Per-value time in ns from origin, as the file implies it (float64, ~0.01 ns precision)."""
+    """Per-value time in ns from the case origin, as the .vital file implies it.
+
+    Waveform samples are placed at their record's time stamp plus the sample index over the nominal rate.
+
+    Args:
+        track: The track from the shared reader.
+        origin: The case origin, seconds (the file's own time stamps).
+
+    Returns:
+        float64 ns (about 0.01 ns precision).
+    """
     rel = (track.record_times - origin) * 1e9
     if track.track_type != TRACK_WAVE:
         return rel
@@ -56,6 +66,20 @@ def _bits_equal(a: np.ndarray, b: np.ndarray) -> bool:
 
 def compare(truth_vals: np.ndarray, truth_t: np.ndarray, got: TrackData | None, *, sort: bool,
             bin_ns: float = 1e5, intended_t: np.ndarray | None = None) -> dict:
+    """Compare one stored track against the file's values and times.
+
+    Args:
+        truth_vals: The file's values (a list for string tracks).
+        truth_t: The file's per-value times, ns from the origin.
+        got: The track as the store returned it, or None when it is missing.
+        sort: Pair values as sets of (time, value) rather than in file order; for stores that return values
+            sorted by time (AtriumDB).
+        bin_ns: Time bin used to pair values when ``sort`` is set (a quarter sample for waveforms).
+        intended_t: Where the importer's timing model meant to put each value, ns; adds ``model_err_*``.
+
+    Returns:
+        A dict of checks: presence, counts, ``values_exact``, time errors (max, p99, mean) and pieces.
+    """
     if got is None:
         return {"present": False}
     tv, tt, it = truth_vals, truth_t, intended_t
@@ -97,7 +121,16 @@ def compare(truth_vals: np.ndarray, truth_t: np.ndarray, got: TrackData | None, 
 
 
 def intended_times_ns(track: VitalTrack, origin: float, timing: str) -> np.ndarray:
-    """Where the importer's timing model places each sample (float64 ns from origin)."""
+    """Where the importer's timing model places each sample.
+
+    Args:
+        track: A waveform track from the shared reader.
+        origin: The case origin, seconds.
+        timing: Timing mode of the build: ``file``, ``nominal`` or ``resync``.
+
+    Returns:
+        float64 ns from the origin, one per sample.
+    """
     out = np.empty(int(track.record_offsets[-1]), dtype=np.float64)
     for seg in segments(track, origin, TimingMode(timing)):
         k = np.arange(seg.n_samples, dtype=np.float64)
@@ -106,6 +139,19 @@ def intended_times_ns(track: VitalTrack, origin: float, timing: str) -> np.ndarr
 
 
 def check_case(caseid: int, root: Path, tn: TimeNetStore | None, adb, timing: str = "file") -> dict:
+    """Check every track of one case in each store given.
+
+    Args:
+        caseid: VitalDB case id.
+        root: The VitalDB release folder (holds ``vital_files/``).
+        tn: The TimeNet store, or None.
+        adb: An opened AtriumDB store (from vitaldb-bench-atriumdb), or None.
+        timing: Timing mode the builds used.
+
+    Returns:
+        ``{"caseid", "tracks": {name: {"timenet": ..., "atriumdb": ...}}}``. Per-case: keep it on the
+        analysis machine.
+    """
     case = read_vital(root / "vital_files" / f"{caseid:04d}.vital")
     origin = case.origin
     res: dict = {"caseid": caseid, "tracks": {}}
@@ -153,6 +199,14 @@ def check_case(caseid: int, root: Path, tn: TimeNetStore | None, adb, timing: st
 
 
 def summarise(rows: list[dict]) -> dict:
+    """Aggregate per-case check results by track and database (no values, no case ids).
+
+    Args:
+        rows: Outputs of :func:`check_case`.
+
+    Returns:
+        ``{track: {db: {count of cases passing each check, worst time errors, pieces}}}``.
+    """
     agg: dict = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
     for row in rows:
         for name, r in row["tracks"].items():
@@ -181,6 +235,11 @@ def summarise(rows: list[dict]) -> dict:
 
 
 def parser() -> argparse.ArgumentParser:
+    """The command-line parser, shared with ``python -m vitaldb_bench_atriumdb.fidelity``.
+
+    Returns:
+        An ``argparse.ArgumentParser``.
+    """
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--root", required=True)
     ap.add_argument("--timenet")
@@ -193,12 +252,21 @@ def parser() -> argparse.ArgumentParser:
 
 
 def run(a: argparse.Namespace, adb=None) -> None:
-    """Check the builds named in ``a``; ``adb`` is an opened AtriumDB store, or None."""
+    """Check the builds named in ``a``, resumably, and write the summary.
+
+    Per-case results are appended to ``<out>.jsonl`` so a later call continues where this one stopped; the
+    summary at ``out`` aggregates by track.
+
+    Args:
+        a: Arguments from :func:`parser`.
+        adb: An opened AtriumDB store, or None to check TimeNet only.
+    """
     t0 = time.time()
     tn = TimeNetStore(a.timenet) if a.timenet else None
     state = Path(a.out).with_suffix(".jsonl")
     done = {json.loads(x)["caseid"] for x in state.read_text().splitlines()} if state.exists() else set()
-    cases = tn.caseids if tn is not None else sorted(int(e["unit"]) for e in map(json.loads, (Path(a.atriumdb) / "build_log.jsonl").read_text().splitlines()) if e.get("status") == "ok")
+    cases = tn.caseids if tn is not None else sorted(int(e["unit"]) for e in map(json.loads, (Path(a.atriumdb) / "build_log.jsonl").read_text().splitlines())
+                                if e.get("kind") == "atriumdb" and e.get("status") == "ok")  # not the label-pass units
     slowest = 0.0
     with state.open("a") as fh:
         for caseid in cases:
@@ -218,6 +286,7 @@ def run(a: argparse.Namespace, adb=None) -> None:
 
 
 def main() -> None:
+    """Command-line entry point (TimeNet only; AtriumDB checks need ``vitaldb_bench_atriumdb.fidelity``)."""
     a = parser().parse_args()
     if a.atriumdb:
         raise SystemExit("AtriumDB checks are in the GPL package: python -m vitaldb_bench_atriumdb.fidelity ...")

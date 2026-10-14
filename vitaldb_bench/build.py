@@ -42,7 +42,16 @@ def _done(out: Path, kind: str) -> dict:
 
 
 def cmd_select(a) -> None:
-    """Pick a reproducible sample of cases, stratified by file size so short and long cases both appear."""
+    """Pick a reproducible sample of cases, stratified by file size (the ``select`` command).
+
+    The .vital files are sorted by size and cut into ``a.strata`` equal strata; ``a.n // a.strata`` cases are
+    drawn from each with ``random.Random(a.seed)``, so short and long cases both appear and the same seed
+    gives the same sample. Files modified in the last five minutes are skipped (a copy still in progress).
+
+    Args:
+        a: Parsed arguments: ``root`` (the VitalDB release), ``out`` (JSON to write), ``n``, ``strata``
+            and ``seed``.
+    """
     files = sorted((Path(a.root) / "vital_files").glob("*.vital"))
     fresh = time.time() - 300
     files = [p for p in files if p.stat().st_mtime < fresh]
@@ -60,6 +69,16 @@ def _cases(a) -> list[int]:
 
 
 def cmd_timenet(a) -> None:
+    """Build TimeNet partitions until the time budget runs out (the ``timenet`` command).
+
+    Cases are written ``a.partition_size`` at a time, each partition its own TimeNet registry root. A
+    partition already logged as done is skipped, so repeated calls finish the build. The time a partition
+    will take is predicted from earlier ones (seconds per source byte); a partition that would overrun the
+    budget is left for the next call.
+
+    Args:
+        a: Parsed arguments of the ``timenet`` subcommand (see :func:`add_case_args` and :func:`main`).
+    """
     os.environ.update(VITALDB_ROOT=a.root, VITALDB_TIMING=a.timing, VITALDB_VALUES=a.values,
                       VITALDB_TOLERANCE_US=str(a.tolerance_us))
     from timenet_connectors.datasets.vitaldb.vitaldb.connector import CONNECTOR  # noqa: PLC0415
@@ -120,7 +139,12 @@ def _write_timenet(dataset, root: Path, a) -> None:
 
 
 def add_case_args(b) -> None:
-    """Arguments shared by every per-case build (TimeNet here, AtriumDB in vitaldb-bench-atriumdb)."""
+    """Add the arguments every per-case build shares (TimeNet here, AtriumDB in vitaldb-bench-atriumdb).
+
+    Args:
+        b: The ``argparse`` subparser to add ``--root``, ``--cases``, ``--out``, ``--timing``, ``--values``,
+            ``--tolerance-us``, ``--time-budget`` and ``--exclude-cases`` to.
+    """
     b.add_argument("--root", required=True)
     b.add_argument("--cases", required=True)
     b.add_argument("--out", required=True)
@@ -133,6 +157,7 @@ def add_case_args(b) -> None:
 
 
 def main() -> None:
+    """Command-line entry point: ``python -m vitaldb_bench.build select|timenet ...``."""
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("select")
