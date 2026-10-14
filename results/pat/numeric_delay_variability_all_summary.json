@@ -1,0 +1,1800 @@
+{
+ "cases": 6388,
+ "block_s": 1800.0,
+ "tracks": {
+  "HR": {
+   "cases": 6222,
+   "edge_excluded": 120,
+   "d_p10_25_50_75_90": [
+    1.6,
+    2.25,
+    3.75,
+    4.45,
+    4.95
+   ],
+   "case_sd_s": 1.622,
+   "case_iqr_s": 2.2,
+   "profile_ci_width_p50": 0.05,
+   "within_case_block_sd_p50": 0.627,
+   "case_sd_expected_from_within": 0.281,
+   "variance_components": {
+    "cases": 6042,
+    "blocks": 37429,
+    "sigma_within_s": 0.832,
+    "tau_between_s": 1.307,
+    "icc": 0.712,
+    "F_p": 0.0
+   },
+   "drift_s_per_h_p10_50_90": [
+    -0.64,
+    0.0,
+    0.65
+   ],
+   "delay_per_s_interval_p10_50_90": [
+    -4.15,
+    2.68,
+    9.68
+   ],
+   "centre_lag_p50_s": 6.75,
+   "by_setup": {
+    "solar_port": {
+     "groups": 18,
+     "n": 6222,
+     "H": 2187.22,
+     "p": 0.0,
+     "eta2": 0.35,
+     "medians": {
+      "COM26": [
+       2.8,
+       1018
+      ],
+      "COM4": [
+       4.25,
+       966
+      ],
+      "COM6": [
+       2.15,
+       820
+      ],
+      "COM5": [
+       2.55,
+       674
+      ],
+      "COM12": [
+       2.2,
+       457
+      ],
+      "COM9": [
+       4.25,
+       418
+      ],
+      "COM42": [
+       4.25,
+       384
+      ],
+      "COM13": [
+       4.25,
+       323
+      ]
+     }
+    },
+    "port_set": {
+     "groups": 149,
+     "n": 5830,
+     "H": 3439.22,
+     "p": 0.0,
+     "eta2": 0.579,
+     "medians": {
+      "BIS:COM8|Orchestra:COM7|Primus:COM5|SNUADC:COM4|Solar8000:COM6": [
+       2.15,
+       567
+      ],
+      "BIS:COM14|Orchestra:COM13|Primus:COM11|SNUADC:COM4|Solar8000:COM12": [
+       2.23,
+       302
+      ],
+      "BIS:COM29|Orchestra:COM28|Primus:COM27|SNUADC:COM19|Solar8000:COM26": [
+       2.05,
+       207
+      ],
+      "BIS:COM20|Orchestra:COM19|Primus:COM10|SNUADC:COM4|Solar8000:COM9": [
+       4.3,
+       178
+      ],
+      "BIS:COM29|Primus:COM27|SNUADC:COM19|Solar8000:COM26": [
+       1.65,
+       146
+      ],
+      "BIS:COM7|Orchestra:COM6|Primus:COM5|SNUADC:COM3|Solar8000:COM4": [
+       4.35,
+       145
+      ],
+      "BIS:COM7|Orchestra:COM6|Primus:COM5|SNUADC:COM12|Solar8000:COM4": [
+       4.2,
+       142
+      ],
+      "BIS:COM39|Orchestra:COM38|Primus:COM43|SNUADC:COM45|Solar8000:COM42": [
+       4.45,
+       134
+      ]
+     }
+    },
+    "stamp_1ms": {
+     "groups": 2,
+     "n": 6222,
+     "H": 1.03,
+     "p": 0.31,
+     "eta2": 0.0,
+     "medians": {
+      "True": [
+       3.75,
+       4820
+      ],
+      "False": [
+       3.7,
+       1402
+      ]
+     }
+    },
+    "primus_co2_gain": {
+     "groups": 2,
+     "n": 6196,
+     "H": 6.15,
+     "p": 0.0131,
+     "eta2": 0.001,
+     "medians": {
+      "0.1": [
+       3.75,
+       5289
+      ],
+      "0.075": [
+       3.6,
+       907
+      ]
+     }
+    },
+    "snuadc_srate": {
+     "groups": 2,
+     "n": 6222,
+     "H": 8.21,
+     "p": 0.00416,
+     "eta2": 0.001,
+     "medians": {
+      "500.0": [
+       3.75,
+       6210
+      ],
+      "100.0": [
+       4.4,
+       12
+      ]
+     }
+    },
+    "department": {
+     "groups": 4,
+     "n": 6222,
+     "H": 1075.14,
+     "p": 8.99e-233,
+     "eta2": 0.172,
+     "medians": {
+      "General surgery": [
+       4.0,
+       4828
+      ],
+      "Thoracic surgery": [
+       2.2,
+       1058
+      ],
+      "Gynecology": [
+       2.05,
+       221
+      ],
+      "Urology": [
+       4.4,
+       115
+      ]
+     }
+    },
+    "caseid_tertile": {
+     "groups": 3,
+     "n": 6222,
+     "H": 0.57,
+     "p": 0.753,
+     "eta2": 0.0,
+     "medians": {
+      "0": [
+       3.7,
+       2080
+      ],
+      "2": [
+       3.75,
+       2074
+      ],
+      "1": [
+       3.75,
+       2068
+      ]
+     }
+    }
+   }
+  },
+  "ART_SBP": {
+   "cases": 3451,
+   "edge_excluded": 31,
+   "d_p10_25_50_75_90": [
+    0.2,
+    0.55,
+    1.05,
+    1.45,
+    1.85
+   ],
+   "case_sd_s": 1.022,
+   "case_iqr_s": 0.9,
+   "profile_ci_width_p50": 0.05,
+   "within_case_block_sd_p50": 0.449,
+   "case_sd_expected_from_within": 0.17,
+   "variance_components": {
+    "cases": 3425,
+    "blocks": 25061,
+    "sigma_within_s": 0.634,
+    "tau_between_s": 0.792,
+    "icc": 0.61,
+    "F_p": 0.0
+   },
+   "drift_s_per_h_p10_50_90": [
+    -0.454,
+    -0.01,
+    0.323
+   ],
+   "delay_per_s_interval_p10_50_90": [
+    -4.55,
+    0.14,
+    5.05
+   ],
+   "centre_lag_p50_s": 2.55,
+   "by_setup": {
+    "solar_port": {
+     "groups": 18,
+     "n": 3451,
+     "H": 26.22,
+     "p": 0.0706,
+     "eta2": 0.003,
+     "medians": {
+      "COM6": [
+       1.1,
+       781
+      ],
+      "COM4": [
+       1.05,
+       504
+      ],
+      "COM26": [
+       1.0,
+       469
+      ],
+      "COM5": [
+       1.0,
+       454
+      ],
+      "COM12": [
+       0.95,
+       322
+      ],
+      "COM13": [
+       0.93,
+       154
+      ],
+      "COM9": [
+       1.05,
+       132
+      ],
+      "COM42": [
+       1.1,
+       119
+      ]
+     }
+    },
+    "port_set": {
+     "groups": 109,
+     "n": 3119,
+     "H": 112.83,
+     "p": 0.356,
+     "eta2": 0.002,
+     "medians": {
+      "BIS:COM8|Orchestra:COM7|Primus:COM5|SNUADC:COM4|Solar8000:COM6": [
+       1.1,
+       567
+      ],
+      "BIS:COM14|Orchestra:COM13|Primus:COM11|SNUADC:COM4|Solar8000:COM12": [
+       0.95,
+       281
+      ],
+      "BIS:COM29|Orchestra:COM28|Primus:COM27|SNUADC:COM19|Solar8000:COM26": [
+       1.05,
+       183
+      ],
+      "BIS:COM7|Orchestra:COM6|Primus:COM5|SNUADC:COM12|Solar8000:COM4": [
+       1.05,
+       108
+      ],
+      "BIS:COM3|Orchestra:COM7|Primus:COM6|SNUADC:COM4|Solar8000:COM5": [
+       1.0,
+       105
+      ],
+      "BIS:COM8|Orchestra:COM7|Primus:COM6|SNUADC:COM4|Solar8000:COM5": [
+       1.2,
+       84
+      ],
+      "BIS:COM8|Orchestra:COM7|Primus:COM5|SNUADC:COM4|Solar8000:COM6|Vigileo:COM10": [
+       1.15,
+       65
+      ],
+      "Orchestra:COM7|Primus:COM5|SNUADC:COM4|Solar8000:COM6": [
+       1.15,
+       61
+      ]
+     }
+    },
+    "stamp_1ms": {
+     "groups": 2,
+     "n": 3451,
+     "H": 0.61,
+     "p": 0.435,
+     "eta2": 0.0,
+     "medians": {
+      "True": [
+       1.05,
+       2675
+      ],
+      "False": [
+       1.05,
+       776
+      ]
+     }
+    },
+    "primus_co2_gain": {
+     "groups": 2,
+     "n": 3435,
+     "H": 2.98,
+     "p": 0.0843,
+     "eta2": 0.001,
+     "medians": {
+      "0.1": [
+       1.0,
+       2921
+      ],
+      "0.075": [
+       1.1,
+       514
+      ]
+     }
+    },
+    "department": {
+     "groups": 4,
+     "n": 3451,
+     "H": 19.81,
+     "p": 0.000186,
+     "eta2": 0.005,
+     "medians": {
+      "General surgery": [
+       1.0,
+       2148
+      ],
+      "Thoracic surgery": [
+       1.05,
+       1056
+      ],
+      "Gynecology": [
+       0.95,
+       177
+      ],
+      "Urology": [
+       1.2,
+       70
+      ]
+     }
+    },
+    "caseid_tertile": {
+     "groups": 3,
+     "n": 3451,
+     "H": 3.22,
+     "p": 0.2,
+     "eta2": 0.0,
+     "medians": {
+      "2": [
+       1.05,
+       1157
+      ],
+      "1": [
+       1.05,
+       1154
+      ],
+      "0": [
+       1.0,
+       1140
+      ]
+     }
+    }
+   }
+  },
+  "ART_MBP": {
+   "cases": 3463,
+   "edge_excluded": 21,
+   "d_p10_25_50_75_90": [
+    0.9,
+    1.2,
+    1.7,
+    2.15,
+    2.45
+   ],
+   "case_sd_s": 0.96,
+   "case_iqr_s": 0.95,
+   "profile_ci_width_p50": 0.05,
+   "within_case_block_sd_p50": 0.438,
+   "case_sd_expected_from_within": 0.165,
+   "variance_components": {
+    "cases": 3435,
+    "blocks": 25110,
+    "sigma_within_s": 0.621,
+    "tau_between_s": 0.781,
+    "icc": 0.613,
+    "F_p": 0.0
+   },
+   "drift_s_per_h_p10_50_90": [
+    -0.471,
+    -0.01,
+    0.337
+   ],
+   "delay_per_s_interval_p10_50_90": [
+    -5.1,
+    -0.25,
+    4.63
+   ],
+   "by_setup": {
+    "solar_port": {
+     "groups": 18,
+     "n": 3463,
+     "H": 17.09,
+     "p": 0.448,
+     "eta2": 0.0,
+     "medians": {
+      "COM6": [
+       1.7,
+       781
+      ],
+      "COM4": [
+       1.65,
+       515
+      ],
+      "COM26": [
+       1.6,
+       469
+      ],
+      "COM5": [
+       1.65,
+       453
+      ],
+      "COM12": [
+       1.7,
+       322
+      ],
+      "COM13": [
+       1.65,
+       155
+      ],
+      "COM9": [
+       1.73,
+       130
+      ],
+      "COM42": [
+       1.75,
+       120
+      ]
+     }
+    },
+    "port_set": {
+     "groups": 110,
+     "n": 3134,
+     "H": 98.0,
+     "p": 0.766,
+     "eta2": 0.0,
+     "medians": {
+      "BIS:COM8|Orchestra:COM7|Primus:COM5|SNUADC:COM4|Solar8000:COM6": [
+       1.7,
+       566
+      ],
+      "BIS:COM14|Orchestra:COM13|Primus:COM11|SNUADC:COM4|Solar8000:COM12": [
+       1.7,
+       281
+      ],
+      "BIS:COM29|Orchestra:COM28|Primus:COM27|SNUADC:COM19|Solar8000:COM26": [
+       1.65,
+       183
+      ],
+      "BIS:COM7|Orchestra:COM6|Primus:COM5|SNUADC:COM12|Solar8000:COM4": [
+       1.55,
+       115
+      ],
+      "BIS:COM3|Orchestra:COM7|Primus:COM6|SNUADC:COM4|Solar8000:COM5": [
+       1.65,
+       105
+      ],
+      "BIS:COM8|Orchestra:COM7|Primus:COM6|SNUADC:COM4|Solar8000:COM5": [
+       1.8,
+       84
+      ],
+      "BIS:COM8|Orchestra:COM7|Primus:COM5|SNUADC:COM4|Solar8000:COM6|Vigileo:COM10": [
+       1.77,
+       66
+      ],
+      "Orchestra:COM7|Primus:COM5|SNUADC:COM4|Solar8000:COM6": [
+       1.8,
+       61
+      ]
+     }
+    },
+    "stamp_1ms": {
+     "groups": 2,
+     "n": 3463,
+     "H": 0.27,
+     "p": 0.602,
+     "eta2": 0.0,
+     "medians": {
+      "True": [
+       1.7,
+       2684
+      ],
+      "False": [
+       1.65,
+       779
+      ]
+     }
+    },
+    "primus_co2_gain": {
+     "groups": 2,
+     "n": 3447,
+     "H": 2.49,
+     "p": 0.115,
+     "eta2": 0.0,
+     "medians": {
+      "0.1": [
+       1.7,
+       2933
+      ],
+      "0.075": [
+       1.7,
+       514
+      ]
+     }
+    },
+    "department": {
+     "groups": 4,
+     "n": 3463,
+     "H": 2.27,
+     "p": 0.519,
+     "eta2": 0.0,
+     "medians": {
+      "General surgery": [
+       1.7,
+       2159
+      ],
+      "Thoracic surgery": [
+       1.65,
+       1052
+      ],
+      "Gynecology": [
+       1.67,
+       180
+      ],
+      "Urology": [
+       1.88,
+       72
+      ]
+     }
+    },
+    "caseid_tertile": {
+     "groups": 3,
+     "n": 3463,
+     "H": 2.15,
+     "p": 0.342,
+     "eta2": 0.0,
+     "medians": {
+      "2": [
+       1.73,
+       1160
+      ],
+      "1": [
+       1.65,
+       1153
+      ],
+      "0": [
+       1.65,
+       1150
+      ]
+     }
+    }
+   }
+  },
+  "ART_DBP": {
+   "cases": 3467,
+   "edge_excluded": 15,
+   "d_p10_25_50_75_90": [
+    0.3,
+    0.6,
+    1.1,
+    1.55,
+    1.95
+   ],
+   "case_sd_s": 1.13,
+   "case_iqr_s": 0.95,
+   "profile_ci_width_p50": 0.0,
+   "within_case_block_sd_p50": 0.442,
+   "case_sd_expected_from_within": 0.167,
+   "variance_components": {
+    "cases": 3439,
+    "blocks": 25206,
+    "sigma_within_s": 0.607,
+    "tau_between_s": 0.874,
+    "icc": 0.675,
+    "F_p": 0.0
+   },
+   "drift_s_per_h_p10_50_90": [
+    -0.46,
+    0.014,
+    0.353
+   ],
+   "delay_per_s_interval_p10_50_90": [
+    -5.85,
+    -1.04,
+    3.85
+   ],
+   "by_setup": {
+    "solar_port": {
+     "groups": 18,
+     "n": 3467,
+     "H": 18.98,
+     "p": 0.33,
+     "eta2": 0.001,
+     "medians": {
+      "COM6": [
+       1.15,
+       781
+      ],
+      "COM4": [
+       1.15,
+       521
+      ],
+      "COM26": [
+       1.0,
+       469
+      ],
+      "COM5": [
+       1.08,
+       454
+      ],
+      "COM12": [
+       1.05,
+       322
+      ],
+      "COM13": [
+       1.15,
+       153
+      ],
+      "COM9": [
+       1.2,
+       131
+      ],
+      "COM42": [
+       1.17,
+       120
+      ]
+     }
+    },
+    "port_set": {
+     "groups": 110,
+     "n": 3140,
+     "H": 114.67,
+     "p": 0.336,
+     "eta2": 0.002,
+     "medians": {
+      "BIS:COM8|Orchestra:COM7|Primus:COM5|SNUADC:COM4|Solar8000:COM6": [
+       1.1,
+       566
+      ],
+      "BIS:COM14|Orchestra:COM13|Primus:COM11|SNUADC:COM4|Solar8000:COM12": [
+       1.05,
+       281
+      ],
+      "BIS:COM29|Orchestra:COM28|Primus:COM27|SNUADC:COM19|Solar8000:COM26": [
+       1.0,
+       183
+      ],
+      "BIS:COM7|Orchestra:COM6|Primus:COM5|SNUADC:COM12|Solar8000:COM4": [
+       1.35,
+       121
+      ],
+      "BIS:COM3|Orchestra:COM7|Primus:COM6|SNUADC:COM4|Solar8000:COM5": [
+       1.0,
+       106
+      ],
+      "BIS:COM8|Orchestra:COM7|Primus:COM6|SNUADC:COM4|Solar8000:COM5": [
+       1.25,
+       84
+      ],
+      "BIS:COM8|Orchestra:COM7|Primus:COM5|SNUADC:COM4|Solar8000:COM6|Vigileo:COM10": [
+       1.15,
+       66
+      ],
+      "Orchestra:COM7|Primus:COM5|SNUADC:COM4|Solar8000:COM6": [
+       1.3,
+       61
+      ]
+     }
+    },
+    "stamp_1ms": {
+     "groups": 2,
+     "n": 3467,
+     "H": 0.11,
+     "p": 0.735,
+     "eta2": 0.0,
+     "medians": {
+      "True": [
+       1.1,
+       2692
+      ],
+      "False": [
+       1.15,
+       775
+      ]
+     }
+    },
+    "primus_co2_gain": {
+     "groups": 2,
+     "n": 3451,
+     "H": 1.77,
+     "p": 0.184,
+     "eta2": 0.0,
+     "medians": {
+      "0.1": [
+       1.1,
+       2938
+      ],
+      "0.075": [
+       1.15,
+       513
+      ]
+     }
+    },
+    "department": {
+     "groups": 4,
+     "n": 3467,
+     "H": 17.69,
+     "p": 0.000509,
+     "eta2": 0.004,
+     "medians": {
+      "General surgery": [
+       1.1,
+       2156
+      ],
+      "Thoracic surgery": [
+       1.15,
+       1057
+      ],
+      "Gynecology": [
+       1.0,
+       179
+      ],
+      "Urology": [
+       1.5,
+       75
+      ]
+     }
+    },
+    "caseid_tertile": {
+     "groups": 3,
+     "n": 3467,
+     "H": 1.79,
+     "p": 0.408,
+     "eta2": 0.0,
+     "medians": {
+      "2": [
+       1.15,
+       1162
+      ],
+      "1": [
+       1.1,
+       1156
+      ],
+      "0": [
+       1.1,
+       1149
+      ]
+     }
+    }
+   }
+  },
+  "CVP": {
+   "cases": 1331,
+   "edge_excluded": 11,
+   "d_p10_25_50_75_90": [
+    3.05,
+    3.35,
+    3.8,
+    4.25,
+    4.6
+   ],
+   "case_sd_s": 0.91,
+   "case_iqr_s": 0.9,
+   "profile_ci_width_p50": 0.15,
+   "within_case_block_sd_p50": 0.606,
+   "case_sd_expected_from_within": 0.229,
+   "variance_components": {
+    "cases": 1319,
+    "blocks": 10590,
+    "sigma_within_s": 0.724,
+    "tau_between_s": 0.597,
+    "icc": 0.405,
+    "F_p": 0.0
+   },
+   "drift_s_per_h_p10_50_90": [
+    -0.48,
+    0.017,
+    0.436
+   ],
+   "delay_per_s_interval_p10_50_90": [
+    -6.33,
+    0.01,
+    5.84
+   ],
+   "centre_lag_p50_s": 5.8,
+   "by_setup": {
+    "solar_port": {
+     "groups": 18,
+     "n": 1331,
+     "H": 18.7,
+     "p": 0.346,
+     "eta2": 0.001,
+     "medians": {
+      "COM6": [
+       3.85,
+       469
+      ],
+      "COM5": [
+       3.8,
+       191
+      ],
+      "COM4": [
+       3.75,
+       148
+      ],
+      "COM26": [
+       3.8,
+       131
+      ],
+      "COM9": [
+       3.75,
+       64
+      ],
+      "COM13": [
+       3.7,
+       59
+      ],
+      "COM42": [
+       3.75,
+       58
+      ],
+      "COM14": [
+       3.8,
+       41
+      ]
+     }
+    },
+    "port_set": {
+     "groups": 50,
+     "n": 1058,
+     "H": 45.18,
+     "p": 0.629,
+     "eta2": 0.0,
+     "medians": {
+      "BIS:COM8|Orchestra:COM7|Primus:COM5|SNUADC:COM4|Solar8000:COM6": [
+       3.8,
+       336
+      ],
+      "BIS:COM29|Orchestra:COM28|Primus:COM27|SNUADC:COM19|Solar8000:COM26": [
+       3.75,
+       65
+      ],
+      "BIS:COM8|Orchestra:COM7|Primus:COM5|SNUADC:COM4|Solar8000:COM6|Vigileo:COM10": [
+       3.9,
+       51
+      ],
+      "BIS:COM3|Orchestra:COM7|Primus:COM6|SNUADC:COM4|Solar8000:COM5": [
+       3.73,
+       42
+      ],
+      "Orchestra:COM7|Primus:COM5|SNUADC:COM4|Solar8000:COM6": [
+       3.98,
+       38
+      ],
+      "BIS:COM8|Orchestra:COM7|Primus:COM6|SNUADC:COM4|Solar8000:COM5": [
+       3.8,
+       35
+      ],
+      "BIS:COM7|EV1000:COM9|Orchestra:COM6|Primus:COM5|SNUADC:COM3|Solar8000:COM4": [
+       3.75,
+       29
+      ],
+      "BIS:COM8|Orchestra:COM7|Primus:COM6|SNUADC:COM4|Solar8000:COM5|Vigileo:COM9": [
+       3.8,
+       29
+      ]
+     }
+    },
+    "stamp_1ms": {
+     "groups": 2,
+     "n": 1331,
+     "H": 0.62,
+     "p": 0.431,
+     "eta2": 0.0,
+     "medians": {
+      "True": [
+       3.8,
+       1000
+      ],
+      "False": [
+       3.8,
+       331
+      ]
+     }
+    },
+    "primus_co2_gain": {
+     "groups": 2,
+     "n": 1325,
+     "H": 0.19,
+     "p": 0.666,
+     "eta2": 0.0,
+     "medians": {
+      "0.1": [
+       3.8,
+       1114
+      ],
+      "0.075": [
+       3.8,
+       211
+      ]
+     }
+    },
+    "department": {
+     "groups": 3,
+     "n": 1330,
+     "H": 5.73,
+     "p": 0.0569,
+     "eta2": 0.003,
+     "medians": {
+      "General surgery": [
+       3.75,
+       677
+      ],
+      "Thoracic surgery": [
+       3.8,
+       625
+      ],
+      "Gynecology": [
+       3.9,
+       28
+      ]
+     }
+    },
+    "caseid_tertile": {
+     "groups": 3,
+     "n": 1331,
+     "H": 3.81,
+     "p": 0.149,
+     "eta2": 0.001,
+     "medians": {
+      "2": [
+       3.8,
+       479
+      ],
+      "0": [
+       3.8,
+       430
+      ],
+      "1": [
+       3.75,
+       422
+      ]
+     }
+    }
+   }
+  },
+  "ETCO2": {
+   "cases": 6186,
+   "edge_excluded": 12,
+   "d_p10_25_50_75_90": [
+    0.75,
+    1.1,
+    1.55,
+    2.35,
+    3.4
+   ],
+   "case_sd_s": 1.169,
+   "case_iqr_s": 1.25,
+   "profile_ci_width_p50": 0.1,
+   "within_case_block_sd_p50": 0.435,
+   "case_sd_expected_from_within": 0.195,
+   "variance_components": {
+    "cases": 5924,
+    "blocks": 34611,
+    "sigma_within_s": 0.795,
+    "tau_between_s": 0.939,
+    "icc": 0.582,
+    "F_p": 0.0
+   },
+   "drift_s_per_h_p10_50_90": [
+    -0.907,
+    -0.092,
+    0.45
+   ],
+   "delay_per_s_interval_p10_50_90": [
+    -1.19,
+    0.07,
+    1.76
+   ],
+   "by_setup": {
+    "solar_port": {
+     "groups": 18,
+     "n": 6186,
+     "H": 458.16,
+     "p": 1.2e-86,
+     "eta2": 0.072,
+     "medians": {
+      "COM26": [
+       1.6,
+       982
+      ],
+      "COM4": [
+       1.5,
+       947
+      ],
+      "COM6": [
+       1.5,
+       849
+      ],
+      "COM5": [
+       1.55,
+       685
+      ],
+      "COM12": [
+       1.55,
+       463
+      ],
+      "COM9": [
+       1.77,
+       410
+      ],
+      "COM42": [
+       0.85,
+       379
+      ],
+      "COM13": [
+       1.5,
+       316
+      ]
+     }
+    },
+    "port_set": {
+     "groups": 147,
+     "n": 5795,
+     "H": 788.12,
+     "p": 1.1e-88,
+     "eta2": 0.114,
+     "medians": {
+      "BIS:COM8|Orchestra:COM7|Primus:COM5|SNUADC:COM4|Solar8000:COM6": [
+       1.5,
+       582
+      ],
+      "BIS:COM14|Orchestra:COM13|Primus:COM11|SNUADC:COM4|Solar8000:COM12": [
+       1.45,
+       306
+      ],
+      "BIS:COM29|Orchestra:COM28|Primus:COM27|SNUADC:COM19|Solar8000:COM26": [
+       1.3,
+       209
+      ],
+      "BIS:COM20|Orchestra:COM19|Primus:COM10|SNUADC:COM4|Solar8000:COM9": [
+       1.75,
+       179
+      ],
+      "BIS:COM7|Orchestra:COM6|Primus:COM5|SNUADC:COM3|Solar8000:COM4": [
+       1.6,
+       144
+      ],
+      "BIS:COM7|Orchestra:COM6|Primus:COM5|SNUADC:COM12|Solar8000:COM4": [
+       1.65,
+       140
+      ],
+      "BIS:COM39|Orchestra:COM38|Primus:COM43|SNUADC:COM45|Solar8000:COM42": [
+       0.85,
+       135
+      ],
+      "BIS:COM6|Orchestra:COM5|Primus:COM14|SNUADC:COM18|Solar8000:COM13": [
+       1.45,
+       132
+      ]
+     }
+    },
+    "stamp_1ms": {
+     "groups": 2,
+     "n": 6186,
+     "H": 120.29,
+     "p": 5.48e-28,
+     "eta2": 0.019,
+     "medians": {
+      "True": [
+       1.6,
+       4764
+      ],
+      "False": [
+       1.35,
+       1422
+      ]
+     }
+    },
+    "primus_co2_gain": {
+     "groups": 2,
+     "n": 6186,
+     "H": 43.09,
+     "p": 5.22e-11,
+     "eta2": 0.007,
+     "medians": {
+      "0.1": [
+       1.55,
+       5260
+      ],
+      "0.075": [
+       1.4,
+       926
+      ]
+     }
+    },
+    "snuadc_srate": {
+     "groups": 2,
+     "n": 6151,
+     "H": 9.17,
+     "p": 0.00246,
+     "eta2": 0.001,
+     "medians": {
+      "500.0": [
+       1.55,
+       6139
+      ],
+      "100.0": [
+       0.9,
+       12
+      ]
+     }
+    },
+    "department": {
+     "groups": 4,
+     "n": 6186,
+     "H": 7.56,
+     "p": 0.0561,
+     "eta2": 0.001,
+     "medians": {
+      "General surgery": [
+       1.55,
+       4764
+      ],
+      "Thoracic surgery": [
+       1.45,
+       1096
+      ],
+      "Gynecology": [
+       1.6,
+       224
+      ],
+      "Urology": [
+       1.77,
+       102
+      ]
+     }
+    },
+    "caseid_tertile": {
+     "groups": 3,
+     "n": 6186,
+     "H": 1.6,
+     "p": 0.449,
+     "eta2": 0.0,
+     "medians": {
+      "0": [
+       1.5,
+       2069
+      ],
+      "2": [
+       1.55,
+       2061
+      ],
+      "1": [
+       1.55,
+       2056
+      ]
+     }
+    }
+   }
+  },
+  "PIP": {
+   "cases": 5894,
+   "edge_excluded": 0,
+   "d_p10_25_50_75_90": [
+    3.65,
+    4.05,
+    4.6,
+    5.45,
+    6.5
+   ],
+   "case_sd_s": 1.175,
+   "case_iqr_s": 1.4,
+   "profile_ci_width_p50": 0.05,
+   "within_case_block_sd_p50": 0.526,
+   "case_sd_expected_from_within": 0.235,
+   "variance_components": {
+    "cases": 5689,
+    "blocks": 33281,
+    "sigma_within_s": 0.863,
+    "tau_between_s": 0.96,
+    "icc": 0.553,
+    "F_p": 0.0
+   },
+   "drift_s_per_h_p10_50_90": [
+    -0.94,
+    0.001,
+    0.57
+   ],
+   "delay_per_s_interval_p10_50_90": [
+    -0.93,
+    0.4,
+    1.82
+   ],
+   "by_setup": {
+    "solar_port": {
+     "groups": 18,
+     "n": 5894,
+     "H": 509.44,
+     "p": 1.94e-97,
+     "eta2": 0.084,
+     "medians": {
+      "COM26": [
+       4.7,
+       924
+      ],
+      "COM4": [
+       4.5,
+       906
+      ],
+      "COM6": [
+       4.65,
+       834
+      ],
+      "COM5": [
+       4.7,
+       638
+      ],
+      "COM12": [
+       4.85,
+       440
+      ],
+      "COM9": [
+       4.78,
+       392
+      ],
+      "COM42": [
+       3.8,
+       367
+      ],
+      "COM13": [
+       4.6,
+       308
+      ]
+     }
+    },
+    "port_set": {
+     "groups": 142,
+     "n": 5518,
+     "H": 790.1,
+     "p": 6.73e-91,
+     "eta2": 0.121,
+     "medians": {
+      "BIS:COM8|Orchestra:COM7|Primus:COM5|SNUADC:COM4|Solar8000:COM6": [
+       4.65,
+       576
+      ],
+      "BIS:COM14|Orchestra:COM13|Primus:COM11|SNUADC:COM4|Solar8000:COM12": [
+       4.85,
+       302
+      ],
+      "BIS:COM29|Orchestra:COM28|Primus:COM27|SNUADC:COM19|Solar8000:COM26": [
+       4.78,
+       202
+      ],
+      "BIS:COM20|Orchestra:COM19|Primus:COM10|SNUADC:COM4|Solar8000:COM9": [
+       4.75,
+       176
+      ],
+      "BIS:COM7|Orchestra:COM6|Primus:COM5|SNUADC:COM12|Solar8000:COM4": [
+       4.8,
+       141
+      ],
+      "BIS:COM7|Orchestra:COM6|Primus:COM5|SNUADC:COM3|Solar8000:COM4": [
+       4.5,
+       141
+      ],
+      "BIS:COM39|Orchestra:COM38|Primus:COM43|SNUADC:COM45|Solar8000:COM42": [
+       3.75,
+       134
+      ],
+      "BIS:COM6|Orchestra:COM5|Primus:COM14|SNUADC:COM18|Solar8000:COM13": [
+       4.5,
+       130
+      ]
+     }
+    },
+    "stamp_1ms": {
+     "groups": 2,
+     "n": 5894,
+     "H": 104.25,
+     "p": 1.78e-24,
+     "eta2": 0.018,
+     "medians": {
+      "True": [
+       4.7,
+       4512
+      ],
+      "False": [
+       4.45,
+       1382
+      ]
+     }
+    },
+    "primus_co2_gain": {
+     "groups": 2,
+     "n": 5894,
+     "H": 32.37,
+     "p": 1.28e-08,
+     "eta2": 0.005,
+     "medians": {
+      "0.1": [
+       4.65,
+       4992
+      ],
+      "0.075": [
+       4.5,
+       902
+      ]
+     }
+    },
+    "snuadc_srate": {
+     "groups": 2,
+     "n": 5859,
+     "H": 9.65,
+     "p": 0.00189,
+     "eta2": 0.001,
+     "medians": {
+      "500.0": [
+       4.65,
+       5847
+      ],
+      "100.0": [
+       3.92,
+       12
+      ]
+     }
+    },
+    "department": {
+     "groups": 4,
+     "n": 5894,
+     "H": 9.67,
+     "p": 0.0216,
+     "eta2": 0.001,
+     "medians": {
+      "General surgery": [
+       4.65,
+       4514
+      ],
+      "Thoracic surgery": [
+       4.55,
+       1078
+      ],
+      "Gynecology": [
+       4.85,
+       198
+      ],
+      "Urology": [
+       4.7,
+       104
+      ]
+     }
+    },
+    "caseid_tertile": {
+     "groups": 3,
+     "n": 5894,
+     "H": 0.33,
+     "p": 0.849,
+     "eta2": 0.0,
+     "medians": {
+      "0": [
+       4.6,
+       1977
+      ],
+      "2": [
+       4.6,
+       1966
+      ],
+      "1": [
+       4.65,
+       1951
+      ]
+     }
+    }
+   }
+  },
+  "RR_CO2": {
+   "cases": 6114,
+   "edge_excluded": 73,
+   "d_p10_25_50_75_90": [
+    1.55,
+    2.85,
+    4.3,
+    5.8,
+    7.45
+   ],
+   "case_sd_s": 2.379,
+   "case_iqr_s": 2.95,
+   "profile_ci_width_p50": 0.9,
+   "within_case_block_sd_p50": 1.138,
+   "case_sd_expected_from_within": 0.657,
+   "variance_components": {
+    "cases": 3872,
+    "blocks": 11532,
+    "sigma_within_s": 1.395,
+    "tau_between_s": 1.981,
+    "icc": 0.668,
+    "F_p": 0.0
+   },
+   "drift_s_per_h_p10_50_90": [
+    -1.121,
+    -0.026,
+    1.012
+   ],
+   "delay_per_s_interval_p10_50_90": [
+    -3.24,
+    -0.05,
+    3.24
+   ],
+   "centre_lag_p50_s": 19.3,
+   "by_setup": {
+    "solar_port": {
+     "groups": 18,
+     "n": 6114,
+     "H": 142.11,
+     "p": 8.47e-22,
+     "eta2": 0.021,
+     "medians": {
+      "COM26": [
+       4.35,
+       974
+      ],
+      "COM4": [
+       4.45,
+       929
+      ],
+      "COM6": [
+       3.85,
+       846
+      ],
+      "COM5": [
+       4.2,
+       680
+      ],
+      "COM12": [
+       4.1,
+       459
+      ],
+      "COM9": [
+       4.9,
+       408
+      ],
+      "COM42": [
+       4.1,
+       369
+      ],
+      "COM13": [
+       4.35,
+       309
+      ]
+     }
+    },
+    "port_set": {
+     "groups": 146,
+     "n": 5723,
+     "H": 353.19,
+     "p": 2.14e-19,
+     "eta2": 0.037,
+     "medians": {
+      "BIS:COM8|Orchestra:COM7|Primus:COM5|SNUADC:COM4|Solar8000:COM6": [
+       3.9,
+       580
+      ],
+      "BIS:COM14|Orchestra:COM13|Primus:COM11|SNUADC:COM4|Solar8000:COM12": [
+       4.0,
+       307
+      ],
+      "BIS:COM29|Orchestra:COM28|Primus:COM27|SNUADC:COM19|Solar8000:COM26": [
+       4.1,
+       208
+      ],
+      "BIS:COM20|Orchestra:COM19|Primus:COM10|SNUADC:COM4|Solar8000:COM9": [
+       4.85,
+       177
+      ],
+      "BIS:COM7|Orchestra:COM6|Primus:COM5|SNUADC:COM12|Solar8000:COM4": [
+       4.4,
+       141
+      ],
+      "BIS:COM7|Orchestra:COM6|Primus:COM5|SNUADC:COM3|Solar8000:COM4": [
+       4.8,
+       138
+      ],
+      "BIS:COM39|Orchestra:COM38|Primus:COM43|SNUADC:COM45|Solar8000:COM42": [
+       3.88,
+       130
+      ],
+      "BIS:COM29|Primus:COM27|SNUADC:COM19|Solar8000:COM26": [
+       4.2,
+       127
+      ]
+     }
+    },
+    "stamp_1ms": {
+     "groups": 2,
+     "n": 6114,
+     "H": 41.0,
+     "p": 1.53e-10,
+     "eta2": 0.007,
+     "medians": {
+      "True": [
+       4.4,
+       4717
+      ],
+      "False": [
+       3.95,
+       1397
+      ]
+     }
+    },
+    "primus_co2_gain": {
+     "groups": 2,
+     "n": 6114,
+     "H": 33.44,
+     "p": 7.34e-09,
+     "eta2": 0.005,
+     "medians": {
+      "0.1": [
+       4.4,
+       5204
+      ],
+      "0.075": [
+       3.92,
+       910
+      ]
+     }
+    },
+    "snuadc_srate": {
+     "groups": 2,
+     "n": 6079,
+     "H": 0.46,
+     "p": 0.498,
+     "eta2": 0.0,
+     "medians": {
+      "500.0": [
+       4.3,
+       6067
+      ],
+      "100.0": [
+       3.6,
+       12
+      ]
+     }
+    },
+    "department": {
+     "groups": 4,
+     "n": 6114,
+     "H": 76.17,
+     "p": 2.03e-16,
+     "eta2": 0.012,
+     "medians": {
+      "General surgery": [
+       4.45,
+       4695
+      ],
+      "Thoracic surgery": [
+       3.8,
+       1094
+      ],
+      "Gynecology": [
+       4.3,
+       223
+      ],
+      "Urology": [
+       4.5,
+       102
+      ]
+     }
+    },
+    "caseid_tertile": {
+     "groups": 3,
+     "n": 6114,
+     "H": 2.92,
+     "p": 0.232,
+     "eta2": 0.0,
+     "medians": {
+      "0": [
+       4.35,
+       2046
+      ],
+      "2": [
+       4.25,
+       2039
+      ],
+      "1": [
+       4.3,
+       2029
+      ]
+     }
+    }
+   }
+  }
+ },
+ "between_track_spearman": {
+  "HR~ART_SBP": {
+   "n": 3379,
+   "rho": 0.106,
+   "p": 6.53e-10
+  },
+  "HR~ART_MBP": {
+   "n": 3391,
+   "rho": 0.087,
+   "p": 3.56e-07
+  },
+  "HR~ART_DBP": {
+   "n": 3396,
+   "rho": 0.056,
+   "p": 0.00121
+  },
+  "HR~CVP": {
+   "n": 1301,
+   "rho": 0.02,
+   "p": 0.473
+  },
+  "HR~ETCO2": {
+   "n": 6033,
+   "rho": 0.021,
+   "p": 0.103
+  },
+  "HR~PIP": {
+   "n": 5754,
+   "rho": -0.06,
+   "p": 4.59e-06
+  },
+  "HR~RR_CO2": {
+   "n": 5963,
+   "rho": 0.105,
+   "p": 3.2e-16
+  },
+  "ART_SBP~ART_MBP": {
+   "n": 3435,
+   "rho": 0.905,
+   "p": 0.0
+  },
+  "ART_SBP~ART_DBP": {
+   "n": 3447,
+   "rho": 0.855,
+   "p": 0.0
+  },
+  "ART_SBP~CVP": {
+   "n": 1321,
+   "rho": 0.18,
+   "p": 4.17e-11
+  },
+  "ART_SBP~ETCO2": {
+   "n": 3422,
+   "rho": 0.002,
+   "p": 0.921
+  },
+  "ART_SBP~PIP": {
+   "n": 3400,
+   "rho": -0.007,
+   "p": 0.675
+  },
+  "ART_SBP~RR_CO2": {
+   "n": 3410,
+   "rho": 0.003,
+   "p": 0.879
+  },
+  "ART_MBP~ART_DBP": {
+   "n": 3452,
+   "rho": 0.896,
+   "p": 0.0
+  },
+  "ART_MBP~CVP": {
+   "n": 1326,
+   "rho": 0.175,
+   "p": 1.27e-10
+  },
+  "ART_MBP~ETCO2": {
+   "n": 3434,
+   "rho": 0.002,
+   "p": 0.89
+  },
+  "ART_MBP~PIP": {
+   "n": 3413,
+   "rho": 0.008,
+   "p": 0.658
+  },
+  "ART_MBP~RR_CO2": {
+   "n": 3422,
+   "rho": 0.017,
+   "p": 0.316
+  },
+  "ART_DBP~CVP": {
+   "n": 1322,
+   "rho": 0.163,
+   "p": 2.58e-09
+  },
+  "ART_DBP~ETCO2": {
+   "n": 3438,
+   "rho": 0.015,
+   "p": 0.365
+  },
+  "ART_DBP~PIP": {
+   "n": 3416,
+   "rho": -0.003,
+   "p": 0.882
+  },
+  "ART_DBP~RR_CO2": {
+   "n": 3426,
+   "rho": 0.032,
+   "p": 0.0647
+  },
+  "CVP~ETCO2": {
+   "n": 1323,
+   "rho": -0.032,
+   "p": 0.249
+  },
+  "CVP~PIP": {
+   "n": 1316,
+   "rho": -0.051,
+   "p": 0.0649
+  },
+  "CVP~RR_CO2": {
+   "n": 1321,
+   "rho": -0.029,
+   "p": 0.285
+  },
+  "ETCO2~PIP": {
+   "n": 5881,
+   "rho": 0.721,
+   "p": 0.0
+  },
+  "ETCO2~RR_CO2": {
+   "n": 6103,
+   "rho": 0.315,
+   "p": 6.87e-141
+  },
+  "PIP~RR_CO2": {
+   "n": 5826,
+   "rho": 0.236,
+   "p": 1.23e-74
+  }
+ }
+}

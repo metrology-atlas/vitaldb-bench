@@ -1,0 +1,122 @@
+{
+ "anestart": {
+  "reference": "recording start",
+  "n5": 3321,
+  "n1": 3033,
+  "event_minus_ref_5min_p10_50_90": [
+   -1455.0,
+   -506.0,
+   -6.0
+  ],
+  "event_minus_ref_1min_p10_50_90": [
+   -1909.0,
+   -692.0,
+   -97.0
+  ],
+  "shift_median_s": 186.0,
+  "shift_median_ci95": [
+   147.0,
+   224.0
+  ],
+  "shift_mean_s": 220.4,
+  "shift_mean_ci95": [
+   186.9,
+   253.7
+  ],
+  "expected": {
+   "floor": -120,
+   "nearest": 0,
+   "ceil": 120
+  }
+ },
+ "aneend": {
+  "reference": "recording end (caseend)",
+  "n5": 6065,
+  "n1": 309,
+  "event_minus_ref_5min_p10_50_90": [
+   -628.0,
+   -182.0,
+   406.0
+  ],
+  "event_minus_ref_1min_p10_50_90": [
+   -634.0,
+   -398.0,
+   33.0
+  ],
+  "shift_median_s": 216.0,
+  "shift_median_ci95": [
+   184.0,
+   261.0
+  ],
+  "shift_mean_s": 214.4,
+  "shift_mean_ci95": [
+   169.4,
+   258.8
+  ],
+  "expected": {
+   "floor": -120,
+   "nearest": 0,
+   "ceil": 120
+  }
+ },
+ "opstart": {
+  "reference": "first sustained cautery",
+  "n5": 595,
+  "n1": 411,
+  "event_minus_ref_5min_p10_50_90": [
+   -911.0,
+   4.0,
+   1839.0
+  ],
+  "event_minus_ref_1min_p10_50_90": [
+   -1101.0,
+   -55.0,
+   1714.0
+  ],
+  "shift_median_s": 59.7,
+  "shift_median_ci95": [
+   22.5,
+   96.8
+  ],
+  "shift_mean_s": 58.6,
+  "shift_mean_ci95": [
+   -92.7,
+   204.8
+  ],
+  "expected": {
+   "floor": -120,
+   "nearest": 0,
+   "ceil": 120
+  }
+ },
+ "opend": {
+  "reference": "last sustained cautery",
+  "n5": 768,
+  "n1": 75,
+  "event_minus_ref_5min_p10_50_90": [
+   -840.0,
+   962.0,
+   2786.0
+  ],
+  "event_minus_ref_1min_p10_50_90": [
+   -768.0,
+   854.0,
+   2861.0
+  ],
+  "shift_median_s": 108.6,
+  "shift_median_ci95": [
+   -230.1,
+   590.8
+  ],
+  "shift_mean_s": 53.7,
+  "shift_mean_ci95": [
+   -254.2,
+   358.3
+  ],
+  "expected": {
+   "floor": -120,
+   "nearest": 0,
+   "ceil": 120
+  }
+ }
+}

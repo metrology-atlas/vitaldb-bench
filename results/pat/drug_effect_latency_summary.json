@@ -1,0 +1,119 @@
+{
+ "cases": 1529,
+ "propofol_bis": {
+  "cases": 497,
+  "events": 499,
+  "responded": 451,
+  "responded_share": 0.904,
+  "control_responded_share": null,
+  "latency_s_p10_25_50_75_90": [
+   70.0,
+   84.0,
+   132.0,
+   232.0,
+   382.0
+  ],
+  "control_latency_s_p50": null,
+  "negative_or_zero_latency": 0
+ },
+ "phenylephrine_map": {
+  "cases": 32,
+  "events": 76,
+  "responded": 48,
+  "responded_share": 0.632,
+  "control_responded_share": 0.668,
+  "latency_s_p10_25_50_75_90": [
+   20.0,
+   56.0,
+   109.0,
+   200.0,
+   264.0
+  ],
+  "control_latency_s_p50": 80.0,
+  "negative_or_zero_latency": 1
+ },
+ "norepinephrine_map": {
+  "cases": 27,
+  "events": 62,
+  "responded": 44,
+  "responded_share": 0.71,
+  "control_responded_share": 0.65,
+  "latency_s_p10_25_50_75_90": [
+   6.0,
+   46.0,
+   108.0,
+   164.0,
+   219.0
+  ],
+  "control_latency_s_p50": 82.0,
+  "negative_or_zero_latency": 3
+ },
+ "remifentanil_hr": {
+  "cases": 1282,
+  "events": 1691,
+  "responded": 1569,
+  "responded_share": 0.928,
+  "control_responded_share": 0.727,
+  "latency_s_p10_25_50_75_90": [
+   26.0,
+   72.0,
+   110.0,
+   166.0,
+   274.0
+  ],
+  "control_latency_s_p50": 104.0,
+  "negative_or_zero_latency": 32
+ },
+ "infuser_cvp": {
+  "cases": 13,
+  "events": 67,
+  "responded": 56,
+  "responded_share": 0.836,
+  "control_responded_share": 0.342,
+  "latency_s_p10_25_50_75_90": [
+   3.0,
+   16.0,
+   32.0,
+   64.0,
+   129.0
+  ],
+  "control_latency_s_p50": 34.0,
+  "negative_or_zero_latency": 5
+ },
+ "infuser_map": {
+  "cases": 13,
+  "events": 68,
+  "responded": 61,
+  "responded_share": 0.897,
+  "control_responded_share": 0.754,
+  "latency_s_p10_25_50_75_90": [
+   2.0,
+   12.0,
+   34.0,
+   96.0,
+   136.0
+  ],
+  "control_latency_s_p50": 42.0,
+  "negative_or_zero_latency": 6
+ },
+ "invos_L_vs_spo2": {
+  "cases": 30,
+  "r_ge_0.3": 4,
+  "lag_s_p10_50_90": [
+   -7.0,
+   10.0,
+   48.0
+  ],
+  "r_p50": 0.1335
+ },
+ "invos_R_vs_spo2": {
+  "cases": 31,
+  "r_ge_0.3": 5,
+  "lag_s_p10_50_90": [
+   -144.0,
+   0.0,
+   22.0
+  ],
+  "r_p50": 0.13
+ }
+}

@@ -1,0 +1,237 @@
+% Bibliography for the VitalDB timing work (device clock drift, synchronisation, timing graph).
+% Keys are stable; add new entries at the end of their section.
+
+% ---------------------------------------------------------------------------- the author's work
+
+@phdthesis{goodwin2023high,
+  title={High frequency physiological data quality modelling in the intensive care unit},
+  author={Goodwin, Andrew James},
+  school={School of Biomedical Engineering, The University of Sydney},
+  address={Sydney, Australia},
+  year={2023},
+  type={{PhD} thesis}
+}
+
+@article{goodwin2022timing,
+  title={Timing errors and temporal uncertainty in clinical databases---a narrative review},
+  author={Goodwin, Andrew J and Eytan, Danny and Dixon, William and Goodfellow, Sebastian D and Doherty, Zakary and Greer, Robert W and McEwan, Alistair and Tracy, Mark and Laussen, Peter C and Assadi, Azadeh and others},
+  journal={Frontiers in Digital Health},
+  volume={4},
+  pages={932599},
+  year={2022},
+  publisher={Frontiers Media SA}
+}
+
+@article{goodwin2023truth,
+  title={The truth {Hertz}---synchronization of electroencephalogram signals with physiological waveforms recorded in an intensive care unit},
+  author={Goodwin, Andrew J and Dixon, William and Mazwi, Mjaye and Hahn, Cecil D and Meir, Tomer and Goodfellow, Sebastian D and Kazazian, Vanna and Greer, Robert W and McEwan, Alistair and Laussen, Peter C and others},
+  journal={Physiological Measurement},
+  volume={44},
+  number={8},
+  pages={085002},
+  year={2023},
+  publisher={IOP Publishing}
+}
+
+@article{ruffolo2025high,
+  title={High-fidelity measurement of pulse arrival time in critically ill children using standard bedside monitoring equipment},
+  author={Ruffolo, Ian and Siddiqui, Asad and Nguyen, Binh and Dixon, Will and Assadi, Azadeh and Greer, Robert and Schwartz, Steven and Brudno, Michael and Mariakakis, Alex and Goodwin, Andrew},
+  journal={Physiological Measurement},
+  volume={46},
+  number={11},
+  pages={115006},
+  year={2025},
+  publisher={IOP Publishing}
+}
+
+@article{goodwin2020practical,
+  title={A practical approach to storage and retrieval of high-frequency physiological signals},
+  author={Goodwin, Andrew J and Eytan, Danny and Greer, Robert W and Mazwi, Mjaye and Thommandram, Anirudh and Goodfellow, Sebastian D and Assadi, Azadeh and Jegatheeswaran, Anusha and Laussen, Peter C},
+  journal={Physiological Measurement},
+  volume={41},
+  number={3},
+  pages={035008},
+  year={2020},
+  publisher={IOP Publishing}
+}
+
+@article{goodwin2021blood,
+  title={Blood pressure in critically ill children: Exploratory analyses of concurrent invasive and noninvasive measurements},
+  author={Goodwin, Andrew and Mazwi, Mjaye L and Somer, Jonathan and Schwartz, Steven M and McEwan, Alistair and Eytan, Danny},
+  journal={Critical Care Explorations},
+  volume={3},
+  number={12},
+  pages={e0586},
+  year={2021}
+}
+
+% ---------------------------------------------------------------------------- data
+
+@article{lee2022vitaldb,
+  title={{VitalDB}, a high-fidelity multi-parameter vital signs database in surgical patients},
+  author={Lee, Hyung-Chul and Park, Yoonsang and Yoon, Soo Bin and Yang, Seong Mi and Park, Dongnyeok and Jung, Chul-Woo},
+  journal={Scientific Data},
+  volume={9},
+  number={1},
+  pages={279},
+  year={2022}
+}
+
+@misc{snuadc,
+  title={{SNUADC}: firmware and hardware of the {VitalDB} analogue-to-digital converter},
+  author={{VitalDB}},
+  howpublished={\url{https://github.com/vitaldb/snuadc}},
+  note={Firmware \texttt{firmware/SNUADC/SNUADC.ino}, accessed October 2026}
+}
+
+@misc{openeeg,
+  title={{openeeg}: open-source {EEG} processing for depth-of-anesthesia ({BIS}-mimic algorithms validated against {VitalDB})},
+  author={{VitalDB}},
+  howpublished={\url{https://github.com/vitaldb/openeeg}},
+  note={Commit \texttt{bd476c5}, 2 June 2026; accessed October 2026}
+}
+
+% Studies in the "Choosing the adopted mean PAT" evidence table (physiosync/data/pat_reference.csv).
+% Checked against Google Scholar exports and publisher pages, 13 October 2026. ruffolo2025high is above.
+
+@article{block2020conventional,
+  title={Conventional pulse transit times as markers of blood pressure changes in humans},
+  author={Block, Robert C and Yavarimanesh, Mohammad and Natarajan, Keerthana and Carek, Andrew and Mousavi, Azin and Chandrasekhar, Anand and Kim, Chang-Sei and Zhu, Junxi and Schifitto, Giovanni and Mestha, Lalit K and others},
+  journal={Scientific Reports},
+  volume={10},
+  number={1},
+  pages={16373},
+  year={2020},
+  publisher={Nature Publishing Group UK London},
+  doi={10.1038/s41598-020-73143-8}
+}
+
+@article{kortekaas2018small,
+  title={Small intra-individual variability of the pre-ejection period justifies the use of pulse transit time as approximation of the vascular transit},
+  author={Kortekaas, Minke C and van Velzen, Marit HN and Gr{\"u}ne, Frank and Niehof, Sjoerd P and Stolker, Robert J and Huygen, Frank JPM},
+  journal={{PLoS ONE}},
+  volume={13},
+  number={10},
+  pages={e0204105},
+  year={2018},
+  publisher={Public Library of Science San Francisco, CA USA},
+  doi={10.1371/journal.pone.0204105}
+}
+
+@article{obata2017noninvasive,
+  title={Noninvasive assessment of the effect of position and exercise on pulse arrival to peripheral vascular beds in healthy volunteers},
+  author={Obata, Yurie and Ong, Qi J and Magruder, J Trent and Grichkevitch, Helen and Berkowitz, Dan E and Nyhan, Daniel and Steppan, Jochen and Barodka, Viachaslau},
+  journal={Frontiers in Physiology},
+  volume={8},
+  pages={47},
+  year={2017},
+  publisher={Frontiers Media SA},
+  doi={10.3389/fphys.2017.00047}
+}
+
+@article{jose2025exploring,
+  title={Exploring the repeatability of pulse arrival time in healthy subjects: A test-retest approach},
+  author={Jose, Annie S and Srivastav, Shival and Mehta, Bharati},
+  journal={Indian Journal of Physiology and Pharmacology},
+  volume={69},
+  number={1},
+  pages={27--33},
+  year={2025},
+  publisher={Scientific Scholar},
+  doi={10.25259/IJPP_149_2024}
+}
+
+@article{vanvelzen2017increasing,
+  title={Increasing accuracy of pulse transit time measurements by automated elimination of distorted photoplethysmography waves},
+  author={van Velzen, Marit HN and Loeve, Arjo J and Niehof, Sjoerd P and Mik, Egbert G},
+  journal={Medical \& Biological Engineering \& Computing},
+  volume={55},
+  number={11},
+  pages={1989--2000},
+  year={2017},
+  publisher={Springer},
+  doi={10.1007/s11517-017-1642-x}
+}
+
+@article{mohammadpoor2024use,
+  title={On the use of fractional calculus to improve the pulse arrival time ({PAT}) detection when using photoplethysmography ({PPG}) and electrocardiography ({ECG}) signals},
+  author={Mohammadpoor Faskhodi, Mahtab and Garcia-Gonzalez, Miguel A. and Fernandez-Chimeno, Mireya and Guede-Fern{\'a}ndez, Federico and Mateu-Mateus, Marc and Capdevila, Lluis and Ramos-Castro, Juan J.},
+  journal={{PLoS ONE}},
+  volume={19},
+  number={2},
+  pages={e0298354},
+  year={2024},
+  publisher={Public Library of Science San Francisco, CA USA},
+  doi={10.1371/journal.pone.0298354}
+}
+
+@article{liao2023filtering,
+  title={Filtering-induced changes of pulse transmit time across different ages: a neglected concern in photoplethysmography-based cuffless blood pressure measurement},
+  author={Liao, Shangdi and Liu, Haipeng and Lin, Wan-Hua and Zheng, Dingchang and Chen, Fei},
+  journal={Frontiers in Physiology},
+  volume={14},
+  pages={1172150},
+  year={2023},
+  publisher={Frontiers},
+  doi={10.3389/fphys.2023.1172150}
+}
+
+@article{martin2016weighing,
+  title={Weighing scale-based pulse transit time is a superior marker of blood pressure than conventional pulse arrival time},
+  author={Martin, Stephanie L-O and Carek, Andrew M and Kim, Chang-Sei and Ashouri, Hazar and Inan, Omer T and Hahn, Jin-Oh and Mukkamala, Ramakrishna},
+  journal={Scientific Reports},
+  volume={6},
+  number={1},
+  pages={39273},
+  year={2016},
+  publisher={Nature Publishing Group UK London},
+  doi={10.1038/srep39273}
+}
+
+@article{allen2000variability,
+  title={Variability of photoplethysmography peripheral pulse measurements at the ears, thumbs and toes},
+  author={Allen, John and Murray, Alan},
+  journal={IEE Proceedings -- Science, Measurement and Technology},
+  volume={147},
+  number={6},
+  pages={403--407},
+  year={2000},
+  publisher={IET},
+  doi={10.1049/ip-smt:20000846}
+}
+
+@article{allen2002age,
+  title={Age-related changes in peripheral pulse timing characteristics at the ears, fingers and toes},
+  author={Allen, John and Murray, Alan},
+  journal={Journal of Human Hypertension},
+  volume={16},
+  number={10},
+  pages={711--717},
+  year={2002},
+  publisher={Nature Publishing Group},
+  doi={10.1038/sj.jhh.1001478}
+}
+
+@article{lee2019analysis,
+  title={Analysis of pulse arrival time as an indicator of blood pressure in a large surgical biosignal database: Recommendations for developing ubiquitous blood pressure monitoring methods},
+  author={Lee, Joonnyong and Yang, Seungman and Lee, Saram and Kim, Hee Chan},
+  journal={Journal of Clinical Medicine},
+  volume={8},
+  number={11},
+  pages={1773},
+  year={2019},
+  publisher={MDPI},
+  doi={10.3390/jcm8111773}
+}
+
+% Anaesthesia effect on PTT, cited for the change after induction only (monitor-based, absolute values include device delays).
+@article{youn2014changes,
+  title={Changes in pulse transit time according to target controlled infusion of propofol versus sevoflurane inhalation induction},
+  author={Youn, Ann Misun and Shin, Yong Sup and Park, Sang Il},
+  journal={Anesthesia and Pain Medicine},
+  volume={9},
+  number={1},
+  pages={48--53},
+  year={2014},
+  publisher={Korean Society of Anesthesiologists}
+}

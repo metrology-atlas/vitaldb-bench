@@ -1,0 +1,158 @@
+{
+ "cases": 6387,
+ "rows": 35503,
+ "model_version": "vitaldb-timing-2026.10",
+ "quality_by_track": {
+  "Solar8000/HR": {
+   "good": 5312,
+   "weak": 910
+  },
+  "Solar8000/ART_SBP": {
+   "good": 3289,
+   "weak": 162
+  },
+  "Solar8000/ART_MBP": {
+   "good": 3289,
+   "weak": 174
+  },
+  "Solar8000/ART_DBP": {
+   "good": 3305,
+   "weak": 162
+  },
+  "Solar8000/CVP": {
+   "good": 1271,
+   "weak": 60
+  },
+  "Primus/ETCO2": {
+   "good": 4268,
+   "weak": 1305
+  },
+  "Primus/PIP_MBAR": {
+   "good": 4864,
+   "weak": 1018
+  },
+  "Primus/RR_CO2": {
+   "weak": 4721,
+   "good": 1393
+  }
+ },
+ "se_p50_by_track": {
+  "Solar8000/HR": 0.256,
+  "Solar8000/ART_SBP": 0.159,
+  "Solar8000/ART_MBP": 0.154,
+  "Solar8000/ART_DBP": 0.155,
+  "Solar8000/CVP": 0.214,
+  "Primus/ETCO2": 0.294,
+  "Primus/PIP_MBAR": 0.273,
+  "Primus/RR_CO2": 1.025
+ },
+ "hr_mixture": {
+  "mu": [
+   1.9178127551773632,
+   4.202952565317338
+  ],
+  "sd": [
+   0.510359593111665,
+   0.6470662132806098
+  ],
+  "w": [
+   0.3643674881388349,
+   0.6356325118611698
+  ]
+ },
+ "hr_groups": {
+  "late": 3652,
+  "uncertain": 795,
+  "early": 1775
+ },
+ "hr_groups_by_port": {
+  "COM26": {
+   "early": 443,
+   "late": 441,
+   "uncertain": 134
+  },
+  "COM4": {
+   "late": 900,
+   "uncertain": 55,
+   "early": 11
+  },
+  "COM6": {
+   "early": 536,
+   "uncertain": 210,
+   "late": 74
+  },
+  "COM5": {
+   "uncertain": 140,
+   "late": 223,
+   "early": 311
+  },
+  "COM12": {
+   "early": 271,
+   "uncertain": 76,
+   "late": 110
+  },
+  "COM9": {
+   "late": 383,
+   "uncertain": 32,
+   "early": 3
+  },
+  "COM42": {
+   "late": 358,
+   "uncertain": 23,
+   "early": 3
+  },
+  "COM13": {
+   "late": 287,
+   "uncertain": 25,
+   "early": 11
+  },
+  "COM14": {
+   "early": 16,
+   "late": 205,
+   "uncertain": 16
+  },
+  "COM10": {
+   "uncertain": 13,
+   "late": 180,
+   "early": 3
+  },
+  "COM11": {
+   "late": 116,
+   "uncertain": 17,
+   "early": 34
+  },
+  "COM28": {
+   "late": 61,
+   "early": 47,
+   "uncertain": 11
+  },
+  "COM15": {
+   "late": 107,
+   "uncertain": 6,
+   "early": 2
+  },
+  "COM21": {
+   "late": 96,
+   "uncertain": 8
+  },
+  "COM27": {
+   "early": 74,
+   "uncertain": 12,
+   "late": 2
+  },
+  "": {
+   "late": 38,
+   "early": 9,
+   "uncertain": 6
+  },
+  "COM25": {
+   "late": 44,
+   "uncertain": 7,
+   "early": 1
+  },
+  "COM16": {
+   "late": 27,
+   "uncertain": 4
+  }
+ }
+}

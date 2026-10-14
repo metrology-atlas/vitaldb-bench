@@ -1,0 +1,1478 @@
+{
+ "cases": 24,
+ "errors": [],
+ "tracks": {
+  "HR": {
+   "n_cases": 24,
+   "records_median": 5952,
+   "gap_median_s": 2.0,
+   "q": [
+    [
+     1.0,
+     24
+    ]
+   ],
+   "best_family": [
+    [
+     "median|t",
+     14
+    ],
+    [
+     "60/mean_int|n",
+     4
+    ],
+    [
+     "median|n",
+     4
+    ],
+    [
+     "mean_rate|n",
+     2
+    ]
+   ],
+   "window_by_family": {
+    "60/mean_int|n": [
+     1.0,
+     8.0,
+     8.0,
+     20.0
+    ],
+    "mean_rate|n": [
+     1.0,
+     1.0
+    ],
+    "median|t": [
+     3.0,
+     5.0,
+     5.0,
+     6.0,
+     6.0,
+     6.0,
+     6.0,
+     6.0,
+     6.0,
+     8.0,
+     8.0,
+     8.0,
+     8.0,
+     8.0
+    ],
+    "median|n": [
+     6.0,
+     6.0,
+     8.0,
+     10.0
+    ]
+   },
+   "delay_min_s_iqr": [
+    1.76,
+    2.58,
+    3.84
+   ],
+   "delay_mid_s_iqr": [
+    2.76,
+    3.58,
+    4.84
+   ],
+   "bias_iqr": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "sigma_iqr": [
+    0.813,
+    0.879,
+    0.941
+   ],
+   "dll_per_record_vs_other_window_type_iqr": [
+    0.0056,
+    0.0132,
+    0.0285
+   ],
+   "dll_per_record_vs_other_function_iqr": [
+    0.0282,
+    0.0509,
+    0.1103
+   ],
+   "round_minus_floor": {
+    "floor_better_cases": 24,
+    "of": 24,
+    "dll_per_record_iqr": [
+     -0.146,
+     -0.138,
+     -0.1
+    ]
+   },
+   "delay_vs_interval": {
+    "n": {
+     "cases": 24,
+     "delay_change_per_s_interval_iqr": [
+      -6.98,
+      -4.85,
+      -1.9
+     ]
+    },
+    "t": {
+     "cases": 24,
+     "delay_change_per_s_interval_iqr": [
+      -4.67,
+      -2.43,
+      1.32
+     ]
+    }
+   },
+   "repeat_fraction_by_pred_change_q": {
+    "0": [
+     0.767,
+     99828
+    ],
+    "0.5": [
+     0.541,
+     17223
+    ],
+    "1": [
+     0.39,
+     8922
+    ],
+    "2": [
+     0.243,
+     4303
+    ],
+    "4": [
+     0.441,
+     14477
+    ]
+   },
+   "hold_delta_bic": {
+    "2": {
+     "median": -280.6,
+     "cases_gt10": 2,
+     "of": 24
+    },
+    "4": {
+     "median": -468.5,
+     "cases_gt10": 0,
+     "of": 24
+    },
+    "6": {
+     "median": -729.2,
+     "cases_gt10": 0,
+     "of": 24
+    },
+    "8": {
+     "median": -1059.2,
+     "cases_gt10": 0,
+     "of": 24
+    },
+    "10": {
+     "median": -1399.0,
+     "cases_gt10": 0,
+     "of": 24
+    },
+    "12": {
+     "median": -1751.8,
+     "cases_gt10": 0,
+     "of": 24
+    }
+   },
+   "hold_best_U": [
+    [
+     "none",
+     22
+    ],
+    [
+     2,
+     2
+    ]
+   ]
+  },
+  "ART_SBP": {
+   "n_cases": 24,
+   "records_median": 5510,
+   "gap_median_s": 2.0,
+   "q": [
+    [
+     1.0,
+     23
+    ],
+    [
+     2.0,
+     1
+    ]
+   ],
+   "best_family": [
+    [
+     "median|t",
+     9
+    ],
+    [
+     "ewma|n",
+     8
+    ],
+    [
+     "median|n",
+     7
+    ]
+   ],
+   "window_by_family": {
+    "ewma|n": [
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0
+    ],
+    "median|n": [
+     3.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     6.0
+    ],
+    "median|t": [
+     3.0,
+     3.0,
+     3.0,
+     3.0,
+     3.0,
+     3.0,
+     3.0,
+     4.0,
+     5.0
+    ]
+   },
+   "delay_min_s_iqr": [
+    0.78,
+    1.15,
+    1.7
+   ],
+   "delay_mid_s_iqr": [
+    1.77,
+    2.15,
+    2.7
+   ],
+   "bias_iqr": [
+    -5.58,
+    -3.92,
+    3.36
+   ],
+   "sigma_iqr": [
+    0.647,
+    0.784,
+    0.962
+   ],
+   "dll_per_record_vs_other_window_type_iqr": [
+    0.0225,
+    0.0566,
+    0.1064
+   ],
+   "dll_per_record_vs_other_function_iqr": [
+    0.0626,
+    0.1206,
+    0.2078
+   ],
+   "delay_vs_interval": {
+    "n": {
+     "cases": 24,
+     "delay_change_per_s_interval_iqr": [
+      -1.94,
+      -0.97,
+      0.0
+     ]
+    },
+    "t": {
+     "cases": 24,
+     "delay_change_per_s_interval_iqr": [
+      -0.99,
+      0.0,
+      1.09
+     ]
+    }
+   },
+   "repeat_fraction_by_pred_change_q": {
+    "0": [
+     0.378,
+     48538
+    ],
+    "0.5": [
+     0.269,
+     28148
+    ],
+    "1": [
+     0.145,
+     27957
+    ],
+    "2": [
+     0.08,
+     17954
+    ],
+    "4": [
+     0.109,
+     14714
+    ]
+   },
+   "hold_delta_bic": {
+    "2": {
+     "median": -323.4,
+     "cases_gt10": 6,
+     "of": 24
+    },
+    "4": {
+     "median": -4160.0,
+     "cases_gt10": 0,
+     "of": 24
+    },
+    "6": {
+     "median": -5792.9,
+     "cases_gt10": 0,
+     "of": 24
+    },
+    "8": {
+     "median": -7283.5,
+     "cases_gt10": 0,
+     "of": 24
+    },
+    "10": {
+     "median": -8377.0,
+     "cases_gt10": 0,
+     "of": 24
+    },
+    "12": {
+     "median": -9066.9,
+     "cases_gt10": 0,
+     "of": 24
+    }
+   },
+   "hold_best_U": [
+    [
+     "none",
+     18
+    ],
+    [
+     2,
+     6
+    ]
+   ]
+  },
+  "ART_MBP": {
+   "n_cases": 24,
+   "records_median": 5632,
+   "gap_median_s": 2.0,
+   "q": [
+    [
+     1.0,
+     24
+    ]
+   ],
+   "best_family": [
+    [
+     "ewma|n",
+     16
+    ],
+    [
+     "wave_mean|t",
+     7
+    ],
+    [
+     "mean|n",
+     1
+    ]
+   ],
+   "window_by_family": {
+    "ewma|n": [
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     5.0,
+     5.0,
+     5.0,
+     5.0
+    ],
+    "wave_mean|t": [
+     6.0,
+     8.0,
+     8.0,
+     10.0,
+     10.0,
+     12.0,
+     12.0
+    ],
+    "mean|n": [
+     16.0
+    ]
+   },
+   "delay_min_s_iqr": [
+    0.45,
+    1.3,
+    1.92
+   ],
+   "delay_mid_s_iqr": [
+    1.45,
+    2.3,
+    2.92
+   ],
+   "bias_iqr": [
+    -5.34,
+    -4.4,
+    0.97
+   ],
+   "sigma_iqr": [
+    0.468,
+    0.519,
+    0.573
+   ],
+   "dll_per_record_vs_other_window_type_iqr": [
+    0.047,
+    0.0834,
+    0.1407
+   ],
+   "dll_per_record_vs_other_function_iqr": [
+    0.0377,
+    0.0834,
+    0.1334
+   ],
+   "delay_vs_interval": {
+    "n": {
+     "cases": 24,
+     "delay_change_per_s_interval_iqr": [
+      -1.67,
+      -0.92,
+      0.54
+     ]
+    },
+    "t": {
+     "cases": 24,
+     "delay_change_per_s_interval_iqr": [
+      0.56,
+      2.16,
+      3.41
+     ]
+    }
+   },
+   "repeat_fraction_by_pred_change_q": {
+    "0": [
+     0.641,
+     73425
+    ],
+    "0.5": [
+     0.403,
+     34551
+    ],
+    "1": [
+     0.206,
+     21175
+    ],
+    "2": [
+     0.157,
+     7666
+    ],
+    "4": [
+     0.209,
+     3432
+    ]
+   },
+   "hold_delta_bic": {
+    "2": {
+     "median": -475.5,
+     "cases_gt10": 6,
+     "of": 24
+    },
+    "4": {
+     "median": -2170.1,
+     "cases_gt10": 0,
+     "of": 24
+    },
+    "6": {
+     "median": -3207.2,
+     "cases_gt10": 0,
+     "of": 24
+    },
+    "8": {
+     "median": -4339.2,
+     "cases_gt10": 0,
+     "of": 24
+    },
+    "10": {
+     "median": -5239.0,
+     "cases_gt10": 0,
+     "of": 24
+    },
+    "12": {
+     "median": -6104.2,
+     "cases_gt10": 0,
+     "of": 24
+    }
+   },
+   "hold_best_U": [
+    [
+     "none",
+     18
+    ],
+    [
+     2,
+     6
+    ]
+   ]
+  },
+  "ART_DBP": {
+   "n_cases": 24,
+   "records_median": 5511,
+   "gap_median_s": 2.0,
+   "q": [
+    [
+     1.0,
+     24
+    ]
+   ],
+   "best_family": [
+    [
+     "ewma|n",
+     20
+    ],
+    [
+     "median|n",
+     2
+    ],
+    [
+     "median|t",
+     2
+    ]
+   ],
+   "window_by_family": {
+    "ewma|n": [
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     3.0,
+     3.0,
+     4.0
+    ],
+    "median|n": [
+     4.0,
+     5.0
+    ],
+    "median|t": [
+     3.0,
+     3.0
+    ]
+   },
+   "delay_min_s_iqr": [
+    0.49,
+    0.88,
+    1.3
+   ],
+   "delay_mid_s_iqr": [
+    1.49,
+    1.88,
+    2.3
+   ],
+   "bias_iqr": [
+    -4.72,
+    -3.31,
+    1.37
+   ],
+   "sigma_iqr": [
+    0.485,
+    0.563,
+    0.669
+   ],
+   "dll_per_record_vs_other_window_type_iqr": [
+    0.0256,
+    0.0445,
+    0.0795
+   ],
+   "dll_per_record_vs_other_function_iqr": [
+    0.0254,
+    0.0383,
+    0.0688
+   ],
+   "delay_vs_interval": {
+    "n": {
+     "cases": 24,
+     "delay_change_per_s_interval_iqr": [
+      -2.49,
+      -1.6,
+      -0.68
+     ]
+    },
+    "t": {
+     "cases": 24,
+     "delay_change_per_s_interval_iqr": [
+      -1.89,
+      -0.95,
+      0.0
+     ]
+    }
+   },
+   "repeat_fraction_by_pred_change_q": {
+    "0": [
+     0.591,
+     62630
+    ],
+    "0.5": [
+     0.398,
+     33197
+    ],
+    "1": [
+     0.205,
+     23945
+    ],
+    "2": [
+     0.127,
+     11687
+    ],
+    "4": [
+     0.122,
+     5811
+    ]
+   },
+   "hold_delta_bic": {
+    "2": {
+     "median": -624.8,
+     "cases_gt10": 6,
+     "of": 24
+    },
+    "4": {
+     "median": -2580.5,
+     "cases_gt10": 0,
+     "of": 24
+    },
+    "6": {
+     "median": -4030.2,
+     "cases_gt10": 0,
+     "of": 24
+    },
+    "8": {
+     "median": -5180.0,
+     "cases_gt10": 0,
+     "of": 24
+    },
+    "10": {
+     "median": -5770.4,
+     "cases_gt10": 0,
+     "of": 24
+    },
+    "12": {
+     "median": -6496.8,
+     "cases_gt10": 0,
+     "of": 24
+    }
+   },
+   "hold_best_U": [
+    [
+     "none",
+     18
+    ],
+    [
+     2,
+     6
+    ]
+   ]
+  },
+  "CVP": {
+   "n_cases": 21,
+   "records_median": 5217,
+   "gap_median_s": 2.0,
+   "q": [
+    [
+     1.0,
+     21
+    ]
+   ],
+   "best_family": [
+    [
+     "wave_mean|t",
+     16
+    ],
+    [
+     "median|n",
+     2
+    ],
+    [
+     "mean|t",
+     2
+    ],
+    [
+     "median|t",
+     1
+    ]
+   ],
+   "window_by_family": {
+    "wave_mean|t": [
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     5.0,
+     5.0,
+     5.0,
+     5.0
+    ],
+    "median|n": [
+     16.0,
+     24.0
+    ],
+    "mean|t": [
+     5.0,
+     5.0
+    ],
+    "median|t": [
+     8.0
+    ]
+   },
+   "delay_min_s_iqr": [
+    2.45,
+    3.95,
+    4.4
+   ],
+   "delay_mid_s_iqr": [
+    3.45,
+    4.95,
+    5.4
+   ],
+   "bias_iqr": [
+    -4.78,
+    -3.87,
+    -1.54
+   ],
+   "sigma_iqr": [
+    0.385,
+    0.414,
+    0.446
+   ],
+   "dll_per_record_vs_other_window_type_iqr": [
+    0.0105,
+    0.0151,
+    0.0242
+   ],
+   "dll_per_record_vs_other_function_iqr": [
+    0.0042,
+    0.0074,
+    0.0164
+   ],
+   "delay_vs_interval": {
+    "n": {
+     "cases": 21,
+     "delay_change_per_s_interval_iqr": [
+      -7.74,
+      -4.0,
+      -0.95
+     ]
+    },
+    "t": {
+     "cases": 21,
+     "delay_change_per_s_interval_iqr": [
+      -5.26,
+      0.0,
+      1.43
+     ]
+    }
+   },
+   "repeat_fraction_by_pred_change_q": {
+    "0": [
+     0.922,
+     113166
+    ],
+    "0.5": [
+     0.722,
+     4310
+    ],
+    "1": [
+     0.597,
+     884
+    ],
+    "2": [
+     0.497,
+     344
+    ],
+    "4": [
+     0.532,
+     474
+    ]
+   },
+   "hold_delta_bic": {
+    "2": {
+     "median": -140.0,
+     "cases_gt10": 0,
+     "of": 21
+    },
+    "4": {
+     "median": -157.8,
+     "cases_gt10": 1,
+     "of": 21
+    },
+    "6": {
+     "median": -228.9,
+     "cases_gt10": 0,
+     "of": 21
+    },
+    "8": {
+     "median": -399.0,
+     "cases_gt10": 1,
+     "of": 21
+    },
+    "10": {
+     "median": -407.0,
+     "cases_gt10": 1,
+     "of": 21
+    },
+    "12": {
+     "median": -573.3,
+     "cases_gt10": 1,
+     "of": 21
+    }
+   },
+   "hold_best_U": [
+    [
+     "none",
+     19
+    ],
+    [
+     10,
+     1
+    ],
+    [
+     4,
+     1
+    ]
+   ]
+  },
+  "ETCO2": {
+   "n_cases": 24,
+   "records_median": 1597,
+   "gap_median_s": 7.01,
+   "q": [
+    [
+     1.0,
+     24
+    ]
+   ],
+   "best_family": [
+    [
+     "mean|n",
+     24
+    ]
+   ],
+   "window_by_family": {
+    "mean|n": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     2.0
+    ]
+   },
+   "delay_min_s_iqr": [
+    -2.28,
+    -1.7,
+    -0.94
+   ],
+   "delay_mid_s_iqr": [
+    1.22,
+    1.75,
+    2.6
+   ],
+   "bias_iqr": [
+    -12.03,
+    -11.7,
+    -10.55
+   ],
+   "sigma_iqr": [
+    0.593,
+    0.741,
+    0.89
+   ],
+   "dll_per_record_vs_other_window_type_iqr": [
+    0.0344,
+    0.0509,
+    0.0836
+   ],
+   "dll_per_record_vs_other_function_iqr": [
+    0.0164,
+    0.0265,
+    0.0558
+   ],
+   "delay_vs_interval": {
+    "n": {
+     "cases": 23,
+     "delay_change_per_s_interval_iqr": [
+      -0.74,
+      0.31,
+      1.03
+     ]
+    },
+    "t": {
+     "cases": 23,
+     "delay_change_per_s_interval_iqr": [
+      -0.12,
+      1.03,
+      1.63
+     ]
+    }
+   },
+   "repeat_fraction_by_pred_change_q": {
+    "0": [
+     0.815,
+     25194
+    ],
+    "0.5": [
+     0.524,
+     9239
+    ],
+    "1": [
+     0.182,
+     4376
+    ],
+    "2": [
+     0.066,
+     1504
+    ],
+    "4": [
+     0.083,
+     1344
+    ]
+   },
+   "primus_drift_best_ppm": [
+    [
+     170.0,
+     13
+    ],
+    [
+     115.0,
+     7
+    ],
+    [
+     0.0,
+     3
+    ],
+    [
+     60.0,
+     1
+    ]
+   ],
+   "primus_drift_dll_115_minus_0_iqr": [
+    1.93,
+    3.07,
+    5.86
+   ]
+  },
+  "RR_CO2": {
+   "n_cases": 24,
+   "records_median": 1573,
+   "gap_median_s": 7.01,
+   "q": [
+    [
+     1.0,
+     24
+    ]
+   ],
+   "best_family": [
+    [
+     "60/mean_int|t",
+     17
+    ],
+    [
+     "60/mean_int|n",
+     3
+    ],
+    [
+     "median|t",
+     2
+    ],
+    [
+     "ewma_rate|n",
+     1
+    ],
+    [
+     "median|n",
+     1
+    ]
+   ],
+   "window_by_family": {
+    "60/mean_int|n": [
+     3.0,
+     5.0,
+     5.0
+    ],
+    "60/mean_int|t": [
+     10.0,
+     20.0,
+     20.0,
+     20.0,
+     20.0,
+     20.0,
+     30.0,
+     30.0,
+     30.0,
+     30.0,
+     30.0,
+     30.0,
+     30.0,
+     30.0,
+     30.0,
+     30.0,
+     30.0
+    ],
+    "median|t": [
+     30.0,
+     45.0
+    ],
+    "ewma_rate|n": [
+     3.0
+    ],
+    "median|n": [
+     6.0
+    ]
+   },
+   "delay_min_s_iqr": [
+    3.95,
+    5.05,
+    9.6
+   ],
+   "delay_mid_s_iqr": [
+    7.45,
+    8.54,
+    13.15
+   ],
+   "bias_iqr": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "sigma_iqr": [
+    0.25,
+    0.25,
+    0.25
+   ],
+   "dll_per_record_vs_other_window_type_iqr": [
+    0.0033,
+    0.0143,
+    0.0194
+   ],
+   "dll_per_record_vs_other_function_iqr": [
+    0.0151,
+    0.0319,
+    0.0719
+   ],
+   "round_minus_floor": {
+    "floor_better_cases": 0,
+    "of": 24,
+    "dll_per_record_iqr": [
+     0.555,
+     0.589,
+     0.616
+    ]
+   },
+   "delay_vs_interval": {
+    "n": {
+     "cases": 23,
+     "delay_change_per_s_interval_iqr": [
+      -4.27,
+      -2.68,
+      -0.71
+     ]
+    },
+    "t": {
+     "cases": 23,
+     "delay_change_per_s_interval_iqr": [
+      -3.97,
+      -2.63,
+      -0.47
+     ]
+    }
+   },
+   "repeat_fraction_by_pred_change_q": {
+    "0": [
+     0.972,
+     39798
+    ],
+    "0.5": [
+     0.459,
+     497
+    ],
+    "1": [
+     0.325,
+     468
+    ],
+    "2": [
+     0.262,
+     408
+    ],
+    "4": [
+     0.143,
+     237
+    ]
+   },
+   "primus_drift_best_ppm": [
+    [
+     170.0,
+     10
+    ],
+    [
+     0.0,
+     6
+    ],
+    [
+     115.0,
+     4
+    ],
+    [
+     60.0,
+     4
+    ]
+   ],
+   "primus_drift_dll_115_minus_0_iqr": [
+    -0.46,
+    1.24,
+    1.82
+   ]
+  },
+  "PIP": {
+   "n_cases": 23,
+   "records_median": 1518,
+   "gap_median_s": 7.01,
+   "q": [
+    [
+     1.0,
+     23
+    ]
+   ],
+   "best_family": [
+    [
+     "mean|n",
+     23
+    ]
+   ],
+   "window_by_family": {
+    "mean|n": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     2.0
+    ]
+   },
+   "delay_min_s_iqr": [
+    1.0,
+    1.75,
+    2.2
+   ],
+   "delay_mid_s_iqr": [
+    4.5,
+    5.25,
+    5.74
+   ],
+   "bias_iqr": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "sigma_iqr": [
+    0.427,
+    0.445,
+    0.445
+   ],
+   "dll_per_record_vs_other_window_type_iqr": [
+    0.0648,
+    0.0856,
+    0.1134
+   ],
+   "dll_per_record_vs_other_function_iqr": [
+    0.0564,
+    0.0748,
+    0.1078
+   ],
+   "delay_vs_interval": {
+    "n": {
+     "cases": 21,
+     "delay_change_per_s_interval_iqr": [
+      0.0,
+      0.55,
+      1.31
+     ]
+    },
+    "t": {
+     "cases": 21,
+     "delay_change_per_s_interval_iqr": [
+      0.22,
+      0.66,
+      1.5
+     ]
+    }
+   },
+   "repeat_fraction_by_pred_change_q": {
+    "0": [
+     0.798,
+     28990
+    ],
+    "0.5": [
+     0.408,
+     6038
+    ],
+    "1": [
+     0.117,
+     2596
+    ],
+    "2": [
+     0.087,
+     986
+    ],
+    "4": [
+     0.166,
+     523
+    ]
+   },
+   "primus_drift_best_ppm": [
+    [
+     170.0,
+     8
+    ],
+    [
+     0.0,
+     7
+    ],
+    [
+     115.0,
+     5
+    ],
+    [
+     60.0,
+     3
+    ]
+   ],
+   "primus_drift_dll_115_minus_0_iqr": [
+    -1.32,
+    0.98,
+    3.06
+   ]
+  },
+  "PEEP": {
+   "n_cases": 23,
+   "records_median": 1495,
+   "gap_median_s": 7.01,
+   "q": [
+    [
+     1.0,
+     23
+    ]
+   ],
+   "best_family": [
+    [
+     "mean|n",
+     16
+    ],
+    [
+     "ewma|n",
+     3
+    ],
+    [
+     "mean|t",
+     2
+    ],
+    [
+     "median|t",
+     2
+    ]
+   ],
+   "window_by_family": {
+    "mean|n": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     2.0
+    ],
+    "ewma|n": [
+     2.0,
+     2.0,
+     12.0
+    ],
+    "mean|t": [
+     10.0,
+     30.0
+    ],
+    "median|t": [
+     10.0,
+     45.0
+    ]
+   },
+   "delay_min_s_iqr": [
+    -2.53,
+    -1.65,
+    0.0
+   ],
+   "delay_mid_s_iqr": [
+    0.97,
+    1.85,
+    3.5
+   ],
+   "bias_iqr": [
+    -0.07,
+    0.0,
+    0.1
+   ],
+   "sigma_iqr": [
+    0.25,
+    0.297,
+    0.315
+   ],
+   "dll_per_record_vs_other_window_type_iqr": [
+    0.0077,
+    0.0401,
+    0.0573
+   ],
+   "dll_per_record_vs_other_function_iqr": [
+    0.0077,
+    0.0258,
+    0.0529
+   ],
+   "delay_vs_interval": {
+    "n": {
+     "cases": 22,
+     "delay_change_per_s_interval_iqr": [
+      -1.56,
+      -0.14,
+      0.95
+     ]
+    },
+    "t": {
+     "cases": 22,
+     "delay_change_per_s_interval_iqr": [
+      -1.14,
+      0.32,
+      1.21
+     ]
+    }
+   },
+   "repeat_fraction_by_pred_change_q": {
+    "0": [
+     0.813,
+     35810
+    ],
+    "0.5": [
+     0.46,
+     1952
+    ],
+    "1": [
+     0.327,
+     626
+    ],
+    "2": [
+     0.333,
+     255
+    ],
+    "4": [
+     0.277,
+     94
+    ]
+   },
+   "primus_drift_best_ppm": [
+    [
+     170.0,
+     8
+    ],
+    [
+     115.0,
+     6
+    ],
+    [
+     0.0,
+     5
+    ],
+    [
+     60.0,
+     4
+    ]
+   ],
+   "primus_drift_dll_115_minus_0_iqr": [
+    -0.36,
+    0.29,
+    1.98
+   ]
+  }
+ }
+}

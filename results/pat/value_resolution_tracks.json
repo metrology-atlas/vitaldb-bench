@@ -1,0 +1,4375 @@
+{
+ "BIS/BIS": {
+  "cases": 203,
+  "type": {
+   "2": 203
+  },
+  "fmt": {
+   "1:float32": 203
+  },
+  "unit": {
+   "": 203
+  },
+  "gain": {
+   "1.0": 203
+  },
+  "offset": {
+   "0.0": 203
+  },
+  "min_step": {
+   "0.099998": 203
+  },
+  "decimal_grid": {
+   "0.1": 203
+  }
+ },
+ "BIS/EEG1_WAV": {
+  "cases": 203,
+  "type": {
+   "1": 203
+  },
+  "fmt": {
+   "1:float32": 203
+  },
+  "unit": {
+   "uV": 203
+  },
+  "gain": {
+   "1.0": 203
+  },
+  "offset": {
+   "0.0": 203
+  },
+  "min_step": {
+   "0.049927": 135,
+   "0.049988": 67,
+   "None": 1
+  },
+  "decimal_grid": {
+   "None": 203
+  }
+ },
+ "BIS/EEG2_WAV": {
+  "cases": 203,
+  "type": {
+   "1": 203
+  },
+  "fmt": {
+   "1:float32": 203
+  },
+  "unit": {
+   "uV": 203
+  },
+  "gain": {
+   "1.0": 203
+  },
+  "offset": {
+   "0.0": 203
+  },
+  "min_step": {
+   "0.049927": 117,
+   "0.049988": 79,
+   "0.049995": 5,
+   "0.049999": 1
+  },
+  "decimal_grid": {
+   "None": 202,
+   "0.01": 1
+  }
+ },
+ "BIS/EMG": {
+  "cases": 203,
+  "type": {
+   "2": 203
+  },
+  "fmt": {
+   "1:float32": 203
+  },
+  "unit": {
+   "dB": 203
+  },
+  "gain": {
+   "1.0": 203
+  },
+  "offset": {
+   "0.0": 203
+  },
+  "min_step": {
+   "0.009998": 144,
+   "0.009995": 59
+  },
+  "decimal_grid": {
+   "0.01": 203
+  }
+ },
+ "BIS/SEF": {
+  "cases": 203,
+  "type": {
+   "2": 203
+  },
+  "fmt": {
+   "1:float32": 203
+  },
+  "unit": {
+   "Hz": 203
+  },
+  "gain": {
+   "1.0": 203
+  },
+  "offset": {
+   "0.0": 203
+  },
+  "min_step": {
+   "0.009998": 202,
+   "0.009999": 1
+  },
+  "decimal_grid": {
+   "0.01": 203
+  }
+ },
+ "BIS/SQI": {
+  "cases": 203,
+  "type": {
+   "2": 203
+  },
+  "fmt": {
+   "1:float32": 203
+  },
+  "unit": {
+   "%": 203
+  },
+  "gain": {
+   "1.0": 203
+  },
+  "offset": {
+   "0.0": 203
+  },
+  "min_step": {
+   "0.599998": 203
+  },
+  "decimal_grid": {
+   "0.1": 203
+  }
+ },
+ "BIS/SR": {
+  "cases": 203,
+  "type": {
+   "2": 203
+  },
+  "fmt": {
+   "1:float32": 203
+  },
+  "unit": {
+   "%": 203
+  },
+  "gain": {
+   "1.0": 203
+  },
+  "offset": {
+   "0.0": 203
+  },
+  "min_step": {
+   "None": 77,
+   "0.1": 68,
+   "0.099998": 36,
+   "0.099999": 22
+  },
+  "decimal_grid": {
+   "0.1": 126,
+   "None": 77
+  }
+ },
+ "BIS/TOTPOW": {
+  "cases": 203,
+  "type": {
+   "2": 203
+  },
+  "fmt": {
+   "1:float32": 203
+  },
+  "unit": {
+   "dB": 203
+  },
+  "gain": {
+   "1.0": 203
+  },
+  "offset": {
+   "0.0": 203
+  },
+  "min_step": {
+   "0.009995": 187,
+   "0.009998": 16
+  },
+  "decimal_grid": {
+   "0.01": 202,
+   "None": 1
+  }
+ },
+ "EV1000/ART_MBP": {
+  "cases": 21,
+  "type": {
+   "2": 21
+  },
+  "fmt": {
+   "1:float32": 21
+  },
+  "unit": {
+   "mmHg": 21
+  },
+  "gain": {
+   "1.0": 21
+  },
+  "offset": {
+   "0.0": 21
+  },
+  "min_step": {
+   "1.0": 21
+  },
+  "decimal_grid": {
+   "1.0": 21
+  }
+ },
+ "EV1000/CI": {
+  "cases": 21,
+  "type": {
+   "2": 21
+  },
+  "fmt": {
+   "1:float32": 21
+  },
+  "unit": {
+   "L/min/m2": 21
+  },
+  "gain": {
+   "1.0": 21
+  },
+  "offset": {
+   "0.0": 21
+  },
+  "min_step": {
+   "0.1": 21
+  },
+  "decimal_grid": {
+   "0.1": 21
+  }
+ },
+ "EV1000/CO": {
+  "cases": 21,
+  "type": {
+   "2": 21
+  },
+  "fmt": {
+   "1:float32": 21
+  },
+  "unit": {
+   "L/min": 21
+  },
+  "gain": {
+   "1.0": 21
+  },
+  "offset": {
+   "0.0": 21
+  },
+  "min_step": {
+   "0.1": 17,
+   "0.099999": 4
+  },
+  "decimal_grid": {
+   "0.1": 21
+  }
+ },
+ "EV1000/CVP": {
+  "cases": 7,
+  "type": {
+   "2": 7
+  },
+  "fmt": {
+   "1:float32": 7
+  },
+  "unit": {
+   "mmHg": 7
+  },
+  "gain": {
+   "1.0": 7
+  },
+  "offset": {
+   "0.0": 7
+  },
+  "min_step": {
+   "1.0": 7
+  },
+  "decimal_grid": {
+   "1.0": 7
+  }
+ },
+ "EV1000/SV": {
+  "cases": 21,
+  "type": {
+   "2": 21
+  },
+  "fmt": {
+   "1:float32": 21
+  },
+  "unit": {
+   "ml/beat": 21
+  },
+  "gain": {
+   "1.0": 21
+  },
+  "offset": {
+   "0.0": 21
+  },
+  "min_step": {
+   "1.0": 21
+  },
+  "decimal_grid": {
+   "1.0": 21
+  }
+ },
+ "EV1000/SVI": {
+  "cases": 21,
+  "type": {
+   "2": 21
+  },
+  "fmt": {
+   "1:float32": 21
+  },
+  "unit": {
+   "ml/beat/m2": 21
+  },
+  "gain": {
+   "1.0": 21
+  },
+  "offset": {
+   "0.0": 21
+  },
+  "min_step": {
+   "1.0": 21
+  },
+  "decimal_grid": {
+   "1.0": 21
+  }
+ },
+ "EV1000/SVR": {
+  "cases": 7,
+  "type": {
+   "2": 7
+  },
+  "fmt": {
+   "1:float32": 7
+  },
+  "unit": {
+   "dn-s/cm5": 7
+  },
+  "gain": {
+   "1.0": 7
+  },
+  "offset": {
+   "0.0": 7
+  },
+  "min_step": {
+   "1.0": 7
+  },
+  "decimal_grid": {
+   "1.0": 7
+  }
+ },
+ "EV1000/SVRI": {
+  "cases": 7,
+  "type": {
+   "2": 7
+  },
+  "fmt": {
+   "1:float32": 7
+  },
+  "unit": {
+   "dn-s-m2/cm5": 7
+  },
+  "gain": {
+   "1.0": 7
+  },
+  "offset": {
+   "0.0": 7
+  },
+  "min_step": {
+   "1.0": 7
+  },
+  "decimal_grid": {
+   "1.0": 7
+  }
+ },
+ "EV1000/SVV": {
+  "cases": 21,
+  "type": {
+   "2": 21
+  },
+  "fmt": {
+   "1:float32": 21
+  },
+  "unit": {
+   "%": 21
+  },
+  "gain": {
+   "1.0": 21
+  },
+  "offset": {
+   "0.0": 21
+  },
+  "min_step": {
+   "0.099999": 12,
+   "0.099998": 5,
+   "0.1": 4
+  },
+  "decimal_grid": {
+   "0.1": 21
+  }
+ },
+ "FMS/FLOW_RATE": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "mL/min": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "2.5": 1
+  },
+  "decimal_grid": {
+   "0.1": 1
+  }
+ },
+ "FMS/INPUT_AMB_TEMP": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "C": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "0.099998": 1
+  },
+  "decimal_grid": {
+   "0.1": 1
+  }
+ },
+ "FMS/INPUT_TEMP": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "C": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "0.099998": 1
+  },
+  "decimal_grid": {
+   "0.1": 1
+  }
+ },
+ "FMS/OUTPUT_AMB_TEMP": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "C": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "0.099998": 1
+  },
+  "decimal_grid": {
+   "0.1": 1
+  }
+ },
+ "FMS/OUTPUT_TEMP": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "C": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "0.099998": 1
+  },
+  "decimal_grid": {
+   "0.1": 1
+  }
+ },
+ "FMS/PRESSURE": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "mmHg": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "1.0": 1
+  },
+  "decimal_grid": {
+   "1.0": 1
+  }
+ },
+ "FMS/TOTAL_VOL": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "mL": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "0.299999": 1
+  },
+  "decimal_grid": {
+   "0.1": 1
+  }
+ },
+ "Orchestra/DOPA_RATE": {
+  "cases": 3,
+  "type": {
+   "2": 3
+  },
+  "fmt": {
+   "1:float32": 3
+  },
+  "unit": {
+   "mL/h": 3
+  },
+  "gain": {
+   "1.0": 3
+  },
+  "offset": {
+   "0.0": 3
+  },
+  "min_step": {
+   "2.0": 1,
+   "0.099998": 1,
+   "0.1": 1
+  },
+  "decimal_grid": {
+   "0.1": 3
+  }
+ },
+ "Orchestra/DOPA_VOL": {
+  "cases": 3,
+  "type": {
+   "2": 3
+  },
+  "fmt": {
+   "1:float32": 3
+  },
+  "unit": {
+   "mL": 3
+  },
+  "gain": {
+   "1.0": 3
+  },
+  "offset": {
+   "0.0": 3
+  },
+  "min_step": {
+   "0.000999": 1,
+   "0.000992": 1,
+   "0.001": 1
+  },
+  "decimal_grid": {
+   "0.001": 2,
+   "None": 1
+  }
+ },
+ "Orchestra/DTZ_RATE": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "mL/h": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "0.1": 1
+  },
+  "decimal_grid": {
+   "0.1": 1
+  }
+ },
+ "Orchestra/DTZ_VOL": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "mL": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "0.000999": 1
+  },
+  "decimal_grid": {
+   "None": 1
+  }
+ },
+ "Orchestra/EPI_RATE": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "mL/h": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "0.1": 1
+  },
+  "decimal_grid": {
+   "0.1": 1
+  }
+ },
+ "Orchestra/EPI_VOL": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "mL": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "0.000999": 1
+  },
+  "decimal_grid": {
+   "0.001": 1
+  }
+ },
+ "Orchestra/FUT_RATE": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "mL/h": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "None": 1
+  },
+  "decimal_grid": {
+   "None": 1
+  }
+ },
+ "Orchestra/FUT_VOL": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "mL": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "0.000999": 1
+  },
+  "decimal_grid": {
+   "0.001": 1
+  }
+ },
+ "Orchestra/NEPI_RATE": {
+  "cases": 4,
+  "type": {
+   "2": 4
+  },
+  "fmt": {
+   "1:float32": 4
+  },
+  "unit": {
+   "mL/h": 4
+  },
+  "gain": {
+   "1.0": 4
+  },
+  "offset": {
+   "0.0": 4
+  },
+  "min_step": {
+   "0.1": 2,
+   "0.3": 1,
+   "1.0": 1
+  },
+  "decimal_grid": {
+   "0.1": 3,
+   "1.0": 1
+  }
+ },
+ "Orchestra/NEPI_VOL": {
+  "cases": 4,
+  "type": {
+   "2": 4
+  },
+  "fmt": {
+   "1:float32": 4
+  },
+  "unit": {
+   "mL": 4
+  },
+  "gain": {
+   "1.0": 4
+  },
+  "offset": {
+   "0.0": 4
+  },
+  "min_step": {
+   "0.001": 2,
+   "0.000999": 2
+  },
+  "decimal_grid": {
+   "0.001": 2,
+   "None": 2
+  }
+ },
+ "Orchestra/NTG_RATE": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "mL/h": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "0.1": 1
+  },
+  "decimal_grid": {
+   "0.1": 1
+  }
+ },
+ "Orchestra/NTG_VOL": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "mL": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "0.000999": 1
+  },
+  "decimal_grid": {
+   "0.001": 1
+  }
+ },
+ "Orchestra/PGE1_RATE": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "mL/h": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "None": 1
+  },
+  "decimal_grid": {
+   "None": 1
+  }
+ },
+ "Orchestra/PGE1_VOL": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "mL": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "0.000999": 1
+  },
+  "decimal_grid": {
+   "None": 1
+  }
+ },
+ "Orchestra/PHEN_RATE": {
+  "cases": 7,
+  "type": {
+   "2": 7
+  },
+  "fmt": {
+   "1:float32": 7
+  },
+  "unit": {
+   "mL/h": 7
+  },
+  "gain": {
+   "1.0": 7
+  },
+  "offset": {
+   "0.0": 7
+  },
+  "min_step": {
+   "0.1": 5,
+   "2.0": 1,
+   "1.0": 1
+  },
+  "decimal_grid": {
+   "0.1": 5,
+   "1.0": 2
+  }
+ },
+ "Orchestra/PHEN_VOL": {
+  "cases": 7,
+  "type": {
+   "2": 7
+  },
+  "fmt": {
+   "1:float32": 7
+  },
+  "unit": {
+   "mL": 7
+  },
+  "gain": {
+   "1.0": 7
+  },
+  "offset": {
+   "0.0": 7
+  },
+  "min_step": {
+   "0.000999": 6,
+   "0.001": 1
+  },
+  "decimal_grid": {
+   "0.001": 6,
+   "None": 1
+  }
+ },
+ "Orchestra/PPF20_CE": {
+  "cases": 123,
+  "type": {
+   "2": 123
+  },
+  "fmt": {
+   "1:float32": 123
+  },
+  "unit": {
+   "": 123
+  },
+  "gain": {
+   "1.0": 123
+  },
+  "offset": {
+   "0.0": 123
+  },
+  "min_step": {
+   "0.001": 122,
+   "0.000999": 1
+  },
+  "decimal_grid": {
+   "0.001": 123
+  }
+ },
+ "Orchestra/PPF20_CP": {
+  "cases": 123,
+  "type": {
+   "2": 123
+  },
+  "fmt": {
+   "1:float32": 123
+  },
+  "unit": {
+   "": 123
+  },
+  "gain": {
+   "1.0": 123
+  },
+  "offset": {
+   "0.0": 123
+  },
+  "min_step": {
+   "0.001": 118,
+   "0.000999": 5
+  },
+  "decimal_grid": {
+   "0.001": 123
+  }
+ },
+ "Orchestra/PPF20_CT": {
+  "cases": 123,
+  "type": {
+   "2": 123
+  },
+  "fmt": {
+   "1:float32": 123
+  },
+  "unit": {
+   "": 123
+  },
+  "gain": {
+   "1.0": 123
+  },
+  "offset": {
+   "0.0": 123
+  },
+  "min_step": {
+   "0.1": 69,
+   "0.2": 26,
+   "0.5": 20,
+   "0.3": 3
+  },
+  "decimal_grid": {
+   "0.1": 120,
+   "1.0": 2,
+   "None": 1
+  }
+ },
+ "Orchestra/PPF20_RATE": {
+  "cases": 123,
+  "type": {
+   "2": 123
+  },
+  "fmt": {
+   "1:float32": 123
+  },
+  "unit": {
+   "mL/h": 123
+  },
+  "gain": {
+   "1.0": 123
+  },
+  "offset": {
+   "0.0": 123
+  },
+  "min_step": {
+   "0.000999": 119,
+   "0.002003": 1,
+   "0.001": 1,
+   "0.001999": 1
+  },
+  "decimal_grid": {
+   "None": 122,
+   "0.001": 1
+  }
+ },
+ "Orchestra/PPF20_VOL": {
+  "cases": 123,
+  "type": {
+   "2": 123
+  },
+  "fmt": {
+   "1:float32": 123
+  },
+  "unit": {
+   "mL": 123
+  },
+  "gain": {
+   "1.0": 123
+  },
+  "offset": {
+   "0.0": 123
+  },
+  "min_step": {
+   "0.000999": 116,
+   "0.000992": 4,
+   "0.001": 3
+  },
+  "decimal_grid": {
+   "None": 95,
+   "0.001": 28
+  }
+ },
+ "Orchestra/RFTN20_CE": {
+  "cases": 177,
+  "type": {
+   "2": 177
+  },
+  "fmt": {
+   "1:float32": 177
+  },
+  "unit": {
+   "": 177
+  },
+  "gain": {
+   "1.0": 177
+  },
+  "offset": {
+   "0.0": 177
+  },
+  "min_step": {
+   "0.001": 172,
+   "0.000999": 5
+  },
+  "decimal_grid": {
+   "0.001": 177
+  }
+ },
+ "Orchestra/RFTN20_CP": {
+  "cases": 177,
+  "type": {
+   "2": 177
+  },
+  "fmt": {
+   "1:float32": 177
+  },
+  "unit": {
+   "": 177
+  },
+  "gain": {
+   "1.0": 177
+  },
+  "offset": {
+   "0.0": 177
+  },
+  "min_step": {
+   "0.001": 124,
+   "0.000999": 53
+  },
+  "decimal_grid": {
+   "0.001": 177
+  }
+ },
+ "Orchestra/RFTN20_CT": {
+  "cases": 177,
+  "type": {
+   "2": 177
+  },
+  "fmt": {
+   "1:float32": 177
+  },
+  "unit": {
+   "": 177
+  },
+  "gain": {
+   "1.0": 177
+  },
+  "offset": {
+   "0.0": 177
+  },
+  "min_step": {
+   "0.1": 102,
+   "0.5": 37,
+   "0.2": 25,
+   "0.3": 5
+  },
+  "decimal_grid": {
+   "0.1": 174,
+   "1.0": 2,
+   "0.01": 1
+  }
+ },
+ "Orchestra/RFTN20_RATE": {
+  "cases": 177,
+  "type": {
+   "2": 177
+  },
+  "fmt": {
+   "1:float32": 177
+  },
+  "unit": {
+   "mL/h": 177
+  },
+  "gain": {
+   "1.0": 177
+  },
+  "offset": {
+   "0.0": 177
+  },
+  "min_step": {
+   "0.000999": 171,
+   "0.001": 6
+  },
+  "decimal_grid": {
+   "None": 177
+  }
+ },
+ "Orchestra/RFTN20_VOL": {
+  "cases": 177,
+  "type": {
+   "2": 177
+  },
+  "fmt": {
+   "1:float32": 177
+  },
+  "unit": {
+   "mL": 177
+  },
+  "gain": {
+   "1.0": 177
+  },
+  "offset": {
+   "0.0": 177
+  },
+  "min_step": {
+   "0.000999": 165,
+   "0.000992": 8,
+   "0.001": 3,
+   "0.000977": 1
+  },
+  "decimal_grid": {
+   "None": 123,
+   "0.001": 54
+  }
+ },
+ "Orchestra/RFTN50_CE": {
+  "cases": 4,
+  "type": {
+   "2": 4
+  },
+  "fmt": {
+   "1:float32": 4
+  },
+  "unit": {
+   "": 4
+  },
+  "gain": {
+   "1.0": 4
+  },
+  "offset": {
+   "0.0": 4
+  },
+  "min_step": {
+   "0.001": 2,
+   "0.000999": 2
+  },
+  "decimal_grid": {
+   "0.001": 4
+  }
+ },
+ "Orchestra/RFTN50_CE#2": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "0.001": 1
+  },
+  "decimal_grid": {
+   "0.001": 1
+  }
+ },
+ "Orchestra/RFTN50_CP": {
+  "cases": 4,
+  "type": {
+   "2": 4
+  },
+  "fmt": {
+   "1:float32": 4
+  },
+  "unit": {
+   "": 4
+  },
+  "gain": {
+   "1.0": 4
+  },
+  "offset": {
+   "0.0": 4
+  },
+  "min_step": {
+   "0.001": 2,
+   "0.000999": 2
+  },
+  "decimal_grid": {
+   "0.001": 4
+  }
+ },
+ "Orchestra/RFTN50_CP#2": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "0.001": 1
+  },
+  "decimal_grid": {
+   "0.001": 1
+  }
+ },
+ "Orchestra/RFTN50_CT": {
+  "cases": 4,
+  "type": {
+   "2": 4
+  },
+  "fmt": {
+   "1:float32": 4
+  },
+  "unit": {
+   "": 4
+  },
+  "gain": {
+   "1.0": 4
+  },
+  "offset": {
+   "0.0": 4
+  },
+  "min_step": {
+   "0.1": 2,
+   "0.3": 1,
+   "0.2": 1
+  },
+  "decimal_grid": {
+   "0.1": 4
+  }
+ },
+ "Orchestra/RFTN50_CT#2": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "None": 1
+  },
+  "decimal_grid": {
+   "None": 1
+  }
+ },
+ "Orchestra/RFTN50_RATE": {
+  "cases": 4,
+  "type": {
+   "2": 4
+  },
+  "fmt": {
+   "1:float32": 4
+  },
+  "unit": {
+   "mL/h": 4
+  },
+  "gain": {
+   "1.0": 4
+  },
+  "offset": {
+   "0.0": 4
+  },
+  "min_step": {
+   "0.000999": 4
+  },
+  "decimal_grid": {
+   "None": 4
+  }
+ },
+ "Orchestra/RFTN50_RATE#2": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "mL/h": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "0.000999": 1
+  },
+  "decimal_grid": {
+   "None": 1
+  }
+ },
+ "Orchestra/RFTN50_VOL": {
+  "cases": 4,
+  "type": {
+   "2": 4
+  },
+  "fmt": {
+   "1:float32": 4
+  },
+  "unit": {
+   "mL": 4
+  },
+  "gain": {
+   "1.0": 4
+  },
+  "offset": {
+   "0.0": 4
+  },
+  "min_step": {
+   "0.000999": 3,
+   "0.000992": 1
+  },
+  "decimal_grid": {
+   "None": 3,
+   "0.001": 1
+  }
+ },
+ "Orchestra/RFTN50_VOL#2": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "mL": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "0.001": 1
+  },
+  "decimal_grid": {
+   "0.001": 1
+  }
+ },
+ "Orchestra/ROC_RATE": {
+  "cases": 6,
+  "type": {
+   "2": 6
+  },
+  "fmt": {
+   "1:float32": 6
+  },
+  "unit": {
+   "mL/h": 6
+  },
+  "gain": {
+   "1.0": 6
+  },
+  "offset": {
+   "0.0": 6
+  },
+  "min_step": {
+   "None": 3,
+   "1.0": 1,
+   "5.0": 1,
+   "0.1": 1
+  },
+  "decimal_grid": {
+   "None": 3,
+   "1.0": 2,
+   "0.1": 1
+  }
+ },
+ "Orchestra/ROC_VOL": {
+  "cases": 6,
+  "type": {
+   "2": 6
+  },
+  "fmt": {
+   "1:float32": 6
+  },
+  "unit": {
+   "mL": 6
+  },
+  "gain": {
+   "1.0": 6
+  },
+  "offset": {
+   "0.0": 6
+  },
+  "min_step": {
+   "0.000999": 5,
+   "0.001": 1
+  },
+  "decimal_grid": {
+   "None": 5,
+   "0.001": 1
+  }
+ },
+ "Primus/AWP": {
+  "cases": 237,
+  "type": {
+   "1": 237
+  },
+  "fmt": {
+   "6:uint16": 237
+  },
+  "unit": {
+   "hPa": 237
+  },
+  "gain": {
+   "0.1": 191,
+   "0.1064": 44,
+   "0.01": 2
+  },
+  "offset": {
+   "-20.0": 191,
+   "-22.0": 44,
+   "0.0": 2
+  },
+  "bits": 16,
+  "count_step": {
+   "1": 237
+  },
+  "physical_resolution": 0.1,
+  "full_scale": 6553.6,
+  "effective_bits_p10_50_90": [
+   7.5,
+   8.3,
+   8.5
+  ],
+  "count_range_used_p50": [
+   194.0,
+   498.0
+  ]
+ },
+ "Primus/CO2": {
+  "cases": 237,
+  "type": {
+   "1": 237
+  },
+  "fmt": {
+   "6:uint16": 237
+  },
+  "unit": {
+   "mmHg": 237
+  },
+  "gain": {
+   "0.1": 193,
+   "0.075": 44
+  },
+  "offset": {
+   "0.0": 237
+  },
+  "bits": 16,
+  "count_step": {
+   "1": 237
+  },
+  "physical_resolution": 0.1,
+  "full_scale": 6553.6,
+  "effective_bits_p10_50_90": [
+   8.9,
+   9.1,
+   9.3
+  ],
+  "count_range_used_p50": [
+   0.0,
+   552.0
+  ]
+ },
+ "Primus/COMPLIANCE": {
+  "cases": 228,
+  "type": {
+   "2": 228
+  },
+  "fmt": {
+   "1:float32": 228
+  },
+  "unit": {
+   "mL / mbar": 228
+  },
+  "gain": {
+   "1.0": 228
+  },
+  "offset": {
+   "0.0": 228
+  },
+  "min_step": {
+   "0.099998": 228
+  },
+  "decimal_grid": {
+   "0.1": 228
+  }
+ },
+ "Primus/ETCO2": {
+  "cases": 236,
+  "type": {
+   "2": 236
+  },
+  "fmt": {
+   "1:float32": 236
+  },
+  "unit": {
+   "mmHg": 236
+  },
+  "gain": {
+   "1.0": 236
+  },
+  "offset": {
+   "0.0": 236
+  },
+  "min_step": {
+   "1.0": 236
+  },
+  "decimal_grid": {
+   "1.0": 236
+  }
+ },
+ "Primus/EXP_DES": {
+  "cases": 72,
+  "type": {
+   "2": 72
+  },
+  "fmt": {
+   "1:float32": 72
+  },
+  "unit": {
+   "kPa": 72
+  },
+  "gain": {
+   "1.0": 72
+  },
+  "offset": {
+   "0.0": 72
+  },
+  "min_step": {
+   "0.1": 43,
+   "None": 25,
+   "0.099999": 4
+  },
+  "decimal_grid": {
+   "0.1": 47,
+   "None": 25
+  }
+ },
+ "Primus/EXP_SEVO": {
+  "cases": 157,
+  "type": {
+   "2": 157
+  },
+  "fmt": {
+   "1:float32": 157
+  },
+  "unit": {
+   "kPa": 157
+  },
+  "gain": {
+   "1.0": 157
+  },
+  "offset": {
+   "0.0": 157
+  },
+  "min_step": {
+   "0.1": 104,
+   "None": 53
+  },
+  "decimal_grid": {
+   "0.1": 104,
+   "None": 53
+  }
+ },
+ "Primus/FEN2O": {
+  "cases": 236,
+  "type": {
+   "2": 236
+  },
+  "fmt": {
+   "1:float32": 236
+  },
+  "unit": {
+   "%": 236
+  },
+  "gain": {
+   "1.0": 236
+  },
+  "offset": {
+   "0.0": 236
+  },
+  "min_step": {
+   "None": 235,
+   "1.0": 1
+  },
+  "decimal_grid": {
+   "None": 235,
+   "1.0": 1
+  }
+ },
+ "Primus/FEO2": {
+  "cases": 236,
+  "type": {
+   "2": 236
+  },
+  "fmt": {
+   "1:float32": 236
+  },
+  "unit": {
+   "%": 236
+  },
+  "gain": {
+   "1.0": 236
+  },
+  "offset": {
+   "0.0": 236
+  },
+  "min_step": {
+   "1.0": 236
+  },
+  "decimal_grid": {
+   "1.0": 236
+  }
+ },
+ "Primus/FIN2O": {
+  "cases": 236,
+  "type": {
+   "2": 236
+  },
+  "fmt": {
+   "1:float32": 236
+  },
+  "unit": {
+   "%": 236
+  },
+  "gain": {
+   "1.0": 236
+  },
+  "offset": {
+   "0.0": 236
+  },
+  "min_step": {
+   "None": 235,
+   "1.0": 1
+  },
+  "decimal_grid": {
+   "None": 235,
+   "1.0": 1
+  }
+ },
+ "Primus/FIO2": {
+  "cases": 236,
+  "type": {
+   "2": 236
+  },
+  "fmt": {
+   "1:float32": 236
+  },
+  "unit": {
+   "%": 236
+  },
+  "gain": {
+   "1.0": 236
+  },
+  "offset": {
+   "0.0": 236
+  },
+  "min_step": {
+   "1.0": 236
+  },
+  "decimal_grid": {
+   "1.0": 236
+  }
+ },
+ "Primus/FLOW_AIR": {
+  "cases": 220,
+  "type": {
+   "2": 220
+  },
+  "fmt": {
+   "1:float32": 220
+  },
+  "unit": {
+   "mL / min": 220
+  },
+  "gain": {
+   "1.0": 220
+  },
+  "offset": {
+   "0.0": 220
+  },
+  "min_step": {
+   "1.0": 67,
+   "None": 47,
+   "253.0": 16,
+   "254.0": 12
+  },
+  "decimal_grid": {
+   "1.0": 173,
+   "None": 47
+  }
+ },
+ "Primus/FLOW_N2O": {
+  "cases": 220,
+  "type": {
+   "2": 220
+  },
+  "fmt": {
+   "1:float32": 220
+  },
+  "unit": {
+   "mL/min": 220
+  },
+  "gain": {
+   "1.0": 220
+  },
+  "offset": {
+   "0.0": 220
+  },
+  "min_step": {
+   "None": 220
+  },
+  "decimal_grid": {
+   "None": 220
+  }
+ },
+ "Primus/FLOW_O2": {
+  "cases": 220,
+  "type": {
+   "2": 220
+  },
+  "fmt": {
+   "1:float32": 220
+  },
+  "unit": {
+   "mL / min": 220
+  },
+  "gain": {
+   "1.0": 220
+  },
+  "offset": {
+   "0.0": 220
+  },
+  "min_step": {
+   "1.0": 56,
+   "481.0": 42,
+   "253.0": 14,
+   "480.0": 8
+  },
+  "decimal_grid": {
+   "1.0": 208,
+   "None": 8,
+   "10.0": 4
+  }
+ },
+ "Primus/INCO2": {
+  "cases": 236,
+  "type": {
+   "2": 236
+  },
+  "fmt": {
+   "1:float32": 236
+  },
+  "unit": {
+   "mmHg": 236
+  },
+  "gain": {
+   "1.0": 236
+  },
+  "offset": {
+   "0.0": 236
+  },
+  "min_step": {
+   "1.0": 233,
+   "None": 3
+  },
+  "decimal_grid": {
+   "1.0": 233,
+   "None": 3
+  }
+ },
+ "Primus/INSP_DES": {
+  "cases": 72,
+  "type": {
+   "2": 72
+  },
+  "fmt": {
+   "1:float32": 72
+  },
+  "unit": {
+   "kPa": 72
+  },
+  "gain": {
+   "1.0": 72
+  },
+  "offset": {
+   "0.0": 72
+  },
+  "min_step": {
+   "0.1": 36,
+   "None": 25,
+   "0.099999": 11
+  },
+  "decimal_grid": {
+   "0.1": 47,
+   "None": 25
+  }
+ },
+ "Primus/INSP_SEVO": {
+  "cases": 157,
+  "type": {
+   "2": 157
+  },
+  "fmt": {
+   "1:float32": 157
+  },
+  "unit": {
+   "kPa": 157
+  },
+  "gain": {
+   "1.0": 157
+  },
+  "offset": {
+   "0.0": 157
+  },
+  "min_step": {
+   "0.1": 104,
+   "None": 53
+  },
+  "decimal_grid": {
+   "0.1": 104,
+   "None": 53
+  }
+ },
+ "Primus/MAC": {
+  "cases": 236,
+  "type": {
+   "2": 236
+  },
+  "fmt": {
+   "1:float32": 236
+  },
+  "unit": {
+   "": 236
+  },
+  "gain": {
+   "1.0": 236
+  },
+  "offset": {
+   "0.0": 236
+  },
+  "min_step": {
+   "0.1": 128,
+   "None": 108
+  },
+  "decimal_grid": {
+   "0.1": 128,
+   "None": 108
+  }
+ },
+ "Primus/MAWP_MBAR": {
+  "cases": 236,
+  "type": {
+   "2": 236
+  },
+  "fmt": {
+   "1:float32": 236
+  },
+  "unit": {
+   "mbar": 236
+  },
+  "gain": {
+   "1.0": 236
+  },
+  "offset": {
+   "0.0": 236
+  },
+  "min_step": {
+   "1.0": 230,
+   "None": 6
+  },
+  "decimal_grid": {
+   "1.0": 230,
+   "None": 6
+  }
+ },
+ "Primus/MV": {
+  "cases": 232,
+  "type": {
+   "2": 232
+  },
+  "fmt": {
+   "1:float32": 232
+  },
+  "unit": {
+   "L": 232
+  },
+  "gain": {
+   "1.0": 232
+  },
+  "offset": {
+   "0.0": 232
+  },
+  "min_step": {
+   "0.1": 117,
+   "0.099999": 113,
+   "None": 2
+  },
+  "decimal_grid": {
+   "0.1": 230,
+   "None": 2
+  }
+ },
+ "Primus/PAMB_MBAR": {
+  "cases": 237,
+  "type": {
+   "2": 237
+  },
+  "fmt": {
+   "1:float32": 237
+  },
+  "unit": {
+   "mbar": 237
+  },
+  "gain": {
+   "1.0": 237
+  },
+  "offset": {
+   "0.0": 237
+  },
+  "min_step": {
+   "None": 186,
+   "1.0": 47,
+   "2.0": 4
+  },
+  "decimal_grid": {
+   "None": 186,
+   "1.0": 51
+  }
+ },
+ "Primus/PEEP_MBAR": {
+  "cases": 228,
+  "type": {
+   "2": 228
+  },
+  "fmt": {
+   "1:float32": 228
+  },
+  "unit": {
+   "mbar": 228
+  },
+  "gain": {
+   "1.0": 228
+  },
+  "offset": {
+   "0.0": 228
+  },
+  "min_step": {
+   "1.0": 224,
+   "None": 3,
+   "2.0": 1
+  },
+  "decimal_grid": {
+   "1.0": 225,
+   "None": 3
+  }
+ },
+ "Primus/PIP_MBAR": {
+  "cases": 230,
+  "type": {
+   "2": 230
+  },
+  "fmt": {
+   "1:float32": 230
+  },
+  "unit": {
+   "mbar": 230
+  },
+  "gain": {
+   "1.0": 230
+  },
+  "offset": {
+   "0.0": 230
+  },
+  "min_step": {
+   "1.0": 228,
+   "2.0": 1,
+   "None": 1
+  },
+  "decimal_grid": {
+   "1.0": 229,
+   "None": 1
+  }
+ },
+ "Primus/PPLAT_MBAR": {
+  "cases": 228,
+  "type": {
+   "2": 228
+  },
+  "fmt": {
+   "1:float32": 228
+  },
+  "unit": {
+   "mbar": 228
+  },
+  "gain": {
+   "1.0": 228
+  },
+  "offset": {
+   "0.0": 228
+  },
+  "min_step": {
+   "1.0": 228
+  },
+  "decimal_grid": {
+   "1.0": 228
+  }
+ },
+ "Primus/RR_CO2": {
+  "cases": 236,
+  "type": {
+   "2": 236
+  },
+  "fmt": {
+   "1:float32": 236
+  },
+  "unit": {
+   "/min": 236
+  },
+  "gain": {
+   "1.0": 236
+  },
+  "offset": {
+   "0.0": 236
+  },
+  "min_step": {
+   "1.0": 236
+  },
+  "decimal_grid": {
+   "1.0": 236
+  }
+ },
+ "Primus/SET_AGE": {
+  "cases": 237,
+  "type": {
+   "2": 237
+  },
+  "fmt": {
+   "1:float32": 237
+  },
+  "unit": {
+   "": 237
+  },
+  "gain": {
+   "1.0": 237
+  },
+  "offset": {
+   "0.0": 237
+  },
+  "min_step": {
+   "None": 230,
+   "1.0": 2,
+   "11.0": 1,
+   "2.0": 1
+  },
+  "decimal_grid": {
+   "None": 230,
+   "1.0": 7
+  }
+ },
+ "Primus/SET_FIO2": {
+  "cases": 228,
+  "type": {
+   "2": 228
+  },
+  "fmt": {
+   "1:float32": 228
+  },
+  "unit": {
+   "%": 228
+  },
+  "gain": {
+   "1.0": 228
+  },
+  "offset": {
+   "0.0": 228
+  },
+  "min_step": {
+   "None": 130,
+   "10.0": 64,
+   "1.0": 14,
+   "20.0": 13
+  },
+  "decimal_grid": {
+   "None": 130,
+   "10.0": 76,
+   "1.0": 22
+  }
+ },
+ "Primus/SET_FLOW_TRIG": {
+  "cases": 9,
+  "type": {
+   "2": 9
+  },
+  "fmt": {
+   "1:float32": 9
+  },
+  "unit": {
+   "L/min": 9
+  },
+  "gain": {
+   "1.0": 9
+  },
+  "offset": {
+   "0.0": 9
+  },
+  "min_step": {
+   "None": 9
+  },
+  "decimal_grid": {
+   "None": 9
+  }
+ },
+ "Primus/SET_FRESH_FLOW": {
+  "cases": 228,
+  "type": {
+   "2": 228
+  },
+  "fmt": {
+   "1:float32": 228
+  },
+  "unit": {
+   "mL/min": 228
+  },
+  "gain": {
+   "1.0": 228
+  },
+  "offset": {
+   "0.0": 228
+  },
+  "min_step": {
+   "None": 51,
+   "1000.0": 44,
+   "500.0": 35,
+   "2000.0": 28
+  },
+  "decimal_grid": {
+   "10.0": 177,
+   "None": 51
+  }
+ },
+ "Primus/SET_INSP_PAUSE": {
+  "cases": 227,
+  "type": {
+   "2": 227
+  },
+  "fmt": {
+   "1:float32": 227
+  },
+  "unit": {
+   "%": 227
+  },
+  "gain": {
+   "1.0": 227
+  },
+  "offset": {
+   "0.0": 227
+  },
+  "min_step": {
+   "None": 227
+  },
+  "decimal_grid": {
+   "None": 227
+  }
+ },
+ "Primus/SET_INSP_PRES": {
+  "cases": 17,
+  "type": {
+   "2": 17
+  },
+  "fmt": {
+   "1:float32": 17
+  },
+  "unit": {
+   "mbar": 17
+  },
+  "gain": {
+   "1.0": 17
+  },
+  "offset": {
+   "0.0": 17
+  },
+  "min_step": {
+   "1.0": 13,
+   "None": 2,
+   "2.0": 2
+  },
+  "decimal_grid": {
+   "1.0": 15,
+   "None": 2
+  }
+ },
+ "Primus/SET_INSP_TM": {
+  "cases": 228,
+  "type": {
+   "2": 228
+  },
+  "fmt": {
+   "1:float32": 228
+  },
+  "unit": {
+   "sec": 228
+  },
+  "gain": {
+   "1.0": 228
+  },
+  "offset": {
+   "0.0": 228
+  },
+  "min_step": {
+   "0.1": 169,
+   "None": 38,
+   "0.2": 16,
+   "0.3": 4
+  },
+  "decimal_grid": {
+   "0.1": 190,
+   "None": 38
+  }
+ },
+ "Primus/SET_INTER_PEEP": {
+  "cases": 228,
+  "type": {
+   "2": 228
+  },
+  "fmt": {
+   "1:float32": 228
+  },
+  "unit": {
+   "mbar": 228
+  },
+  "gain": {
+   "1.0": 228
+  },
+  "offset": {
+   "0.0": 228
+  },
+  "min_step": {
+   "None": 218,
+   "1.0": 7,
+   "2.0": 3
+  },
+  "decimal_grid": {
+   "None": 218,
+   "1.0": 10
+  }
+ },
+ "Primus/SET_PIP": {
+  "cases": 227,
+  "type": {
+   "2": 227
+  },
+  "fmt": {
+   "1:float32": 227
+  },
+  "unit": {
+   "mbar": 227
+  },
+  "gain": {
+   "1.0": 227
+  },
+  "offset": {
+   "0.0": 227
+  },
+  "min_step": {
+   "None": 215,
+   "2.0": 4,
+   "1.0": 3,
+   "3.0": 2
+  },
+  "decimal_grid": {
+   "None": 215,
+   "1.0": 12
+  }
+ },
+ "Primus/SET_RR_IPPV": {
+  "cases": 228,
+  "type": {
+   "2": 228
+  },
+  "fmt": {
+   "1:float32": 228
+  },
+  "unit": {
+   "/min": 228
+  },
+  "gain": {
+   "1.0": 228
+  },
+  "offset": {
+   "0.0": 228
+  },
+  "min_step": {
+   "1.0": 170,
+   "None": 36,
+   "2.0": 22
+  },
+  "decimal_grid": {
+   "1.0": 192,
+   "None": 36
+  }
+ },
+ "Primus/SET_TV_L": {
+  "cases": 227,
+  "type": {
+   "2": 227
+  },
+  "fmt": {
+   "1:float32": 227
+  },
+  "unit": {
+   "L": 227
+  },
+  "gain": {
+   "1.0": 227
+  },
+  "offset": {
+   "0.0": 227
+  },
+  "min_step": {
+   "None": 110,
+   "0.01": 65,
+   "0.02": 35,
+   "0.04": 8
+  },
+  "decimal_grid": {
+   "0.01": 117,
+   "None": 110
+  }
+ },
+ "Primus/TV": {
+  "cases": 228,
+  "type": {
+   "2": 228
+  },
+  "fmt": {
+   "1:float32": 228
+  },
+  "unit": {
+   "mL": 228
+  },
+  "gain": {
+   "1.0": 228
+  },
+  "offset": {
+   "0.0": 228
+  },
+  "min_step": {
+   "1.0": 228
+  },
+  "decimal_grid": {
+   "1.0": 228
+  }
+ },
+ "Primus/VENT_LEAK": {
+  "cases": 237,
+  "type": {
+   "2": 237
+  },
+  "fmt": {
+   "1:float32": 237
+  },
+  "unit": {
+   "mL/min": 237
+  },
+  "gain": {
+   "1.0": 237
+  },
+  "offset": {
+   "0.0": 237
+  },
+  "min_step": {
+   "None": 232,
+   "1.0": 2,
+   "58.0": 1,
+   "8.0": 1
+  },
+  "decimal_grid": {
+   "None": 232,
+   "1.0": 5
+  }
+ },
+ "SNUADC/ART": {
+  "cases": 137,
+  "type": {
+   "1": 137
+  },
+  "fmt": {
+   "6:uint16": 137
+  },
+  "unit": {
+   "mmHg": 137
+  },
+  "gain": {
+   "0.9874570312500001": 136,
+   "0.987457": 1
+  },
+  "offset": {
+   "-495.62600000000003": 136,
+   "-495.626": 1
+  },
+  "bits": 16,
+  "count_step": {
+   "1": 137
+  },
+  "physical_resolution": 0.9874570312500001,
+  "full_scale": 64713.984000000004,
+  "effective_bits_p10_50_90": [
+   7.7,
+   8.1,
+   8.4
+  ],
+  "count_range_used_p50": [
+   484.0,
+   768.0
+  ]
+ },
+ "SNUADC/CVP": {
+  "cases": 49,
+  "type": {
+   "1": 49
+  },
+  "fmt": {
+   "6:uint16": 49
+  },
+  "unit": {
+   "cmH2O": 49
+  },
+  "gain": {
+   "0.9874570312500001": 49
+  },
+  "offset": {
+   "-495.62600000000003": 49
+  },
+  "bits": 16,
+  "count_step": {
+   "1": 49
+  },
+  "physical_resolution": 0.9874570312500001,
+  "full_scale": 64713.984000000004,
+  "effective_bits_p10_50_90": [
+   7.6,
+   8.1,
+   8.3
+  ],
+  "count_range_used_p50": [
+   483.0,
+   758.0
+  ]
+ },
+ "SNUADC/ECG_II": {
+  "cases": 234,
+  "type": {
+   "1": 234
+  },
+  "fmt": {
+   "6:uint16": 234
+  },
+  "unit": {
+   "mV": 234
+  },
+  "gain": {
+   "0.0098745703125": 234
+  },
+  "offset": {
+   "-4.95626": 234
+  },
+  "bits": 16,
+  "count_step": {
+   "1": 234
+  },
+  "physical_resolution": 0.0098745703125,
+  "full_scale": 647.13984,
+  "effective_bits_p10_50_90": [
+   7.7,
+   8.9,
+   10.0
+  ],
+  "count_range_used_p50": [
+   285.5,
+   784.5
+  ]
+ },
+ "SNUADC/ECG_V5": {
+  "cases": 119,
+  "type": {
+   "1": 119
+  },
+  "fmt": {
+   "6:uint16": 119
+  },
+  "unit": {
+   "mV": 119
+  },
+  "gain": {
+   "0.0098745703125": 119
+  },
+  "offset": {
+   "-4.95626": 119
+  },
+  "bits": 16,
+  "count_step": {
+   "1": 119
+  },
+  "physical_resolution": 0.0098745703125,
+  "full_scale": 647.13984,
+  "effective_bits_p10_50_90": [
+   7.8,
+   9.0,
+   10.0
+  ],
+  "count_range_used_p50": [
+   297.0,
+   790.0
+  ]
+ },
+ "SNUADC/FEM": {
+  "cases": 1,
+  "type": {
+   "1": 1
+  },
+  "fmt": {
+   "6:uint16": 1
+  },
+  "unit": {
+   "mmHg": 1
+  },
+  "gain": {
+   "0.987457": 1
+  },
+  "offset": {
+   "-495.626": 1
+  },
+  "bits": 16,
+  "count_step": {
+   "1": 1
+  },
+  "physical_resolution": 0.987457,
+  "full_scale": 64713.981952,
+  "effective_bits_p10_50_90": [
+   6.6,
+   6.6,
+   6.6
+  ],
+  "count_range_used_p50": [
+   533.0,
+   630.0
+  ]
+ },
+ "SNUADC/PLETH": {
+  "cases": 229,
+  "type": {
+   "1": 229
+  },
+  "fmt": {
+   "6:uint16": 229
+  },
+  "unit": {
+   "": 229
+  },
+  "gain": {
+   "0.3949828125": 229
+  },
+  "offset": {
+   "-198.2504": 229
+  },
+  "bits": 16,
+  "count_step": {
+   "1": 229
+  },
+  "physical_resolution": 0.3949828125,
+  "full_scale": 25885.5936,
+  "effective_bits_p10_50_90": [
+   7.1,
+   7.8,
+   8.0
+  ],
+  "count_range_used_p50": [
+   501.0,
+   717.0
+  ]
+ },
+ "Solar8000/ART_DBP": {
+  "cases": 140,
+  "type": {
+   "2": 140
+  },
+  "fmt": {
+   "1:float32": 140
+  },
+  "unit": {
+   "mmHg": 140
+  },
+  "gain": {
+   "1.0": 140
+  },
+  "offset": {
+   "0.0": 140
+  },
+  "min_step": {
+   "1.0": 140
+  },
+  "decimal_grid": {
+   "1.0": 140
+  }
+ },
+ "Solar8000/ART_DBP#2": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "mmHg": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "1.0": 1
+  },
+  "decimal_grid": {
+   "1.0": 1
+  }
+ },
+ "Solar8000/ART_MBP": {
+  "cases": 140,
+  "type": {
+   "2": 140
+  },
+  "fmt": {
+   "1:float32": 140
+  },
+  "unit": {
+   "mmHg": 140
+  },
+  "gain": {
+   "1.0": 140
+  },
+  "offset": {
+   "0.0": 140
+  },
+  "min_step": {
+   "1.0": 140
+  },
+  "decimal_grid": {
+   "1.0": 140
+  }
+ },
+ "Solar8000/ART_MBP#2": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "mmHg": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "1.0": 1
+  },
+  "decimal_grid": {
+   "1.0": 1
+  }
+ },
+ "Solar8000/ART_SBP": {
+  "cases": 140,
+  "type": {
+   "2": 140
+  },
+  "fmt": {
+   "1:float32": 140
+  },
+  "unit": {
+   "mmHg": 140
+  },
+  "gain": {
+   "1.0": 140
+  },
+  "offset": {
+   "0.0": 140
+  },
+  "min_step": {
+   "1.0": 140
+  },
+  "decimal_grid": {
+   "1.0": 140
+  }
+ },
+ "Solar8000/ART_SBP#2": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "mmHg": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "1.0": 1
+  },
+  "decimal_grid": {
+   "1.0": 1
+  }
+ },
+ "Solar8000/BT": {
+  "cases": 222,
+  "type": {
+   "2": 222
+  },
+  "fmt": {
+   "1:float32": 222
+  },
+  "unit": {
+   "C": 222
+  },
+  "gain": {
+   "1.0": 222
+  },
+  "offset": {
+   "0.0": 222
+  },
+  "min_step": {
+   "0.099998": 222
+  },
+  "decimal_grid": {
+   "0.1": 222
+  }
+ },
+ "Solar8000/CVP": {
+  "cases": 54,
+  "type": {
+   "2": 54
+  },
+  "fmt": {
+   "1:float32": 54
+  },
+  "unit": {
+   "mmHg": 54
+  },
+  "gain": {
+   "1.0": 54
+  },
+  "offset": {
+   "0.0": 54
+  },
+  "min_step": {
+   "1.0": 54
+  },
+  "decimal_grid": {
+   "1.0": 54
+  }
+ },
+ "Solar8000/ETCO2": {
+  "cases": 235,
+  "type": {
+   "2": 235
+  },
+  "fmt": {
+   "1:float32": 235
+  },
+  "unit": {
+   "mmHg": 235
+  },
+  "gain": {
+   "1.0": 235
+  },
+  "offset": {
+   "0.0": 235
+  },
+  "min_step": {
+   "1.0": 235
+  },
+  "decimal_grid": {
+   "1.0": 235
+  }
+ },
+ "Solar8000/FEM_DBP": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "mmHg": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "1.0": 1
+  },
+  "decimal_grid": {
+   "1.0": 1
+  }
+ },
+ "Solar8000/FEM_MBP": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "mmHg": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "1.0": 1
+  },
+  "decimal_grid": {
+   "1.0": 1
+  }
+ },
+ "Solar8000/FEM_SBP": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "mmHg": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "1.0": 1
+  },
+  "decimal_grid": {
+   "1.0": 1
+  }
+ },
+ "Solar8000/FEO2": {
+  "cases": 235,
+  "type": {
+   "2": 235
+  },
+  "fmt": {
+   "1:float32": 235
+  },
+  "unit": {
+   "%": 235
+  },
+  "gain": {
+   "1.0": 235
+  },
+  "offset": {
+   "0.0": 235
+  },
+  "min_step": {
+   "1.0": 235
+  },
+  "decimal_grid": {
+   "1.0": 235
+  }
+ },
+ "Solar8000/FIO2": {
+  "cases": 235,
+  "type": {
+   "2": 235
+  },
+  "fmt": {
+   "1:float32": 235
+  },
+  "unit": {
+   "%": 235
+  },
+  "gain": {
+   "1.0": 235
+  },
+  "offset": {
+   "0.0": 235
+  },
+  "min_step": {
+   "1.0": 235
+  },
+  "decimal_grid": {
+   "1.0": 235
+  }
+ },
+ "Solar8000/GAS2_EXPIRED": {
+  "cases": 125,
+  "type": {
+   "2": 125
+  },
+  "fmt": {
+   "1:float32": 125
+  },
+  "unit": {
+   "%": 125
+  },
+  "gain": {
+   "1.0": 125
+  },
+  "offset": {
+   "0.0": 125
+  },
+  "min_step": {
+   "0.09": 100,
+   "0.1": 19,
+   "0.089999": 4,
+   "None": 2
+  },
+  "decimal_grid": {
+   "0.01": 105,
+   "0.1": 18,
+   "None": 2
+  }
+ },
+ "Solar8000/GAS2_INSPIRED": {
+  "cases": 125,
+  "type": {
+   "2": 125
+  },
+  "fmt": {
+   "1:float32": 125
+  },
+  "unit": {
+   "%": 125
+  },
+  "gain": {
+   "1.0": 125
+  },
+  "offset": {
+   "0.0": 125
+  },
+  "min_step": {
+   "0.09": 104,
+   "0.1": 11,
+   "0.089999": 8,
+   "None": 2
+  },
+  "decimal_grid": {
+   "0.01": 114,
+   "0.1": 9,
+   "None": 2
+  }
+ },
+ "Solar8000/HR": {
+  "cases": 237,
+  "type": {
+   "2": 237
+  },
+  "fmt": {
+   "1:float32": 237
+  },
+  "unit": {
+   "/min": 237
+  },
+  "gain": {
+   "1.0": 237
+  },
+  "offset": {
+   "0.0": 237
+  },
+  "min_step": {
+   "1.0": 237
+  },
+  "decimal_grid": {
+   "1.0": 237
+  }
+ },
+ "Solar8000/INCO2": {
+  "cases": 235,
+  "type": {
+   "2": 235
+  },
+  "fmt": {
+   "1:float32": 235
+  },
+  "unit": {
+   "mmHg": 235
+  },
+  "gain": {
+   "1.0": 235
+  },
+  "offset": {
+   "0.0": 235
+  },
+  "min_step": {
+   "1.0": 213,
+   "None": 22
+  },
+  "decimal_grid": {
+   "1.0": 213,
+   "None": 22
+  }
+ },
+ "Solar8000/NIBP_DBP": {
+  "cases": 208,
+  "type": {
+   "2": 208
+  },
+  "fmt": {
+   "1:float32": 208
+  },
+  "unit": {
+   "mmHg": 208
+  },
+  "gain": {
+   "1.0": 208
+  },
+  "offset": {
+   "0.0": 208
+  },
+  "min_step": {
+   "1.0": 176,
+   "2.0": 9,
+   "None": 6,
+   "3.0": 6
+  },
+  "decimal_grid": {
+   "1.0": 202,
+   "None": 6
+  }
+ },
+ "Solar8000/NIBP_MBP": {
+  "cases": 208,
+  "type": {
+   "2": 208
+  },
+  "fmt": {
+   "1:float32": 208
+  },
+  "unit": {
+   "mmHg": 208
+  },
+  "gain": {
+   "1.0": 208
+  },
+  "offset": {
+   "0.0": 208
+  },
+  "min_step": {
+   "1.0": 163,
+   "2.0": 16,
+   "3.0": 9,
+   "None": 6
+  },
+  "decimal_grid": {
+   "1.0": 202,
+   "None": 6
+  }
+ },
+ "Solar8000/NIBP_SBP": {
+  "cases": 208,
+  "type": {
+   "2": 208
+  },
+  "fmt": {
+   "1:float32": 208
+  },
+  "unit": {
+   "mmHg": 208
+  },
+  "gain": {
+   "1.0": 208
+  },
+  "offset": {
+   "0.0": 208
+  },
+  "min_step": {
+   "1.0": 162,
+   "2.0": 14,
+   "3.0": 9,
+   "5.0": 5
+  },
+  "decimal_grid": {
+   "1.0": 203,
+   "None": 5
+  }
+ },
+ "Solar8000/PA_DBP": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "mmHg": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "1.0": 1
+  },
+  "decimal_grid": {
+   "1.0": 1
+  }
+ },
+ "Solar8000/PA_MBP": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "mmHg": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "1.0": 1
+  },
+  "decimal_grid": {
+   "1.0": 1
+  }
+ },
+ "Solar8000/PA_SBP": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "mmHg": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "1.0": 1
+  },
+  "decimal_grid": {
+   "1.0": 1
+  }
+ },
+ "Solar8000/PLETH_HR": {
+  "cases": 237,
+  "type": {
+   "2": 237
+  },
+  "fmt": {
+   "1:float32": 237
+  },
+  "unit": {
+   "": 237
+  },
+  "gain": {
+   "1.0": 237
+  },
+  "offset": {
+   "0.0": 237
+  },
+  "min_step": {
+   "1.0": 237
+  },
+  "decimal_grid": {
+   "1.0": 237
+  }
+ },
+ "Solar8000/PLETH_SPO2": {
+  "cases": 237,
+  "type": {
+   "2": 237
+  },
+  "fmt": {
+   "1:float32": 237
+  },
+  "unit": {
+   "": 237
+  },
+  "gain": {
+   "1.0": 237
+  },
+  "offset": {
+   "0.0": 237
+  },
+  "min_step": {
+   "1.0": 236,
+   "None": 1
+  },
+  "decimal_grid": {
+   "1.0": 236,
+   "None": 1
+  }
+ },
+ "Solar8000/RR": {
+  "cases": 48,
+  "type": {
+   "2": 48
+  },
+  "fmt": {
+   "1:float32": 48
+  },
+  "unit": {
+   "/min": 48
+  },
+  "gain": {
+   "1.0": 48
+  },
+  "offset": {
+   "0.0": 48
+  },
+  "min_step": {
+   "1.0": 48
+  },
+  "decimal_grid": {
+   "1.0": 48
+  }
+ },
+ "Solar8000/RR_CO2": {
+  "cases": 235,
+  "type": {
+   "2": 235
+  },
+  "fmt": {
+   "1:float32": 235
+  },
+  "unit": {
+   "/min": 235
+  },
+  "gain": {
+   "1.0": 235
+  },
+  "offset": {
+   "0.0": 235
+  },
+  "min_step": {
+   "1.0": 235
+  },
+  "decimal_grid": {
+   "1.0": 235
+  }
+ },
+ "Solar8000/ST_AVF": {
+  "cases": 108,
+  "type": {
+   "2": 108
+  },
+  "fmt": {
+   "1:float32": 108
+  },
+  "unit": {
+   "mm": 108
+  },
+  "gain": {
+   "1.0": 108
+  },
+  "offset": {
+   "0.0": 108
+  },
+  "min_step": {
+   "0.1": 107,
+   "None": 1
+  },
+  "decimal_grid": {
+   "0.1": 107,
+   "None": 1
+  }
+ },
+ "Solar8000/ST_AVL": {
+  "cases": 108,
+  "type": {
+   "2": 108
+  },
+  "fmt": {
+   "1:float32": 108
+  },
+  "unit": {
+   "mm": 108
+  },
+  "gain": {
+   "1.0": 108
+  },
+  "offset": {
+   "0.0": 108
+  },
+  "min_step": {
+   "0.1": 107,
+   "None": 1
+  },
+  "decimal_grid": {
+   "0.1": 107,
+   "None": 1
+  }
+ },
+ "Solar8000/ST_AVR": {
+  "cases": 108,
+  "type": {
+   "2": 108
+  },
+  "fmt": {
+   "1:float32": 108
+  },
+  "unit": {
+   "mm": 108
+  },
+  "gain": {
+   "1.0": 108
+  },
+  "offset": {
+   "0.0": 108
+  },
+  "min_step": {
+   "0.1": 107,
+   "None": 1
+  },
+  "decimal_grid": {
+   "0.1": 107,
+   "None": 1
+  }
+ },
+ "Solar8000/ST_I": {
+  "cases": 109,
+  "type": {
+   "2": 109
+  },
+  "fmt": {
+   "1:float32": 109
+  },
+  "unit": {
+   "mm": 109
+  },
+  "gain": {
+   "1.0": 109
+  },
+  "offset": {
+   "0.0": 109
+  },
+  "min_step": {
+   "0.1": 107,
+   "None": 1,
+   "0.099999": 1
+  },
+  "decimal_grid": {
+   "0.1": 108,
+   "None": 1
+  }
+ },
+ "Solar8000/ST_II": {
+  "cases": 223,
+  "type": {
+   "2": 223
+  },
+  "fmt": {
+   "1:float32": 223
+  },
+  "unit": {
+   "mm": 223
+  },
+  "gain": {
+   "1.0": 223
+  },
+  "offset": {
+   "0.0": 223
+  },
+  "min_step": {
+   "0.1": 221,
+   "None": 2
+  },
+  "decimal_grid": {
+   "0.1": 221,
+   "None": 2
+  }
+ },
+ "Solar8000/ST_III": {
+  "cases": 108,
+  "type": {
+   "2": 108
+  },
+  "fmt": {
+   "1:float32": 108
+  },
+  "unit": {
+   "mm": 108
+  },
+  "gain": {
+   "1.0": 108
+  },
+  "offset": {
+   "0.0": 108
+  },
+  "min_step": {
+   "0.1": 107,
+   "None": 1
+  },
+  "decimal_grid": {
+   "0.1": 107,
+   "None": 1
+  }
+ },
+ "Solar8000/ST_V5": {
+  "cases": 120,
+  "type": {
+   "2": 120
+  },
+  "fmt": {
+   "1:float32": 120
+  },
+  "unit": {
+   "mm": 120
+  },
+  "gain": {
+   "1.0": 120
+  },
+  "offset": {
+   "0.0": 120
+  },
+  "min_step": {
+   "0.1": 120
+  },
+  "decimal_grid": {
+   "0.1": 120
+  }
+ },
+ "Solar8000/VENT_INSP_TM": {
+  "cases": 227,
+  "type": {
+   "2": 227
+  },
+  "fmt": {
+   "1:float32": 227
+  },
+  "unit": {
+   "sec": 227
+  },
+  "gain": {
+   "1.0": 227
+  },
+  "offset": {
+   "0.0": 227
+  },
+  "min_step": {
+   "0.1": 167,
+   "None": 39,
+   "0.2": 16,
+   "0.3": 4
+  },
+  "decimal_grid": {
+   "0.1": 188,
+   "None": 39
+  }
+ },
+ "Solar8000/VENT_MAWP": {
+  "cases": 235,
+  "type": {
+   "2": 235
+  },
+  "fmt": {
+   "1:float32": 235
+  },
+  "unit": {
+   "mbar": 235
+  },
+  "gain": {
+   "1.0": 235
+  },
+  "offset": {
+   "0.0": 235
+  },
+  "min_step": {
+   "1.0": 229,
+   "None": 6
+  },
+  "decimal_grid": {
+   "1.0": 229,
+   "None": 6
+  }
+ },
+ "Solar8000/VENT_MEAS_PEEP": {
+  "cases": 3,
+  "type": {
+   "2": 3
+  },
+  "fmt": {
+   "1:float32": 3
+  },
+  "unit": {
+   "hPa": 3
+  },
+  "gain": {
+   "1.0": 3
+  },
+  "offset": {
+   "0.0": 3
+  },
+  "min_step": {
+   "1.0": 3
+  },
+  "decimal_grid": {
+   "1.0": 3
+  }
+ },
+ "Solar8000/VENT_MV": {
+  "cases": 231,
+  "type": {
+   "2": 231
+  },
+  "fmt": {
+   "1:float32": 231
+  },
+  "unit": {
+   "L/min": 231
+  },
+  "gain": {
+   "1.0": 231
+  },
+  "offset": {
+   "0.0": 231
+  },
+  "min_step": {
+   "0.099999": 116,
+   "0.1": 113,
+   "None": 2
+  },
+  "decimal_grid": {
+   "0.1": 229,
+   "None": 2
+  }
+ },
+ "Solar8000/VENT_PIP": {
+  "cases": 228,
+  "type": {
+   "2": 228
+  },
+  "fmt": {
+   "1:float32": 228
+  },
+  "unit": {
+   "mbar": 228
+  },
+  "gain": {
+   "1.0": 228
+  },
+  "offset": {
+   "0.0": 228
+  },
+  "min_step": {
+   "1.0": 227,
+   "2.0": 1
+  },
+  "decimal_grid": {
+   "1.0": 228
+  }
+ },
+ "Solar8000/VENT_PPLAT": {
+  "cases": 227,
+  "type": {
+   "2": 227
+  },
+  "fmt": {
+   "1:float32": 227
+  },
+  "unit": {
+   "mbar": 227
+  },
+  "gain": {
+   "1.0": 227
+  },
+  "offset": {
+   "0.0": 227
+  },
+  "min_step": {
+   "1.0": 227
+  },
+  "decimal_grid": {
+   "1.0": 227
+  }
+ },
+ "Solar8000/VENT_RR": {
+  "cases": 231,
+  "type": {
+   "2": 231
+  },
+  "fmt": {
+   "1:float32": 231
+  },
+  "unit": {
+   "/min": 231
+  },
+  "gain": {
+   "1.0": 231
+  },
+  "offset": {
+   "0.0": 231
+  },
+  "min_step": {
+   "1.0": 228,
+   "None": 3
+  },
+  "decimal_grid": {
+   "1.0": 228,
+   "None": 3
+  }
+ },
+ "Solar8000/VENT_SET_FIO2": {
+  "cases": 77,
+  "type": {
+   "2": 77
+  },
+  "fmt": {
+   "1:float32": 77
+  },
+  "unit": {
+   "%": 77
+  },
+  "gain": {
+   "1.0": 77
+  },
+  "offset": {
+   "0.0": 77
+  },
+  "min_step": {
+   "None": 63,
+   "10.0": 8,
+   "1.0": 4,
+   "2.0": 1
+  },
+  "decimal_grid": {
+   "None": 63,
+   "10.0": 9,
+   "1.0": 5
+  }
+ },
+ "Solar8000/VENT_SET_PCP": {
+  "cases": 104,
+  "type": {
+   "2": 104
+  },
+  "fmt": {
+   "1:float32": 104
+  },
+  "unit": {
+   "cmH2O": 104
+  },
+  "gain": {
+   "1.0": 104
+  },
+  "offset": {
+   "0.0": 104
+  },
+  "min_step": {
+   "None": 102,
+   "3.0": 1,
+   "4.0": 1
+  },
+  "decimal_grid": {
+   "None": 102,
+   "1.0": 2
+  }
+ },
+ "Solar8000/VENT_SET_TV": {
+  "cases": 160,
+  "type": {
+   "2": 160
+  },
+  "fmt": {
+   "1:float32": 160
+  },
+  "unit": {
+   "mL": 160
+  },
+  "gain": {
+   "1.0": 160
+  },
+  "offset": {
+   "0.0": 160
+  },
+  "min_step": {
+   "None": 104,
+   "10.0": 33,
+   "20.0": 20,
+   "40.0": 2
+  },
+  "decimal_grid": {
+   "None": 104,
+   "10.0": 56
+  }
+ },
+ "Solar8000/VENT_TV": {
+  "cases": 227,
+  "type": {
+   "2": 227
+  },
+  "fmt": {
+   "1:float32": 227
+  },
+  "unit": {
+   "mL": 227
+  },
+  "gain": {
+   "1.0": 227
+  },
+  "offset": {
+   "0.0": 227
+  },
+  "min_step": {
+   "1.0": 227
+  },
+  "decimal_grid": {
+   "1.0": 227
+  }
+ },
+ "Vigilance/BT_PA": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "C": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "0.099998": 1
+  },
+  "decimal_grid": {
+   "0.1": 1
+  }
+ },
+ "Vigilance/CI": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "L/min/m2": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "0.1": 1
+  },
+  "decimal_grid": {
+   "0.1": 1
+  }
+ },
+ "Vigilance/CO": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "L/min": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "0.099999": 1
+  },
+  "decimal_grid": {
+   "0.1": 1
+  }
+ },
+ "Vigilance/EDV": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "ml": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "1.0": 1
+  },
+  "decimal_grid": {
+   "1.0": 1
+  }
+ },
+ "Vigilance/EDVI": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "ml/m2": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "1.0": 1
+  },
+  "decimal_grid": {
+   "1.0": 1
+  }
+ },
+ "Vigilance/ESV": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "ml": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "1.0": 1
+  },
+  "decimal_grid": {
+   "1.0": 1
+  }
+ },
+ "Vigilance/ESVI": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "ml/m2": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "1.0": 1
+  },
+  "decimal_grid": {
+   "1.0": 1
+  }
+ },
+ "Vigilance/HR_AVG": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "/min": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "1.0": 1
+  },
+  "decimal_grid": {
+   "1.0": 1
+  }
+ },
+ "Vigilance/RVEF": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "%": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "1.0": 1
+  },
+  "decimal_grid": {
+   "1.0": 1
+  }
+ },
+ "Vigilance/SNR": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "dB": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "0.099998": 1
+  },
+  "decimal_grid": {
+   "0.1": 1
+  }
+ },
+ "Vigilance/SQI": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "1.0": 1
+  },
+  "decimal_grid": {
+   "1.0": 1
+  }
+ },
+ "Vigilance/SV": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "ml/beat": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "1.0": 1
+  },
+  "decimal_grid": {
+   "1.0": 1
+  }
+ },
+ "Vigilance/SVI": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "ml/beat/m2": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "1.0": 1
+  },
+  "decimal_grid": {
+   "1.0": 1
+  }
+ },
+ "Vigilance/SVO2": {
+  "cases": 1,
+  "type": {
+   "2": 1
+  },
+  "fmt": {
+   "1:float32": 1
+  },
+  "unit": {
+   "%": 1
+  },
+  "gain": {
+   "1.0": 1
+  },
+  "offset": {
+   "0.0": 1
+  },
+  "min_step": {
+   "1.0": 1
+  },
+  "decimal_grid": {
+   "1.0": 1
+  }
+ },
+ "Vigileo/CI": {
+  "cases": 9,
+  "type": {
+   "2": 9
+  },
+  "fmt": {
+   "1:float32": 9
+  },
+  "unit": {
+   "L/min/m2": 9
+  },
+  "gain": {
+   "1.0": 9
+  },
+  "offset": {
+   "0.0": 9
+  },
+  "min_step": {
+   "0.1": 9
+  },
+  "decimal_grid": {
+   "0.1": 9
+  }
+ },
+ "Vigileo/CO": {
+  "cases": 9,
+  "type": {
+   "2": 9
+  },
+  "fmt": {
+   "1:float32": 9
+  },
+  "unit": {
+   "L/min": 9
+  },
+  "gain": {
+   "1.0": 9
+  },
+  "offset": {
+   "0.0": 9
+  },
+  "min_step": {
+   "0.1": 6,
+   "0.099999": 3
+  },
+  "decimal_grid": {
+   "0.1": 9
+  }
+ },
+ "Vigileo/SV": {
+  "cases": 9,
+  "type": {
+   "2": 9
+  },
+  "fmt": {
+   "1:float32": 9
+  },
+  "unit": {
+   "ml/beat": 9
+  },
+  "gain": {
+   "1.0": 9
+  },
+  "offset": {
+   "0.0": 9
+  },
+  "min_step": {
+   "1.0": 9
+  },
+  "decimal_grid": {
+   "1.0": 9
+  }
+ },
+ "Vigileo/SVI": {
+  "cases": 9,
+  "type": {
+   "2": 9
+  },
+  "fmt": {
+   "1:float32": 9
+  },
+  "unit": {
+   "ml/beat/m2": 9
+  },
+  "gain": {
+   "1.0": 9
+  },
+  "offset": {
+   "0.0": 9
+  },
+  "min_step": {
+   "1.0": 9
+  },
+  "decimal_grid": {
+   "1.0": 9
+  }
+ },
+ "Vigileo/SVV": {
+  "cases": 9,
+  "type": {
+   "2": 9
+  },
+  "fmt": {
+   "1:float32": 9
+  },
+  "unit": {
+   "%": 9
+  },
+  "gain": {
+   "1.0": 9
+  },
+  "offset": {
+   "0.0": 9
+  },
+  "min_step": {
+   "1.0": 9
+  },
+  "decimal_grid": {
+   "1.0": 9
+  }
+ }
+}

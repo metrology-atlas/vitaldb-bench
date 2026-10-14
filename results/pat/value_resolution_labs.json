@@ -1,0 +1,565 @@
+{
+ "alb": {
+  "n": 36629,
+  "decimals": {
+   "1": 32970,
+   "0": 3659
+  },
+  "reported_places": 1,
+  "short_observed": 3659,
+  "short_expected": 3663.3,
+  "short_ratio": 1.0,
+  "without_bloodgas_panel": {
+   "n": 36629,
+   "share_below_reported_places": 0.1,
+   "share_with_decimals": 0.9
+  }
+ },
+ "alt": {
+  "n": 35918,
+  "decimals": {
+   "0": 35918
+  },
+  "reported_places": 0,
+  "values_with_decimals": 0,
+  "without_bloodgas_panel": {
+   "n": 35918,
+   "share_below_reported_places": null,
+   "share_with_decimals": 0.0
+  }
+ },
+ "aptt": {
+  "n": 20542,
+  "decimals": {
+   "0": 2252,
+   "1": 18290
+  },
+  "reported_places": 1,
+  "short_observed": 2252,
+  "short_expected": 2032.2,
+  "short_ratio": 1.11,
+  "with_bloodgas_panel": {
+   "n": 3,
+   "share_below_reported_places": 0.0,
+   "share_with_decimals": 1.0
+  },
+  "without_bloodgas_panel": {
+   "n": 20539,
+   "share_below_reported_places": 0.11,
+   "share_with_decimals": 0.89
+  }
+ },
+ "ast": {
+  "n": 35919,
+  "decimals": {
+   "0": 35918,
+   "1": 1
+  },
+  "reported_places": 0,
+  "values_with_decimals": 1,
+  "without_bloodgas_panel": {
+   "n": 35919,
+   "share_below_reported_places": null,
+   "share_with_decimals": 0.0
+  }
+ },
+ "bun": {
+  "n": 37213,
+  "decimals": {
+   "0": 37212,
+   "1": 1
+  },
+  "reported_places": 0,
+  "values_with_decimals": 1,
+  "without_bloodgas_panel": {
+   "n": 37213,
+   "share_below_reported_places": null,
+   "share_with_decimals": 0.0
+  }
+ },
+ "cl": {
+  "n": 40863,
+  "decimals": {
+   "0": 40862,
+   "1": 1
+  },
+  "reported_places": 0,
+  "values_with_decimals": 1,
+  "without_bloodgas_panel": {
+   "n": 40863,
+   "share_below_reported_places": null,
+   "share_with_decimals": 0.0
+  }
+ },
+ "cr": {
+  "n": 37311,
+  "decimals": {
+   "2": 33559,
+   "1": 3420,
+   "0": 332
+  },
+  "reported_places": 2,
+  "short_observed": 3752,
+  "short_expected": 3728.8,
+  "short_ratio": 1.01,
+  "without_bloodgas_panel": {
+   "n": 37311,
+   "share_below_reported_places": 0.101,
+   "share_with_decimals": 0.991
+  }
+ },
+ "crp": {
+  "n": 28278,
+  "decimals": {
+   "2": 25666,
+   "1": 2391,
+   "0": 221
+  },
+  "reported_places": 2,
+  "short_observed": 2612,
+  "short_expected": 2851.8,
+  "short_ratio": 0.92,
+  "without_bloodgas_panel": {
+   "n": 28278,
+   "share_below_reported_places": 0.092,
+   "share_with_decimals": 0.992
+  }
+ },
+ "fib": {
+  "n": 18931,
+  "decimals": {
+   "0": 18924,
+   "1": 7
+  },
+  "reported_places": 0,
+  "values_with_decimals": 7,
+  "with_bloodgas_panel": {
+   "n": 3,
+   "share_below_reported_places": null,
+   "share_with_decimals": 0.0
+  },
+  "without_bloodgas_panel": {
+   "n": 18928,
+   "share_below_reported_places": null,
+   "share_with_decimals": 0.0
+  }
+ },
+ "gfr": {
+  "n": 36683,
+  "decimals": {
+   "1": 33084,
+   "0": 3599
+  },
+  "reported_places": 1,
+  "short_observed": 3599,
+  "short_expected": 3676.0,
+  "short_ratio": 0.98,
+  "without_bloodgas_panel": {
+   "n": 36683,
+   "share_below_reported_places": 0.098,
+   "share_with_decimals": 0.902
+  }
+ },
+ "gluc": {
+  "n": 35358,
+  "decimals": {
+   "0": 35358
+  },
+  "reported_places": 0,
+  "values_with_decimals": 0,
+  "with_bloodgas_panel": {
+   "n": 14542,
+   "share_below_reported_places": null,
+   "share_with_decimals": 0.0
+  },
+  "without_bloodgas_panel": {
+   "n": 20816,
+   "share_below_reported_places": null,
+   "share_with_decimals": 0.0
+  }
+ },
+ "hb": {
+  "n": 43976,
+  "decimals": {
+   "1": 39541,
+   "0": 4435
+  },
+  "reported_places": 1,
+  "short_observed": 4435,
+  "short_expected": 4393.4,
+  "short_ratio": 1.01,
+  "without_bloodgas_panel": {
+   "n": 43976,
+   "share_below_reported_places": 0.101,
+   "share_with_decimals": 0.899
+  }
+ },
+ "hco3": {
+  "n": 14578,
+  "decimals": {
+   "1": 13423,
+   "0": 1155
+  },
+  "reported_places": 1,
+  "short_observed": 1155,
+  "short_expected": 1491.4,
+  "short_ratio": 0.77,
+  "with_bloodgas_panel": {
+   "n": 14578,
+   "share_below_reported_places": 0.079,
+   "share_with_decimals": 0.921
+  }
+ },
+ "hct": {
+  "n": 58498,
+  "decimals": {
+   "1": 39572,
+   "0": 18926
+  },
+  "reported_places": 1,
+  "short_observed": 18926,
+  "short_expected": 4396.9,
+  "short_ratio": 4.3,
+  "with_bloodgas_panel": {
+   "n": 14550,
+   "share_below_reported_places": 1.0,
+   "share_with_decimals": 0.0
+  },
+  "without_bloodgas_panel": {
+   "n": 43948,
+   "share_below_reported_places": 0.1,
+   "share_with_decimals": 0.9
+  }
+ },
+ "ica": {
+  "n": 17705,
+  "decimals": {
+   "2": 16040,
+   "1": 1459,
+   "0": 206
+  },
+  "reported_places": 2,
+  "short_observed": 1665,
+  "short_expected": 1782.2,
+  "short_ratio": 0.93,
+  "with_bloodgas_panel": {
+   "n": 14595,
+   "share_below_reported_places": 0.093,
+   "share_with_decimals": 0.987
+  },
+  "without_bloodgas_panel": {
+   "n": 3110,
+   "share_below_reported_places": 0.1,
+   "share_with_decimals": 0.994
+  }
+ },
+ "k": {
+  "n": 55486,
+  "decimals": {
+   "1": 49751,
+   "0": 5735
+  },
+  "reported_places": 1,
+  "short_observed": 5735,
+  "short_expected": 5527.9,
+  "short_ratio": 1.04,
+  "with_bloodgas_panel": {
+   "n": 14593,
+   "share_below_reported_places": 0.086,
+   "share_with_decimals": 0.914
+  },
+  "without_bloodgas_panel": {
+   "n": 40893,
+   "share_below_reported_places": 0.11,
+   "share_with_decimals": 0.89
+  }
+ },
+ "lac": {
+  "n": 14516,
+  "decimals": {
+   "0": 1818,
+   "1": 12698
+  },
+  "reported_places": 1,
+  "short_observed": 1818,
+  "short_expected": 1410.9,
+  "short_ratio": 1.29,
+  "with_bloodgas_panel": {
+   "n": 14516,
+   "share_below_reported_places": 0.125,
+   "share_with_decimals": 0.875
+  }
+ },
+ "na": {
+  "n": 55463,
+  "decimals": {
+   "0": 55463
+  },
+  "reported_places": 0,
+  "values_with_decimals": 0,
+  "with_bloodgas_panel": {
+   "n": 14598,
+   "share_below_reported_places": null,
+   "share_with_decimals": 0.0
+  },
+  "without_bloodgas_panel": {
+   "n": 40865,
+   "share_below_reported_places": null,
+   "share_with_decimals": 0.0
+  }
+ },
+ "pco2": {
+  "n": 14590,
+  "decimals": {
+   "0": 14582,
+   "1": 8
+  },
+  "reported_places": 0,
+  "values_with_decimals": 8,
+  "with_bloodgas_panel": {
+   "n": 14590,
+   "share_below_reported_places": null,
+   "share_with_decimals": 0.001
+  }
+ },
+ "ph": {
+  "n": 14597,
+  "decimals": {
+   "1": 1424,
+   "2": 13165,
+   "3": 7,
+   "0": 1
+  },
+  "reported_places": 2,
+  "short_observed": 1425,
+  "short_expected": 1462.8,
+  "short_ratio": 0.97,
+  "with_bloodgas_panel": {
+   "n": 14597,
+   "share_below_reported_places": 0.098,
+   "share_with_decimals": 1.0
+  }
+ },
+ "plt": {
+  "n": 43529,
+  "decimals": {
+   "0": 43529
+  },
+  "reported_places": 0,
+  "values_with_decimals": 0,
+  "without_bloodgas_panel": {
+   "n": 43529,
+   "share_below_reported_places": null,
+   "share_with_decimals": 0.0
+  }
+ },
+ "po2": {
+  "n": 14597,
+  "decimals": {
+   "0": 14597
+  },
+  "reported_places": 0,
+  "values_with_decimals": 0,
+  "with_bloodgas_panel": {
+   "n": 14597,
+   "share_below_reported_places": null,
+   "share_with_decimals": 0.0
+  }
+ },
+ "pt%": {
+  "n": 21154,
+  "decimals": {
+   "0": 21146,
+   "1": 8
+  },
+  "reported_places": 0,
+  "values_with_decimals": 8,
+  "with_bloodgas_panel": {
+   "n": 3,
+   "share_below_reported_places": null,
+   "share_with_decimals": 0.0
+  },
+  "without_bloodgas_panel": {
+   "n": 21151,
+   "share_below_reported_places": null,
+   "share_with_decimals": 0.0
+  }
+ },
+ "ptinr": {
+  "n": 21156,
+  "decimals": {
+   "2": 19134,
+   "1": 1471,
+   "0": 550,
+   "3": 1
+  },
+  "reported_places": 2,
+  "short_observed": 2021,
+  "short_expected": 2126.0,
+  "short_ratio": 0.95,
+  "with_bloodgas_panel": {
+   "n": 3,
+   "share_below_reported_places": 0.0,
+   "share_with_decimals": 1.0
+  },
+  "without_bloodgas_panel": {
+   "n": 21153,
+   "share_below_reported_places": 0.096,
+   "share_with_decimals": 0.974
+  }
+ },
+ "ptsec": {
+  "n": 21156,
+  "decimals": {
+   "1": 18963,
+   "0": 2193
+  },
+  "reported_places": 1,
+  "short_observed": 2193,
+  "short_expected": 2107.0,
+  "short_ratio": 1.04,
+  "with_bloodgas_panel": {
+   "n": 3,
+   "share_below_reported_places": 0.0,
+   "share_with_decimals": 1.0
+  },
+  "without_bloodgas_panel": {
+   "n": 21153,
+   "share_below_reported_places": 0.104,
+   "share_with_decimals": 0.896
+  }
+ },
+ "sao2": {
+  "n": 14572,
+  "decimals": {
+   "0": 14572
+  },
+  "reported_places": 0,
+  "values_with_decimals": 0,
+  "with_bloodgas_panel": {
+   "n": 14572,
+   "share_below_reported_places": null,
+   "share_with_decimals": 0.0
+  }
+ },
+ "tbil": {
+  "n": 36088,
+  "decimals": {
+   "1": 33743,
+   "0": 2345
+  },
+  "reported_places": 1,
+  "short_observed": 2345,
+  "short_expected": 3749.2,
+  "short_ratio": 0.63,
+  "without_bloodgas_panel": {
+   "n": 36088,
+   "share_below_reported_places": 0.065,
+   "share_with_decimals": 0.935
+  }
+ },
+ "tprot": {
+  "n": 36034,
+  "decimals": {
+   "1": 32554,
+   "0": 3480
+  },
+  "reported_places": 1,
+  "short_observed": 3480,
+  "short_expected": 3617.1,
+  "short_ratio": 0.96,
+  "without_bloodgas_panel": {
+   "n": 36034,
+   "share_below_reported_places": 0.097,
+   "share_with_decimals": 0.903
+  }
+ },
+ "wbc": {
+  "n": 43941,
+  "decimals": {
+   "2": 39527,
+   "1": 3986,
+   "0": 428
+  },
+  "reported_places": 2,
+  "short_observed": 4414,
+  "short_expected": 4391.9,
+  "short_ratio": 1.01,
+  "without_bloodgas_panel": {
+   "n": 43941,
+   "share_below_reported_places": 0.1,
+   "share_with_decimals": 0.99
+  }
+ },
+ "be": {
+  "n": 3911,
+  "decimals": {
+   "1": 3529,
+   "0": 382
+  },
+  "reported_places": 1,
+  "short_observed": 382,
+  "short_expected": 392.1,
+  "short_ratio": 0.97,
+  "with_bloodgas_panel": {
+   "n": 3911,
+   "share_below_reported_places": 0.098,
+   "share_with_decimals": 0.902
+  }
+ },
+ "p": {
+  "n": 16440,
+  "decimals": {
+   "1": 14873,
+   "0": 1567
+  },
+  "reported_places": 1,
+  "short_observed": 1567,
+  "short_expected": 1652.6,
+  "short_ratio": 0.95,
+  "without_bloodgas_panel": {
+   "n": 16440,
+   "share_below_reported_places": 0.095,
+   "share_with_decimals": 0.905
+  }
+ },
+ "esr": {
+  "n": 1415,
+  "decimals": {
+   "0": 1415
+  },
+  "reported_places": 0,
+  "values_with_decimals": 0,
+  "without_bloodgas_panel": {
+   "n": 1415,
+   "share_below_reported_places": null,
+   "share_with_decimals": 0.0
+  }
+ },
+ "ccr": {
+  "n": 537,
+  "decimals": {
+   "0": 537
+  },
+  "reported_places": 0,
+  "values_with_decimals": 0,
+  "without_bloodgas_panel": {
+   "n": 537,
+   "share_below_reported_places": null,
+   "share_with_decimals": 0.0
+  }
+ },
+ "ammo": {
+  "n": 864,
+  "decimals": {
+   "0": 864
+  },
+  "reported_places": 0,
+  "values_with_decimals": 0,
+  "without_bloodgas_panel": {
+   "n": 864,
+   "share_below_reported_places": null,
+   "share_with_decimals": 0.0
+  }
+ }
+}

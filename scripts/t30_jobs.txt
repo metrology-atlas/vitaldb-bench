@@ -1,0 +1,32 @@
+# name | db | build args (cases, root, out and budget are added by t30.sh)
+A01-base        | atriumdb | --timing nominal --values integer --zstd-level 19 --block-size 32768
+A02-b4096       | atriumdb | --timing nominal --values integer --zstd-level 19 --block-size 4096
+A03-b16384      | atriumdb | --timing nominal --values integer --zstd-level 19 --block-size 16384
+A04-b65536      | atriumdb | --timing nominal --values integer --zstd-level 19 --block-size 65536
+A05-b131072     | atriumdb | --timing nominal --values integer --zstd-level 19 --block-size 131072
+A06-z3          | atriumdb | --timing nominal --values integer --zstd-level 3 --block-size 32768
+A07-z9          | atriumdb | --timing nominal --values integer --zstd-level 9 --block-size 32768
+A08-source      | atriumdb | --timing nominal --values source --zstd-level 19 --block-size 32768
+A09-resync-b8192   | atriumdb | --timing resync --values integer --zstd-level 19 --block-size 8192
+A10-resync-b32768  | atriumdb | --timing resync --values integer --zstd-level 19 --block-size 32768
+A11-resync-b131072 | atriumdb | --timing resync --values integer --zstd-level 19 --block-size 131072
+N00-num-base    | atriumdb | --timing nominal --values integer --zstd-level 19 --block-size 32768 --kinds numeric,string
+N01-tol0.25     | atriumdb | --timing nominal --values integer --zstd-level 19 --block-size 32768 --kinds numeric,string --numeric-tolerance 0.25
+N02-tol1.0      | atriumdb | --timing nominal --values integer --zstd-level 19 --block-size 32768 --kinds numeric,string --numeric-tolerance 1.0
+N03-detect      | atriumdb | --timing nominal --values integer --zstd-level 19 --block-size 32768 --kinds numeric,string --detect-period
+N04-drop        | atriumdb | --timing nominal --values integer --zstd-level 19 --block-size 32768 --kinds numeric,string --duplicates drop
+N05-rawtimes    | atriumdb | --timing nominal --values integer --zstd-level 19 --block-size 32768 --kinds numeric,string --raw-times
+N06-nostrings   | atriumdb | --timing nominal --values integer --zstd-level 19 --block-size 32768 --kinds numeric
+T01-base        | timenet  | --timing nominal --values integer --partition-size 3
+T02-part1       | timenet  | --timing nominal --values integer --partition-size 1
+T03-part5       | timenet  | --timing nominal --values integer --partition-size 5
+T04-zarr        | timenet  | --timing nominal --values integer --backend zarr --compression zstd --partition-size 3
+T05-plain       | timenet  | --timing nominal --values integer --encoding plain --partition-size 1 --exclude-cases 4649
+T07-dict        | timenet  | --timing nominal --values integer --encoding dictionary --partition-size 3
+T08-z3          | timenet  | --timing nominal --values integer --level 3 --partition-size 3
+T09-z9          | timenet  | --timing nominal --values integer --level 9 --partition-size 3
+T10-chunk256k   | timenet  | --timing nominal --values integer --chunk-bytes 262144 --partition-size 3
+T11-chunk4m     | timenet  | --timing nominal --values integer --chunk-bytes 4194304 --partition-size 3
+T12-source      | timenet  | --timing nominal --values source --partition-size 3
+T13-resync      | timenet  | --timing resync --values integer --partition-size 3
+T14-file        | timenet  | --timing file --values integer --partition-size 3
