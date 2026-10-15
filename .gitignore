@@ -15,3 +15,6 @@ scripts/local.env
 *.parquet
 *.db
 *.sqlite
+
+# zensical build output
+site/

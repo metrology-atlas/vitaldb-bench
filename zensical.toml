@@ -11,7 +11,7 @@ copyright = "© 2026 Andrew J. Goodwin, University of Sydney · MIT licence"
 nav = [
   { "Home" = "index.md" },
   { "Get started" = "get-started.md" },
-  { "How-to guides" = [{ "Build TimeNet" = "how-to/build-timenet.md" }, { "Check fidelity" = "how-to/check-fidelity.md" }, { "Benchmark builds" = "how-to/benchmark.md" }, { "Recover the case clock" = "how-to/case-clock.md" }, { "Timing budget" = "how-to/timing-budget.md" }, { "Reproduce the results" = "how-to/reproduce-results.md" }] },
+  { "How-to guides" = [{ "Build TimeNet" = "how-to/build-timenet.md" }, { "Read corrected times" = "how-to/corrected-times.md" }, { "Check fidelity" = "how-to/check-fidelity.md" }, { "Benchmark builds" = "how-to/benchmark.md" }, { "Recover the case clock" = "how-to/case-clock.md" }, { "Timing budget" = "how-to/timing-budget.md" }, { "Reproduce the results" = "how-to/reproduce-results.md" }] },
   { "Concepts" = [{ "Availability" = "concepts/availability.md" }, { "Timing modes" = "concepts/timing-modes.md" }, { "Data sharing and licensing" = "concepts/data-and-licensing.md" }] },
   { "Reference" = [{ "API reference" = "reference/index.md" }, { "Analysis scripts" = "reference/tools.md" }] },
 ]

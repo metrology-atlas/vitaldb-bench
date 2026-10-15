@@ -12,6 +12,28 @@ The installed package, `vitaldb_bench`. The analysis scripts are listed in
 
 ::: vitaldb_bench.build
 
+## Derived labels
+
+::: vitaldb_bench.label_families
+
+::: vitaldb_bench.timenet_labels
+
+## Corrected times
+
+The dataset-neutral layer (it imports nothing VitalDB-specific, so it can become its own package):
+
+::: vitaldb_bench.correct
+
+::: vitaldb_bench.correct.layer
+
+::: vitaldb_bench.correct.clock
+
+::: vitaldb_bench.correct.dist
+
+The VitalDB side:
+
+::: vitaldb_bench.clock_model
+
 ## Stores
 
 ::: vitaldb_bench.stores

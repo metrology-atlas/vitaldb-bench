@@ -35,7 +35,41 @@ call if it would overrun the budget.
 | `--exclude-cases` | comma list | Leave cases out (their whole partition). |
 | `--backend`, `--encoding`, `--level`, `--compression`, `--chunk-bytes` | | TimeNet writer settings under test; each defaults to the TimeNet default. |
 
-## 3. Drive several builds with the scripts
+## 3. Add the derived labels
+
+The analysis scripts write per-case label CSVs (PPG timing, line accesses, lab draws and lab times, numeric
+delays, HR delay groups, BIS smoothing). They go into a TimeNet build as record annotations, one per label:
+`key` is the family, `value` the label name, `span` its interval (or a time point for `lab_time`), and
+`metadata` its parameters with `available_at`. The families are defined once, in
+`vitaldb_bench.label_families`, and the AtriumDB label pass writes the same labels.
+
+Write them while building, by naming the results folder:
+
+```bash
+python -m vitaldb_bench.build timenet --root "$VITALDB_ROOT" --cases cases.json --out build/tn --results RESULTS
+```
+
+or add them to an existing build:
+
+```bash
+python -m vitaldb_bench.build timenet-labels --out build/tn --results RESULTS --work /tmp/tn-labels
+```
+
+TimeNet versions are immutable, so this writes a labelled copy of each partition as version `1.1.0` beside
+`1.0.0`; `TimeNetStore` reads the newest version. A rerun replaces the labels rather than adding to them.
+`--work` labels each partition in a local folder and copies the result back, for builds on a mounted
+network or Windows folder, where the writer's DuckDB control file misbehaves. Resumable, like the build.
+
+## 4. Write the label tables beside the build
+
+```bash
+python -m vitaldb_bench.build label-tables --out build/tn --results results/pat --clock-fits clock_fits.jsonl
+```
+
+The label families and the clock model as Parquet tables in `build/tn/label_params/`, which the corrected
+reader applies at read time; see [Read corrected times](corrected-times.md).
+
+## 5. Drive several builds with the scripts
 
 `scripts/` holds shell drivers that advance builds by one call of about 170 s each, so a long build can be
 run as a series of short steps:
