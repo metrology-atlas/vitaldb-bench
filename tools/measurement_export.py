@@ -17,12 +17,10 @@ from __future__ import annotations
 import argparse
 import csv
 import json
-import sys
 from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "physiosync"))
 from physiosync import (
     CHAIN_FIELDS,
     LABEL_FIELDS,

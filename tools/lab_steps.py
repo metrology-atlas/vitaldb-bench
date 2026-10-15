@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 """Do arterial-line events and timing steps line up with blood-draw times? One case, this machine only.
 
-    python tools/lab_steps.py --root R --case 3255 --out out.json --fig fig.png
+    python tools/lab_steps.py --root R --case 1 --out out.json --fig fig.png
 
 Whole case, split at breaks in the samples. Per beat: R-peak (ECG_II), PPG steepest upstroke (PLETH),
 ART steepest upstroke (as art_export). Then:
@@ -31,7 +31,6 @@ import pandas as pd
 from scipy import signal
 
 sys.path.insert(0, str(Path(__file__).parent))
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "physiosync"))
 import itertools
 
 from pat import ECG, PPG, r_peaks, sample_times

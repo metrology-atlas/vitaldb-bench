@@ -26,7 +26,6 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).parent))
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "lineaccess"))
 from lineaccess import line_accesses, match_times
 from pat import sample_times
 from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital

@@ -29,7 +29,6 @@ import numpy as np
 from scipy import signal
 
 sys.path.insert(0, str(Path(__file__).parent))
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "physiosync"))
 from frame_an import ibi_lock, phase_scan
 from pat import ECG, sample_times
 from physiosync.ecg_ppg import _local_steps, _p2p

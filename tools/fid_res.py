@@ -33,7 +33,6 @@ import numpy as np
 from scipy import signal
 
 sys.path.insert(0, str(Path(__file__).parent))
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "physiosync"))
 from pat import ECG, PPG, r_peaks, sample_times
 from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import (
     read_vital,

@@ -25,7 +25,6 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent))
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "lineaccess"))
 from lineaccess import line_accesses, line_events
 from pat import sample_times
 from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital

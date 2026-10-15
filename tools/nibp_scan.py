@@ -21,7 +21,6 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent))
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "lineaccess"))
 from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
 
 N = ("Solar8000/NIBP_SBP", "Solar8000/NIBP_DBP", "Solar8000/NIBP_MBP")

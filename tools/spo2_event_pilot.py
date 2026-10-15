@@ -41,7 +41,6 @@ import numpy as np
 from scipy import ndimage, signal
 
 sys.path.insert(0, str(Path(__file__).parent))
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "physiosync"))
 from numeric_derivation_pilot import VALID, analyse_track, candidates, numeric_obs  # noqa: E402
 from vent_sync_pilot import snu_times  # noqa: E402
 from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital  # noqa: E402

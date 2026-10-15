@@ -2,7 +2,7 @@
 """Loop-closure test for arterial pressure measured three ways: SNUADC ART, EV1000 ART_MBP and CardioQ ABP.
 Per case, this machine only; aggregates leave.
 
-    python tools/loop_closure_art.py scan --root R --cases 19,468 --units units.csv --step-rates rates.json --out out.jsonl
+    python tools/loop_closure_art.py scan --root R --cases 1,2 --units units.csv --step-rates rates.json --out out.jsonl
     python tools/loop_closure_art.py agg out*.jsonl --summary summary.json
 
 Three links of the timing graph meet in one loop:

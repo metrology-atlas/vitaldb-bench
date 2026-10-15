@@ -3,7 +3,7 @@
 with the uniform time/value model of tools/numeric_derivation_pilot.py over longer windows. Per case, this
 machine only.
 
-    python tools/vigilance_window.py --root R --cases 12,251 --units units.csv --step-rates rates.json --out out.jsonl
+    python tools/vigilance_window.py --root R --cases 1,2 --units units.csv --step-rates rates.json --out out.jsonl
     python tools/vigilance_window.py --agg out.jsonl --summary summary.json
 
 Candidates: 60/mean(R-R), mean(60/R-R), median and EWMA over N beats (N = 32..4096) or T seconds (T = 30..3600);

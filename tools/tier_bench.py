@@ -18,12 +18,10 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "physiosync"))
 from physiosync import fit_ecg_ppg_delay
 
 FRAME = 1 / 30

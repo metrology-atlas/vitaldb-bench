@@ -20,7 +20,6 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent))
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "physiosync"))
 from foot_export import feet
 from pat import ECG, PPG, r_peaks, sample_times
 from pat_res import ecg_subsample, ppg_onsets

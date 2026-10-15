@@ -2,7 +2,7 @@
 """Clock offset and drift of the rarely used VitalDB devices against the reference (SNUADC stamp-model time).
 Per case, this machine only; aggregates leave.
 
-    python tools/rare_device_sync.py --root R --cases 19,468 --units units.csv --step-rates rates.json --out out.jsonl
+    python tools/rare_device_sync.py --root R --cases 1,2 --units units.csv --step-rates rates.json --out out.jsonl
     python tools/rare_device_sync.py --agg out*.jsonl --summary summary.json
 
 Reference: SNUADC samples on the stamp-model line (tools/vent_sync_pilot.snu_times). Lag = device time stamp
@@ -37,7 +37,6 @@ import numpy as np
 from scipy import signal
 
 sys.path.insert(0, str(Path(__file__).parent))
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "physiosync"))
 from pat import r_peaks, sample_times  # noqa: E402
 from vent_sync_pilot import snu_times  # noqa: E402
 from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital  # noqa: E402

@@ -39,7 +39,6 @@ import numpy as np
 from scipy import ndimage, signal
 
 sys.path.insert(0, str(Path(__file__).parent))
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "physiosync"))
 from pat import r_peaks, sample_times
 from physiosync import corrected_times, stamp_clock
 from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital

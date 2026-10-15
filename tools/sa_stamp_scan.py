@@ -9,13 +9,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 import time
 from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "physiosync"))
 from physiosync import stamp_clock
 from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
 
