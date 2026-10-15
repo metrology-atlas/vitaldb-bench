@@ -88,6 +88,20 @@ def decode_signal(signal: Signal, values: np.ndarray) -> np.ndarray:
     return values
 
 
+def newest_version(dataset_dir: Path) -> Path:
+    """The newest committed version directory (``1.1.0`` after a label pass, else ``1.0.0``).
+
+    Args:
+        dataset_dir: The dataset's directory inside a partition (``part-0000/vitaldb/vitaldb``).
+
+    Returns:
+        The version directory with the highest ``major.minor.patch``.
+    """
+    versions = [p for p in dataset_dir.iterdir() if p.is_dir() and p.name.count(".") == 2
+                and all(x.isdigit() for x in p.name.split("."))]
+    return max(versions, key=lambda p: tuple(int(x) for x in p.name.split(".")))
+
+
 class TimeNetStore:
     """All partitions of one TimeNet build directory, read one partition at a time.
 
@@ -129,7 +143,7 @@ class TimeNetStore:
         part = self._part_of[caseid]
         if part != self._open_part:
             self._records = {}  # drop the previous partition (and any values its loaders cached)
-            version = self.build_dir / part / "vitaldb" / "vitaldb" / "1.0.0"
+            version = newest_version(self.build_dir / part / "vitaldb" / "vitaldb")
             self._records = {r.record_id: r for r in TimeFDataset.open(path=version).records}
             self._open_part = part
         return self._records[f"vitaldb-{caseid:04d}"]
