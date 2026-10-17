@@ -46,6 +46,9 @@ class TrackClock:
         ref_shift_s: Added to every time to put the device on the reference clock (s).
         n_samples: Samples in the track when the clock was fitted; a store holding a different number is
             not corrected (its counts would not line up).
+        sample_order: The order the fit put the samples in, where the source writes some out of order (for
+            VitalDB, the SNUADC reset rule); a store stating a different order is not corrected. Empty: not
+            stated.
 
     Examples:
         >>> c = TrackClock(t0_s=10.0, fs=100.0, rate_ppm=100.0, k_breaks=np.array([0, 1000]),
@@ -61,6 +64,7 @@ class TrackClock:
     offsets_s: np.ndarray
     ref_shift_s: float = 0.0
     n_samples: int = -1
+    sample_order: str = ""
 
     def stretch(self, k: np.ndarray) -> np.ndarray:
         """Stretch index of each sample count."""

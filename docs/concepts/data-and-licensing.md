@@ -11,6 +11,9 @@ results:
 - **Only aggregates and plots leave.** Summary JSON files are counts, quantiles and fitted constants, by
   track or by group; they carry no values and no case ids.
 - **Machine paths are not published.** Scripts read them from `scripts/local.env` or the environment.
+- **No case ids.** Case ids never appear in code, docs, results, examples or commit messages; case lists
+  live in per-case files on the analysis machine. `tests/test_no_case_ids.py` checks every tracked file and
+  commit message, and allows only the placeholders 0-3 in usage examples.
 
 To reproduce the results, download the release from PhysioNet under its own licence and point `--root` at it.
 

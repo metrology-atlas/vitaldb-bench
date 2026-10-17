@@ -40,6 +40,8 @@ class Samples:
             data): such values cannot be put on a clock line.
         n_track: Values in the whole track as the store holds it (checked against the clock's fit).
         resolution_s: Step of the stored time stamps (their rounding error is uniform over one step).
+        sample_order: How the store ordered the samples, when its source writes them out of order in places
+            (checked against the clock's fit; empty means not stated, and is not checked).
     """
 
     values: np.ndarray
@@ -47,6 +49,7 @@ class Samples:
     k: np.ndarray | None
     n_track: int
     resolution_s: float = 0.0
+    sample_order: str = ""
 
 
 class SampleSource(Protocol):
@@ -173,6 +176,10 @@ class CorrectedStore:
                 clk = None
             elif clk.n_samples >= 0 and s.n_track != clk.n_samples:
                 notes.append(f"store holds {s.n_track} values, the clock was fitted on {clk.n_samples}: not corrected")
+                clk = None
+            elif clk.sample_order and s.sample_order and clk.sample_order != s.sample_order:
+                notes.append(f"store's sample order is {s.sample_order}, the clock was fitted on {clk.sample_order}: "
+                             "not corrected")
                 clk = None
         if clk is None:
             s = self.source.samples(case, track, start_s, end_s)

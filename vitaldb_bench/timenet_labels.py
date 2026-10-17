@@ -32,7 +32,7 @@ US = 10**6
 
 
 def case_of(record_id: str) -> int:
-    """VitalDB case id of a TimeNet record (``vitaldb-0042`` -> 42)."""
+    """VitalDB case id of a TimeNet record (``vitaldb-0003`` -> 3)."""
     return int(record_id.rsplit("-", 1)[1])
 
 

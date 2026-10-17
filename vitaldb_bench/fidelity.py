@@ -29,6 +29,7 @@ from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
+from timenet_connectors.datasets.vitaldb.vitaldb.resets import reorder_case
 from timenet_connectors.datasets.vitaldb.vitaldb.timing import TimingMode, segments
 from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import TRACK_STRING, TRACK_WAVE, VitalTrack, read_vital
 
@@ -154,6 +155,11 @@ def check_case(caseid: int, root: Path, tn: TimeNetStore | None, adb, timing: st
     """
     case = read_vital(root / "vital_files" / f"{caseid:04d}.vital")
     origin = case.origin
+    # a TimeNet build that put SNUADC reset clusters in sampling order is checked against the same order;
+    # builds from before the rule (no "reset_order" key) and AtriumDB keep file order
+    tn_case = case
+    if tn is not None and tn.record(caseid).metadata.get("reset_order", "off") != "off":
+        tn_case, _ = reorder_case(case)
     res: dict = {"caseid": caseid, "tracks": {}}
     for name, track in case.tracks.items():
         if not track.record_times.size:
@@ -176,8 +182,11 @@ def check_case(caseid: int, root: Path, tn: TimeNetStore | None, adb, timing: st
             res["tracks"][name] = r
             continue
         if tn is not None:
-            intended_tn = intended_times_ns(track, origin, timing) if track.track_type == TRACK_WAVE else None
-            r["timenet"] = compare(values, t_ns, tn.track(caseid, name), sort=False, intended_t=intended_tn)
+            tn_track = tn_case.tracks[name]
+            tn_values = values if tn_track is track else tn_track.values
+            tn_t = t_ns if tn_track is track else truth_times_ns(tn_track, origin)
+            intended_tn = intended_times_ns(tn_track, origin, timing) if track.track_type == TRACK_WAVE else None
+            r["timenet"] = compare(tn_values, tn_t, tn.track(caseid, name), sort=False, intended_t=intended_tn)
         if adb is not None and track.track_type != TRACK_STRING:
             float_dtype = None if track.is_integer_format else track.dtype
             got = adb.track(caseid, name, origin, float_dtype=float_dtype)

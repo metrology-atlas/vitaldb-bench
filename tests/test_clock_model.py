@@ -39,15 +39,16 @@ def test_population_constants_are_leave_one_out():
 
 def test_tables_and_corrected_read_back(tmp_path):
     from test_timenet_labels import FIXTURES, _build  # noqa: PLC0415
+    from timenet_connectors.datasets.vitaldb.vitaldb.resets import RULE_VERSION, reorder_case  # noqa: PLC0415
     from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital  # noqa: PLC0415
 
     build = _build(tmp_path)
     tool = _fit_tool()
-    v = read_vital(FIXTURES / "vital_files" / "0001.vital")
+    v, _ = reorder_case(read_vital(FIXTURES / "vital_files" / "0001.vital"))   # as the build and the fit tool order it
     tracks, clocks = {}, {}
     for name in ("SNUADC/ECG_II", "BIS/EEG1_WAV"):
         tracks[name], clocks[name] = tool.fit_track(v.tracks[name], name.split("/")[0], {}, {"*": -64.5})
-    fits = {1: {"case": 1, "origin_s": v.origin, "tracks": tracks, "snuadc_mode": "small"}}
+    fits = {1: {"case": 1, "origin_s": v.origin, "tracks": tracks, "snuadc_mode": "small", "reset_order": RULE_VERSION}}
     n = cm.write_tables(build, fits)
     assert n["clock_model"] == len(tracks["SNUADC/ECG_II"]["k_breaks"])   # BIS: no bursts, no reference shift
 
@@ -64,3 +65,9 @@ def test_tables_and_corrected_read_back(tmp_path):
 
     none = cm.load_clock_model(build, corrections="none")
     assert none.clocks == {}
+
+    # a fit made on file order is not applied to a build in sampling order
+    fits[1]["reset_order"] = "file"
+    cm.write_tables(build, fits)
+    w = cm.corrected_timenet(build).window(1, "SNUADC/ECG_II", -1e6, 1e6)
+    assert not w.corrected and "sample order" in w.notes[0]

@@ -79,6 +79,21 @@ def test_count_mismatch_is_not_corrected():
     assert not w.corrected and "999" in w.notes[0]
 
 
+def test_sample_order_mismatch_is_not_corrected():
+    class Ordered(Toy):
+        def samples(self, case, track, a, b):
+            s = super().samples(case, track, a, b)
+            return None if s is None else Samples(**{**s.__dict__, "sample_order": "rule-b"})
+
+    m = ClockModel(clocks={(1, "x"): _clock(sample_order="rule-a")})
+    w = CorrectedStore(Ordered(), m).window(1, "x", 1.0, 2.0)
+    assert not w.corrected and "rule-a" in w.notes[0]
+    m = ClockModel(clocks={(1, "x"): _clock(sample_order="rule-b")})
+    assert CorrectedStore(Ordered(), m).window(1, "x", 1.0, 2.0).corrected
+    # an order stated on one side only is not checked
+    assert CorrectedStore(Toy(), m).window(1, "x", 1.0, 2.0).corrected
+
+
 def test_bounds_hold_their_coverage():
     rng = np.random.default_rng(3)
     between = Empirical.from_samples(rng.standard_t(3, 20_000) * 0.02)     # heavy-tailed, as measured

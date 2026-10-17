@@ -20,6 +20,17 @@ For every SNUADC and BIS waveform track this fits the stamp sawtooth (`physiosyn
 adopted VitalDB rules for tracks without whole teeth) and runs the ECG~EEG burst probe on the corrected
 times. About 2 s per case; resumable.
 
+SNUADC drops about 9 samples (17.7 ms) of signal at every step-mode resynchronisation: the stamps show a
+correction of about 0.48 s, the true one is about 0.498 s. Measured on fixed-rate paced ECG
+(`tools/paced_breaks.py`) and confirmed on the ECG~EEG bursts, it is added back at each such correction
+(`physiosync.stamp_clock(..., event_loss_s=...)`), so samples after a correction are no longer 17.7 ms early.
+
+At every reset the recorder also writes five records out of order. The fit reads the case through
+`timenet_connectors.datasets.vitaldb.vitaldb.resets.reorder_case`, as the TimeNet connector does by default
+(`VITALDB_RESET_ORDER=on`), so sample counts in the fit and in the build agree. Each fit row records the order it
+used (`sample_order`); a build stored in a different order is left uncorrected, with a note, rather than shifted
+by up to two records.
+
 ## 2. Write the tables beside the build
 
 ```bash
@@ -41,6 +52,7 @@ always used). Rerun the command after any model change.
 ## 3. Read
 
 ```python
+# requires a TimeNet build with its label tables (steps 1 and 2)
 from vitaldb_bench.clock_model import corrected_timenet
 
 cs = corrected_timenet("build/tn", corrections="population", coverage=0.99)

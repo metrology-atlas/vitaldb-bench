@@ -9,7 +9,8 @@ VitalDB rules of tools/sa_corrected.py variant "model": SNUADC corrects downward
 SNUADC has no whole tooth and no step-mode correction its stamps are trusted (rate 0), with step-mode
 corrections but no tooth the port's typical rate; where BIS has no tooth, its unit's mean rate, else the
 case's sync_full rate), with stretch breaks as sample counts so a store can apply it. ``model`` holds the
-ECG~EEG burst probe on those corrected times (the same shape as sa_corrected output), which
+ECG~EEG burst probe on those corrected times. SNUADC step-mode corrections add back the signal time
+the device drops at each one (SNUADC_EVENT_LOSS_S) (the same shape as sa_corrected output), which
 :mod:`vitaldb_bench.clock_model` turns into the reference shift and the error distributions. Resumable.
 """
 
@@ -27,11 +28,15 @@ from physiosync import corrected_times, stamp_clock
 
 sys.path.insert(0, str(Path(__file__).parent))
 from shared_artifacts import BAND, DT, burst_probe, envelope
+from timenet_connectors.datasets.vitaldb.vitaldb.resets import RULE_VERSION as RESET_RULE, reorder_case
 from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
 
 DEVICES = {"SNUADC": -1, "BIS": 1}           # device -> correction_sign
 PROBE = {"ecg": "SNUADC/ECG_II", "eeg1": "BIS/EEG1_WAV", "eeg2": "BIS/EEG2_WAV"}
 STEP_EVENT_S = -0.4                          # a median SNUADC correction event this large means step mode
+# Signal time SNUADC loses at each step-mode resynchronisation (about 9 samples at 500 Hz): measured on fixed-rate
+# paced ECG (tools/paced_breaks.py; -17.2 and -18.2 ms phase steps on the sample count at two corrections).
+SNUADC_EVENT_LOSS_S = 0.0177
 
 
 def _num(x):
@@ -42,7 +47,8 @@ def fit_track(tr, dev: str, u: dict, step_rates: dict) -> dict:
     """Stamp clock of one track with the VitalDB fallback rules; breaks as sample counts."""
     st = tr.record_offsets[: tr.record_times.size]
     fs, sign = float(tr.srate), DEVICES[dev]
-    clk = stamp_clock(tr.record_times, st, fs, correction_sign=sign)
+    loss = SNUADC_EVENT_LOSS_S if dev == "SNUADC" else 0.0
+    clk = stamp_clock(tr.record_times, st, fs, correction_sign=sign, event_loss_s=loss)
     tier = clk["rate_source"]
     if clk["rate_source"] == "fit":
         if dev == "SNUADC":
@@ -55,14 +61,22 @@ def fit_track(tr, dev: str, u: dict, step_rates: dict) -> dict:
             unit, known = _num(u.get("bis_unit_mean_ppm")), _num(u.get("bis_drift_ppm"))
             fall, tier = (unit, "unit_mean") if unit is not None else (known, "sync_full")
         if fall is not None:
-            clk = stamp_clock(tr.record_times, st, fs, rate_ppm=fall, correction_sign=sign)
+            clk = stamp_clock(tr.record_times, st, fs, rate_ppm=fall, correction_sign=sign, event_loss_s=loss)
         else:
             tier = "fit"
     rec = corrected_times(clk, st)
-    k_breaks = np.asarray(st, dtype=np.int64)[clk["breaks"]]
+    # one offset per piece: stretches between gaps, split again at each lossy correction (offset + loss)
+    seg = np.zeros(st.size, dtype=np.int64)
+    seg[clk["breaks"][1:]] = 1
+    off = clk["offsets_s"][np.cumsum(seg)].astype(float)
+    for i in clk["loss_records"]:
+        off[i:] += clk["event_loss_s"]
+    starts_rec = np.r_[0, np.flatnonzero(np.diff(off) != 0) + 1]
+    k_breaks = np.asarray(st, dtype=np.int64)[starts_rec]
     return {"device": dev, "fs": fs, "t0_s": clk["t0"], "rate_ppm": clk["rate_ppm"], "rate_source": clk["rate_source"],
             "rate_tier": tier, "teeth": clk["teeth"], "k_breaks": k_breaks.tolist(),
-            "offsets_s": [float(x) for x in clk["offsets_s"]], "n_samples": int(np.sum(tr.record_sizes)),
+            "offsets_s": [float(x) for x in off[starts_rec]], "loss_events": len(clk["loss_records"]),
+            "event_loss_s": clk["event_loss_s"], "n_samples": int(np.sum(tr.record_sizes)),
             "n_records": int(st.size), "max_shift_s": float(np.max(np.abs(rec - tr.record_times))),
             "median_event_s": clk["corrections"]["median_event_s"], "events": clk["corrections"]["events"],
             "gaps": clk["gaps"], "sawtooth_p2p_s": clk["sawtooth_p2p_s"]}, clk
@@ -70,8 +84,9 @@ def fit_track(tr, dev: str, u: dict, step_rates: dict) -> dict:
 
 def one_case(path: Path, u: dict, step_rates: dict) -> dict:
     """Fits and burst probe for one .vital file."""
-    v = read_vital(path)
-    res: dict = {"origin_s": v.origin, "tracks": {}}
+    # SNUADC reset clusters in sampling order, as the TimeNet builds store them, so sample counts agree
+    v, _ = reorder_case(read_vital(path))
+    res: dict = {"origin_s": v.origin, "reset_order": RESET_RULE, "tracks": {}}
     times = {}
     for name, tr in v.tracks.items():
         dev = name.split("/", 1)[0]

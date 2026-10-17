@@ -38,7 +38,7 @@ import numpy as np
 
 from vitaldb_bench.correct import ClockModel, Empirical, Samples, TrackClock, TrackError
 
-MODEL_VERSION = "clock-model-2026.10.15"
+MODEL_VERSION = "clock-model-2026.10.17"  # .17: fits on SNUADC records in sampling order at resets
 REFERENCE = "SNUADC"
 MIN_CASE_WINDOWS = 5
 GOOD_PEAK, GOOD_MARGIN, LAG_RANGE_MS = 0.3, 0.15, (-2500.0, 500.0)   # burst window quality, as in the validation
@@ -154,7 +154,9 @@ def clock_rows(fits: dict[int, dict], pop: dict[int, dict]) -> list[dict]:
                              "max_shift_s": t["max_shift_s"], "snuadc_mode": mode, "ref_shift_population_s": shift_pop,
                              "ref_shift_case_s": shift_case, "case_windows": own["n"] if own else 0,
                              "error_group": group, "constant_fit": "leave-one-out", "available_at": "case_end",
-                             "model_version": MODEL_VERSION})
+                             "model_version": MODEL_VERSION,
+                             # fits from before the reset-order rule ran on SNUADC records in file order
+                             "sample_order": f.get("reset_order", "file")})
     return rows
 
 
@@ -226,7 +228,7 @@ def load_clock_model(build_dir: str | Path, corrections: str = "population", tim
         model.clocks[key] = TrackClock(t0_s=t0, fs=r0["fs"], rate_ppm=r0["rate_ppm"],
                                        k_breaks=np.array([r["k_start"] for r in rs], dtype=np.int64),
                                        offsets_s=np.array([r["offset_s"] for r in rs]), ref_shift_s=shift,
-                                       n_samples=r0["n_samples"])
+                                       n_samples=r0["n_samples"], sample_order=r0.get("sample_order", ""))
         g = r0["error_group"]
         if g == "reference":
             model.errors[key] = TrackError(group="reference (SNUADC)")
@@ -287,13 +289,16 @@ class TimeNetSource:
                     vals.append(physical(s, s.read_steps(int(a), int(b)).to_numpy(zero_copy_only=False)))
                     times.append(off[a:b] / 1e6)
             k0 += n
+        # builds from before the reset-order rule hold SNUADC records in file order
+        order = self.store.record(case).metadata.get("reset_order", "off")
+        order = "file" if order == "off" else order
         if not vals:
             return Samples(values=np.empty(0), t_nominal=np.empty(0), k=np.empty(0, np.int64) if regular else None,
-                           n_track=k0, resolution_s=self.resolution_s)
+                           n_track=k0, resolution_s=self.resolution_s, sample_order=order)
         t = np.concatenate(times)
         m = (t >= start_s) & (t < end_s)
         return Samples(values=np.concatenate(vals)[m], t_nominal=t[m], k=np.concatenate(ks)[m] if regular else None,
-                       n_track=k0, resolution_s=self.resolution_s)
+                       n_track=k0, resolution_s=self.resolution_s, sample_order=order)
 
 
 def corrected_timenet(build_dir: str | Path, corrections: str = "population", coverage: float = 0.99):
