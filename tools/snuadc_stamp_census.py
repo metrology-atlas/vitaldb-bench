@@ -132,6 +132,11 @@ def scan(a) -> None:
     print(f"scanned {n} files this call; {len(done) + n} of {len(files)} done; {left} left")
 
 
+def _anomalous(r: dict) -> bool:
+    """Records step back far more often than resets do: the reset rule would match by coincidence."""
+    return r.get("clusters", 0) > 2 * max(r.get("hours", 0), 0.1) or r.get("overlap_share", 0) > 0.01
+
+
 def summary(a) -> None:
     import matplotlib
     matplotlib.use("Agg")
@@ -140,7 +145,9 @@ def summary(a) -> None:
     rows = [json.loads(line) for line in open(a.scan) if line.strip()]
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    have = [r for r in rows if r.get("track")]
+    have_all = [r for r in rows if r.get("track")]
+    anomalous = [r for r in have_all if _anomalous(r)]
+    have = [r for r in have_all if not _anomalous(r)]   # resets and slopes are counted in normal files only
     ppm = np.array([p for r in have for p in r.get("stretch_ppm", [])])
     hrs = np.array([h for r in have for h in r.get("stretch_hours", [])])
     per_file = np.array([np.median(r["stretch_ppm"]) for r in have if r.get("stretch_ppm")])
@@ -148,7 +155,7 @@ def summary(a) -> None:
     for r in have:
         pats.update(r.get("unmatched_patterns", {}))
     s = {
-        "files": len(rows), "files_with_snuadc": len(have), "errors": sum(1 for r in rows if "error" in r),
+        "files": len(rows), "files_with_snuadc": len(have_all), "normal_files": len(have), "errors": sum(1 for r in rows if "error" in r),
         "stretches": int(ppm.size), "stretch_hours": round(float(hrs.sum()), 1),
         "stretch_ppm": {"median": float(np.median(ppm)) if ppm.size else None,
                         "p1": float(np.percentile(ppm, 1)) if ppm.size else None,
@@ -160,11 +167,12 @@ def summary(a) -> None:
                                               / max(sum(r.get("hours", 0) for r in have), 1e-9), 4)},
         "anomalous_files": {
             "rule": "more than 2 reset clusters per recording hour, or more than 1% of record junctions stepping back",
-            "count": sum(1 for r in have if r.get("clusters", 0) > 2 * max(r.get("hours", 0), 0.1)
-                         or r.get("overlap_share", 0) > 0.01),
-            "clusters_in_them": sum(r.get("clusters", 0) for r in have
-                                    if r.get("clusters", 0) > 2 * max(r.get("hours", 0), 0.1)
-                                    or r.get("overlap_share", 0) > 0.01)},
+            "count": len(anomalous), "hours": round(sum(r.get("hours", 0) for r in anomalous), 1),
+            "with_overlap_share_over_4pct": sum(1 for r in anomalous if r.get("overlap_share", 0) > 0.04),
+            "rule_matches_in_them": sum(r.get("clusters", 0) for r in anomalous)},
+        "files_with_resets_out_of_order": sum(1 for r in have if r.get("clusters")),
+        "files_with_resets_in_order": sum(1 for r in have if r.get("in_order")),
+        "files_with_both": sum(1 for r in have if r.get("clusters") and r.get("in_order")),
         "resets": {"files_with_any": sum(1 for r in have if r.get("clusters") or r.get("unmatched")),
                    "reordered_standard": sum(r.get("standard", 0) for r in have),
                    "reordered_restamped": sum(r.get("restamped", 0) for r in have),
@@ -182,7 +190,7 @@ def summary(a) -> None:
     ax.axvline(-0.954, color="#e65100", ls="--", lw=1, label="six-file value, -0.954 ppm")
     ax.set_xlabel("stamp minus sample count, slope within a stretch (ppm)")
     ax.set_ylabel("recording hours")
-    ax.set_title(f"SNUADC stamp arithmetic: {ppm.size:,} stretches in {len(have):,} files")
+    ax.set_title(f"SNUADC stamp arithmetic: {ppm.size:,} stretches in {len(have):,} files", fontsize=10)
     ax.legend(frameon=False, fontsize=8)
     fig.tight_layout()
     fig.savefig(out / "stamp_slope_hist.png", dpi=150)
@@ -196,7 +204,8 @@ def summary(a) -> None:
     for k, v in enumerate(vals):
         ax.text(k, v, f"{v:,}", ha="center", va="bottom", fontsize=8)
     ax.set_ylabel("resets")
-    ax.set_title(f"SNUADC resets in {r['files_with_any']:,} files")
+    ax.set_title(f"SNUADC resets in {r['files_with_any']:,} files ({len(anomalous)} files with overlapping records "
+                 "left out)", fontsize=9)
     fig.tight_layout()
     fig.savefig(out / "reset_cluster_classes.png", dpi=150)
     plt.close(fig)

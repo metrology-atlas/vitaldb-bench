@@ -9,11 +9,13 @@ results:
   lists) is written next to the analysis, and `.gitignore` excludes the usual formats (`*.vital`, `*.jsonl`,
   `*.parquet`, `*.db`, `*.sqlite`).
 - **Only aggregates and plots leave.** Summary JSON files are counts, quantiles and fitted constants, by
-  track or by group; they carry no values and no case ids.
+  track or by group; they carry no values.
 - **Machine paths are not published.** Scripts read them from `scripts/local.env` or the environment.
-- **No case ids.** Case ids never appear in code, docs, results, examples or commit messages; case lists
-  live in per-case files on the analysis machine. `tests/test_no_case_ids.py` checks every tracked file and
-  commit message, and allows only the placeholders 0-3 in usage examples.
+- **Case ids where they help.** VitalDB is open data (CC BY 4.0) and its case ids are public. A doc, figure
+  or example that discusses a specific case (an edge case, a clear example of a mechanism, a comparison
+  between cases) names it; population and group results do not need ids. Bulk per-case output (one row per
+  case or per beat) still stays on the analysis machine: `tests/test_no_per_case_files.py` fails if a
+  `*.jsonl`, `*.parquet`, `*.vital` or database file, or a CSV outside `results/`, is tracked.
 
 To reproduce the results, download the release from PhysioNet under its own licence and point `--root` at it.
 
