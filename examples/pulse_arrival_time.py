@@ -254,6 +254,89 @@ def cohort_figure(out: Path) -> None:
                       "finger_minus_art_sd_ms": {k: robust_sd(gap[k]) if gap[k] else None for k in gap}}))
 
 
+ADULT_RANGE_MS = (200, 285)   # awake adults, shared-clock studies (atlas: ppg-offset-reference); to be verified
+
+
+def distribution_figure(out: Path) -> None:
+    """Actual PAT values per 30 s window, as stored and after both steps, with the arterial-line PAT for reference.
+
+    Negative corrected values (windows where the correction failed) are left out and counted, not drawn at zero.
+    """
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    s = json.loads((out / "summary.json").read_text())
+    ok = [v for v in s.values() if "within_case_sd_ms" in v]
+    acc: dict[str, list] = {"raw": [], "cor": [], "art": []}
+    n = {k: 0 for k in acc}
+    for v in ok:
+        z = np.load(out / "windows" / f"{v['case']}.npz")
+        for k in acc:
+            if k in z.files and len(z[k]):
+                acc[k].append(z[k] * 1000)
+                n[k] += 1
+    x = {k: np.concatenate(v) for k, v in acc.items() if v}
+    fig, ax = plt.subplots(figsize=(8, 3.6))
+    ax.axvspan(*ADULT_RANGE_MS, color="#e5e5e5", zorder=0)
+    ax.text(ADULT_RANGE_MS[0] - 5, 0.0215, f"awake adults,\nshared-clock studies\n{ADULT_RANGE_MS[0]}–{ADULT_RANGE_MS[1]} ms"
+            "\n(to be verified)", ha="right", va="top", fontsize=7.5, color="#555")
+    bins = np.arange(0, 901, 10)
+    spec = (("art", COLOURS["art"], f"arterial line, ECG → radial upstroke ({n['art']} cases)", dict(histtype="stepfilled", alpha=.35)),
+            ("raw", COLOURS["raw"], f"finger PPG as stored ({n['raw']} cases)", dict(histtype="step", lw=2)),
+            ("cor", COLOURS["cor"], f"finger PPG after steps 1 and 2 ({n['cor']} cases)", dict(histtype="step", lw=2)))
+    for k, col, lab, kw in spec:
+        if k in x:
+            y = x[k]
+            ax.hist(y[(y >= 0) & (y <= 900)], bins=bins, density=True, color=col, label=lab, **kw)
+    ax.set(xlim=(0, 900), xlabel="pulse arrival time (ms), 30 s windows", ylabel="share of windows (per ms)")
+    ax.legend(frameon=False, fontsize=8, loc="upper right")
+    ax.spines[["top", "right"]].set_visible(False)
+    fig.tight_layout()
+    fig.savefig(out / "pat_distribution.png", dpi=150)
+    plt.close(fig)
+    lo, hi = ADULT_RANGE_MS
+    print(json.dumps({k: {"windows": int(len(y)), "p5_p50_p95_ms": np.percentile(y, [5, 50, 95]).round(0).tolist(),
+                          "outside_range": round(float(((y < lo) | (y > hi)).mean()), 3),
+                          "negative": round(float((y < 0).mean()), 3)} for k, y in x.items()}))
+
+
+def scatter_figure(out: Path) -> None:
+    """Finger PAT against arterial-line PAT, window by window, as stored and after both steps; both axes from zero."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    s = json.loads((out / "summary.json").read_text())
+    pts: dict[str, list] = {"raw": [], "cor": []}
+    cases = 0
+    for v in s.values():
+        if "minus_art_sd_ms" not in v:
+            continue
+        z = np.load(out / "windows" / f"{v['case']}.npz")
+        if "art_k" not in z.files or not len(z["art"]):
+            continue
+        cases += 1
+        for k in pts:
+            _, iu, iv = np.intersect1d(z[k + "_k"], z["art_k"], return_indices=True)
+            pts[k].append(np.c_[z["art"][iv], z[k][iu]] * 1000)
+    xy = {k: np.vstack(v) for k, v in pts.items()}
+    fig, ax = plt.subplots(figsize=(6.2, 6.2))
+    for k, lab in (("raw", "finger PPG as stored"), ("cor", "finger PPG after steps 1 and 2")):
+        d = xy[k][xy[k][:, 1] >= 0]
+        ax.scatter(d[:, 0], d[:, 1], s=4, alpha=.25, lw=0, color=COLOURS[k], label=f"{lab} (median {np.median(d[:, 1]):.0f} ms)")
+    lim = 900
+    ax.plot([0, lim], [0, lim], color="#555", lw=.8, ls="--", label="equal PAT")
+    ax.set(xlim=(0, 450), ylim=(0, lim), xlabel="PAT, ECG → radial arterial line (ms)",
+           ylabel="PAT, ECG → finger PPG (ms)", title=f"{len(xy['raw']):,} paired 30 s windows, {cases} cases", )
+    ax.title.set_fontsize(9)
+    ax.legend(frameon=False, fontsize=8, loc="upper left", markerscale=4)
+    ax.spines[["top", "right"]].set_visible(False)
+    fig.tight_layout()
+    fig.savefig(out / "pat_scatter.png", dpi=150)
+    plt.close(fig)
+    print(json.dumps({k: {"pairs": int(len(v)), "finger_minus_art_median_ms": round(float(np.median(v[:, 1] - v[:, 0])), 1)}
+                      for k, v in xy.items()}))
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--root", type=Path)
@@ -284,6 +367,8 @@ def main() -> None:
         sf.write_text(json.dumps(done, indent=1))
     if a.cohort_figure:
         cohort_figure(a.out)
+        distribution_figure(a.out)
+        scatter_figure(a.out)
     print(len(done), "cases in the summary")
 
 

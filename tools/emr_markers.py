@@ -3,6 +3,7 @@
 
     python tools/emr_markers.py scan --root R --cases 1,2 --out part.jsonl
     python tools/emr_markers.py agg part*.jsonl --root R --summary summary.json
+    python tools/emr_markers.py fig part*.jsonl --root R --out emr-rounding.png
 
 scan: marker times (s from casestart, i.e. the file origin 2100-01-01 00:00:00 UTC) from numerics on recorder
 stamps (Orchestra ~1 s, BIS 1 s, Primus ~7 s):
@@ -192,9 +193,100 @@ def agg(paths, root, out):
     print(json.dumps(S, indent=1))
 
 
+def groups(M, cl, ev, mk, time_of_day):
+    """D = marker - EMR time for 5-minute entries and minute entries (same rules as agg)."""
+    g5, g1 = [], []
+    for c, m in M.items():
+        if mk not in m or c not in cl:
+            continue
+        r = cl[c]
+        clk = time_of_day(r)
+        if clk.get("status") != "ok":
+            continue
+        x = float(r[ev])
+        first = m.get(mk.split("_")[0] + "_first_record")
+        if mk.endswith("_start") and first is not None and m[mk] - first < 30:
+            continue
+        minute = (clk["tod_s"] + x) / 60
+        if abs(minute - round(minute)) > 1e-3:
+            continue
+        d = m[mk] - x
+        if abs(d) > 3600:
+            continue
+        (g5 if int(round(minute)) % 5 == 0 else g1).append(d)
+    return np.array(g5), np.array(g1)
+
+
+LABEL = {"ppf_start": "propofol infusion start", "rftn_start": "remifentanil start", "bis_loc": "BIS below 60",
+         "vent_start": "ventilation start", "co2_start": "ETCO2 start", "ppf_stop": "propofol infusion stop",
+         "rftn_stop": "remifentanil stop", "vent_stop": "ventilation stop", "co2_stop": "ETCO2 stop",
+         "bis_wake": "BIS above 80", "rec_end": "recording end"}
+
+
+def fig(paths, root, out, example=("aneend", "co2_stop")):
+    """Left: one marker's D for both groups, with the 5-minute group predicted under each rounding kernel.
+    Right: the shift of the 5-minute group against the minute group for every marker (bootstrap 95% CI)."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from vitaldb_bench.case_clock import time_of_day  # noqa: PLC0415
+
+    M = {}
+    for p in paths:
+        for l in open(p):
+            r = json.loads(l)
+            if "error" not in r:
+                M[r["case"]] = r
+    cl = {int(r["caseid"]): r for r in csv.DictReader(open(Path(root) / "clinical_data.csv", encoding="utf-8-sig"))}
+    rng = np.random.default_rng(0)
+    f, ax = plt.subplots(1, 2, figsize=(12, 4.4), gridspec_kw={"width_ratios": [1.15, 1]})
+    ev, mk = example
+    g5, g1 = groups(M, cl, ev, mk, time_of_day)
+    both = np.r_[g1, g5]
+    lo_, hi_ = np.floor(np.percentile(both, 1) / 60) * 60 - 300, np.ceil(np.percentile(both, 99) / 60) * 60 + 300
+    bins = np.arange(lo_, hi_ + 1, 60)
+    ax[0].hist(g1, bins=bins, density=True, color="#bdbdbd", label=f"minute entries ({g1.size:,})")
+    ax[0].hist(g5, bins=bins, density=True, histtype="step", lw=2, color="#08519c", label=f"5-minute entries ({g5.size:,})")
+    centres = (bins[:-1] + bins[1:]) / 2
+    for name, (a, b), col, ls in (("rounded up", (-300, 0), "#d62728", "-"), ("rounded to nearest", (-150, 150), "#636363", "--"),
+                                   ("rounded down", (0, 300), "#636363", ":")):
+        sim = rng.choice(g1, 200000) + rng.uniform(a, b, 200000)
+        h, _ = np.histogram(sim, bins=bins, density=True)
+        ax[0].plot(centres, h, color=col, ls=ls, lw=1.4, label=f"predicted if {name}")
+    ax[0].set(xlabel=f"{LABEL[mk]} minus the EMR {'anaesthesia end' if ev == 'aneend' else 'anaesthesia start'} (s)",
+              ylabel="share of cases (per s)", xlim=(lo_, hi_))
+    ax[0].legend(frameon=False, fontsize=7.5, loc="upper left")
+    rows = []
+    for ev2, markers in (("anestart", INDUCTION), ("aneend", EMERGENCE)):
+        for m2 in markers:
+            a5, a1 = groups(M, cl, ev2, m2, time_of_day)
+            if a5.size < 20 or a1.size < 20:
+                continue
+            bs = [np.median(rng.choice(a5, a5.size)) - np.median(rng.choice(a1, a1.size)) for _ in range(1000)]
+            rows.append((f"{'start' if ev2 == 'anestart' else 'end'}: {LABEL[m2]}", np.median(a5) - np.median(a1),
+                         *np.percentile(bs, [2.5, 97.5])))
+    y = np.arange(len(rows))[::-1]
+    for yy, (lab, med, lo, hi) in zip(y, rows):
+        ax[1].plot([lo, hi], [yy, yy], color="#08519c", lw=2)
+        ax[1].plot(med, yy, "o", color="#08519c", ms=5)
+    for x, lab, col in ((-150, "rounded up", "#d62728"), (0, "nearest", "#636363"), (150, "down", "#636363")):
+        ax[1].axvline(x, color=col, lw=.9, ls="--")
+        ax[1].text(x, len(rows) - .3, lab, ha="center", fontsize=7.5, color=col)
+    ax[1].set_yticks(y, [r[0] for r in rows], fontsize=8)
+    ax[1].set(xlabel="5-minute minus minute entries: shift of the median (s, 95% CI)", xlim=(-400, 200),
+              ylim=(-.7, len(rows) + .2))
+    for a_ in ax:
+        a_.spines[["top", "right"]].set_visible(False)
+    f.tight_layout()
+    f.savefig(out, dpi=150)
+    print(json.dumps({"example": {"n5": int(g5.size), "n1": int(g1.size)}, "markers": len(rows),
+                      "shifts": [[r[0], round(float(r[1]), 0)] for r in rows]}))
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("mode", choices=["scan", "agg"])
+    ap.add_argument("mode", choices=["scan", "agg", "fig"])
     ap.add_argument("inputs", nargs="*")
     ap.add_argument("--root")
     ap.add_argument("--cases")
@@ -203,6 +295,9 @@ def main():
     a = ap.parse_args()
     if a.mode == "agg":
         agg(a.inputs, a.root, a.summary)
+        return
+    if a.mode == "fig":
+        fig(a.inputs, a.root, a.out)
         return
     done = set()
     if Path(a.out).exists():
