@@ -421,6 +421,64 @@ def lag_summary(a) -> None:
     fig.savefig(a.out / "bg_lagscan.png", dpi=150)
     plt.close(fig)
 
+    # oximetry: gases chosen by the lab value (SaO2 <= 98, below the analyser's ceiling), never by the monitor, so no
+    # offset is favoured; Spearman rank correlation of changes, which tolerates SpO2 = 100 as a tie
+    from scipy.stats import spearmanr  # noqa: PLC0415
+
+    def rank_r(dl, dm):
+        return spearmanr(dl, dm).correlation
+
+    def boot_rank(dl, dm, cases, n=200, seed=0):
+        rng = np.random.default_rng(seed)
+        X = pd.DataFrame({"case": cases, "dl": dl, "dm": dm}).dropna()
+        gx = [v for _, v in X.groupby("case")]
+        out = []
+        for _ in range(n):
+            q = pd.concat([gx[i] for i in rng.integers(0, len(gx), len(gx))])
+            out.append(rank_r(q.dl, q.dm))
+        return np.percentile(out, [2.5, 97.5])
+
+    O = L[L.kind == "spo2"].sort_values(["case", "gi"])
+    fig, axs = plt.subplots(1, 1, figsize=(7.5, 4.4))
+    for sel, col, lab, ci_on in ((O.lab <= 98, "#08519c", "gases with SaO₂ ≤ 98% (95% CI)", True),
+                                 (O.lab > 0, "#636363", "all gases", False)):
+        x = O[sel]
+        g = x.groupby("case")
+        dl = g.lab.diff()
+        rs, lo, hi = [], [], []
+        for l in LAGS_MIN:
+            dm = g[f"m{int(l):+d}"].diff()
+            ok = dl.notna() & dm.notna()
+            rs.append(rank_r(dl[ok], dm[ok]))
+            if ci_on:
+                b = boot_rank(dl[ok], dm[ok], x.case[ok])
+                lo.append(b[0]); hi.append(b[1])
+        dm = g["m_stamp"].diff()
+        ok = dl.notna() & dm.notna()
+        key = "spo2_sao2_le98" if ci_on else "spo2_all"
+        res[key] = {"gases": int(len(x)), "pairs_at_0": int((dl.notna() & g["m+0"].diff().notna()).sum()),
+                    "best_offset_min": float(LAGS_MIN[int(np.nanargmax(rs))]),
+                    "r_at_draw": round(float(rs[list(LAGS_MIN).index(0)]), 3),
+                    "r_at_stamp": round(float(rank_r(dl[ok], dm[ok])), 3),
+                    "r_by_offset": {int(l): round(float(r), 3) for l, r in zip(LAGS_MIN, rs)}}
+        if ci_on:
+            axs.fill_between(LAGS_MIN, lo, hi, color="#9ecae1", alpha=.6, lw=0)
+        axs.plot(LAGS_MIN, rs, "o-" if ci_on else "s--", color=col, ms=4 if ci_on else 3, lw=1.5 if ci_on else 1,
+                 label=f"{lab}: change vs change")
+    st = float(O.stamp_min.median())
+    axs.axvline(0, color="#e6550d", lw=1)
+    axs.text(0.2, 0.95, "estimated draw", color="#e6550d", fontsize=8, transform=axs.get_xaxis_transform())
+    axs.axvline(st, color="#555", ls=":", lw=1)
+    axs.text(st + .2, 0.95, f"lab stamp (median {st:.1f} min)", color="#555", fontsize=8, transform=axs.get_xaxis_transform())
+    axs.set(xlabel="monitor read at minutes from the start of the access", ylabel="rank correlation (within patients)",
+            title="SaO₂ against SpO₂: agreement by when the oximeter is read", ylim=(0, 1))
+    axs.title.set_fontsize(9)
+    axs.legend(frameon=False, fontsize=8, loc="lower left")
+    axs.spines[["top", "right"]].set_visible(False)
+    fig.tight_layout()
+    fig.savefig(a.out / "bg_lagscan_spo2.png", dpi=150)
+    plt.close(fig)
+
     # within-case change figure: draw vs stamp, CO2
     P = pd.concat([pd.read_csv(p) for p in sorted((a.out / "parts").glob("*.csv"))], ignore_index=True)
     c = P[P.kind == "etco2"].dropna(subset=["lab", "monitor_draw", "monitor_stamp"]).copy()

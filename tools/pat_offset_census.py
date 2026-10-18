@@ -7,7 +7,8 @@
 scan: per case with SNUADC ECG lead II and PLETH at 500 Hz, 8 segments of 2 minutes spread evenly over their
 overlap (from 10 minutes in). In each: R peaks and one steepest upstroke per pulse in PLETH (and SNUADC/ART where recorded),
 paired by the segment's modal delay (0.10-1.20 s for PLETH, 0.05-0.60 s for ART), because the stored PLETH delay
-often exceeds one RR interval and a nearest-after search would pair one beat out. Writes per segment the median finger PAT, arterial PAT, finger minus arterial PAT
+often exceeds one RR interval and a nearest-after search would pair one beat out. Each pulse also gets a foot
+(intersecting tangent), so delays are written to both the foot and the steepest upstroke. Writes per segment the median finger PAT, arterial PAT, finger minus arterial PAT
 (paired beat by beat), the median RR interval and beat counts. No sawtooth fit and no offset correction: these are
 the stored delays. Resumable: cases already in --out are skipped; stops at --time-budget seconds.
 
@@ -40,13 +41,29 @@ SEGMENTS, SEG_S = 8, 120.0
 
 
 def upstroke_times(t, x, fs=FS):
-    """One steepest-upstroke time per pulse: peaks of the derivative of the 0.5-10 Hz band-passed signal."""
+    """Per pulse, the steepest upstroke and the foot of the 0.5-10 Hz band-passed signal (zero-phase filter).
+
+    Upstroke: a peak of the first derivative. Foot: the intersecting tangent, where the tangent at the steepest
+    upstroke crosses the level of the minimum in the 0.35 s before it (the usual pulse-foot definition).
+    Returns (upstroke times, foot times), aligned.
+    """
     from scipy import signal  # noqa: PLC0415
 
     sos = signal.butter(2, (0.5, 10), btype="bandpass", fs=fs, output="sos")
-    d = np.gradient(signal.sosfiltfilt(sos, x))
+    y = signal.sosfiltfilt(sos, x)
+    d = np.gradient(y)
     pk, _ = signal.find_peaks(d, distance=int(0.3 * fs), height=np.percentile(d, 90) * 0.3)
-    return t[pk]
+    back = int(0.35 * fs)
+    foot = np.full(pk.size, np.nan)
+    for k, i in enumerate(pk):
+        a = max(0, i - back)
+        if i - a < 5 or d[i] <= 0:
+            continue
+        j = a + int(np.argmin(y[a:i]))
+        foot[k] = t[i] - ((y[i] - y[j]) / d[i]) / fs
+        if foot[k] < t[j] - 0.05:
+            foot[k] = np.nan
+    return t[pk], foot
 
 
 def mode_paired(r, u, lo, hi, tol=0.12):
@@ -54,10 +71,12 @@ def mode_paired(r, u, lo, hi, tol=0.12):
 
     All (u - r) within lo..hi are histogrammed (5 ms bins, smoothed); a constant delay makes one sharp peak while
     pairings one beat out move with the RR interval and smear. Each R peak then takes the upstroke nearest to
-    r + mode (within tol). Returns (mode s, per-beat delays with NaN where none, share of all pairs at the mode).
+    r + mode (within tol). Returns (mode s, per-beat delays with NaN where none, share of all pairs at the mode,
+    index of the matched upstroke per R peak, -1 where none).
     """
+    none = (np.nan, np.full(r.size, np.nan), np.nan, np.full(r.size, -1))
     if r.size < 30 or u.size < 30:
-        return np.nan, np.full(r.size, np.nan), np.nan
+        return none
     i0 = np.searchsorted(u, r + lo)
     lags = []
     for k in range(r.size):
@@ -66,17 +85,19 @@ def mode_paired(r, u, lo, hi, tol=0.12):
             lags.append(u[j] - r[k])
             j += 1
     if len(lags) < 30:
-        return np.nan, np.full(r.size, np.nan), np.nan
+        return none
     lags = np.asarray(lags)
     edges = np.arange(lo, hi + 0.005, 0.005)
     h, _ = np.histogram(lags, bins=edges)
     h = np.convolve(h, np.ones(3), mode="same")
     m = (edges[np.argmax(h)] + edges[np.argmax(h) + 1]) / 2
     j = np.clip(np.searchsorted(u, r + m), 1, u.size - 1)
-    near = np.where(np.abs(u[j - 1] - r - m) <= np.abs(u[j] - r - m), u[j - 1], u[j])
-    d = near - r
-    d[np.abs(d - m) > tol] = np.nan
-    return m, d, float(np.mean(np.abs(lags - m) <= 0.02))
+    pick = np.where(np.abs(u[j - 1] - r - m) <= np.abs(u[j] - r - m), j - 1, j)
+    d = u[pick] - r
+    bad = np.abs(d - m) > tol
+    d[bad] = np.nan
+    pick[bad] = -1
+    return m, d, float(np.mean(np.abs(lags - m) <= 0.02)), pick
 
 
 def scan_case(root: Path, case: int) -> dict:
@@ -110,14 +131,29 @@ def scan_case(root: Path, case: int) -> dict:
             continue
         rr = np.diff(r)
         seg = {"t_rel_s": round(float(s0 - t0), 0), "beats": int(r.size), "rr_ms": round(float(np.median(rr)) * 1000, 1)}
-        mp, dp, sharp = mode_paired(r, upstroke_times(*cut[PPG]), 0.10, 1.20) if cut[PPG][0].size > FS * 60 else (np.nan, np.full(r.size, np.nan), np.nan)
+        if cut[PPG][0].size > FS * 60:
+            up, fp = upstroke_times(*cut[PPG])
+            mp, dp, sharp, ip = mode_paired(r, up, 0.10, 1.20)
+        else:
+            dp, sharp, ip, fp = np.full(r.size, np.nan), np.nan, np.full(r.size, -1), np.zeros(0)
+        fdp = np.where(ip >= 0, fp[np.clip(ip, 0, None)] - r, np.nan) if fp.size else np.full(r.size, np.nan)
         seg["ppg_n"] = int(np.isfinite(dp).sum())
         if seg["ppg_n"] >= 30:
             seg["ppg_ms"] = round(float(np.nanmedian(dp)) * 1000, 1)
             seg["ppg_iqr_ms"] = round(float(np.subtract(*np.nanpercentile(dp, [75, 25]))) * 1000, 1)
             seg["ppg_mode_share"] = round(sharp, 3)
+            if np.isfinite(fdp).sum() >= 30:
+                seg["ppg_foot_ms"] = round(float(np.nanmedian(fdp)) * 1000, 1)
+                seg["ppg_foot_to_up_ms"] = round(float(np.nanmedian(dp - fdp)) * 1000, 1)
         if has_art and cut[ART][0].size > FS * 60:
-            ma, da, _ = mode_paired(r, upstroke_times(*cut[ART]), 0.05, 0.60)
+            ua, fa = upstroke_times(*cut[ART])
+            ma, da, _, ia = mode_paired(r, ua, 0.05, 0.60)
+            fda = np.where(ia >= 0, fa[np.clip(ia, 0, None)] - r, np.nan) if fa.size else np.full(r.size, np.nan)
+            if np.isfinite(fda).sum() >= 30:
+                seg["art_foot_ms"] = round(float(np.nanmedian(fda)) * 1000, 1)
+                ff = (fdp - fda)[np.isfinite(fdp) & np.isfinite(fda)]
+                if ff.size >= 30:
+                    seg["ppg_minus_art_foot_ms"] = round(float(np.median(ff)) * 1000, 1)
             if np.isfinite(da).sum() >= 30:
                 seg["art_ms"] = round(float(np.nanmedian(da)) * 1000, 1)
                 dd = (dp - da)[np.isfinite(dp) & np.isfinite(da)]
@@ -180,7 +216,8 @@ def agg(a) -> None:
         key = " · ".join(core) if all(core) else assigned.get(c)
         rec = {"case": c, "key": key, "snuadc_port": pr.get("SNUADC"), "art": r["art"], "segments": len(sg),
                "rr_ms": sg.rr_ms.median()}
-        for col in ("ppg_ms", "art_ms", "ppg_minus_art_ms"):
+        for col in ("ppg_ms", "art_ms", "ppg_minus_art_ms", "ppg_foot_ms", "ppg_foot_to_up_ms", "art_foot_ms",
+                    "ppg_minus_art_foot_ms"):
             if col in sg and sg[col].notna().sum() >= 3:
                 rec[col] = sg[col].median()
                 rec[col + "_seg_range"] = sg[col].max() - sg[col].min()
@@ -196,6 +233,8 @@ def agg(a) -> None:
 
     s = {"cases": int(len(df)), "with_art": int(df.art.sum()),
          "ppg_ms": q(df.get("ppg_ms")), "art_ms": q(df.get("art_ms")), "ppg_minus_art_ms": q(df.get("ppg_minus_art_ms")),
+         "ppg_foot_ms": q(df.get("ppg_foot_ms")), "ppg_foot_to_up_ms": q(df.get("ppg_foot_to_up_ms")),
+         "art_foot_ms": q(df.get("art_foot_ms")), "ppg_minus_art_foot_ms": q(df.get("ppg_minus_art_foot_ms")),
          "within_case_segment_range_ms": {c: q(df.get(c + "_seg_range")) for c in ("ppg_ms", "ppg_minus_art_ms")}}
     by = {}
     for k, g in df.groupby("key"):

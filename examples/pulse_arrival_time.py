@@ -12,9 +12,10 @@ starting 10 minutes into their overlap:
    D(t) = offset + sawtooth(t): a creep at a fixed rate, reset by one 30 Hz frame at each slip (arterial
    upstrokes, where present, as the reference for the slips). Removing only the sawtooth part leaves the PAT at
    its stored level.
-3. **Step 2, global delay.** Subtract one device delay for every recording, 0.445 s: the stored delay's median over
-   the release (0.715 s, tools/pat_offset_census.py) minus an adopted mean finger PAT of 0.27 s. Differences between
-   patients are kept; the absolute level rests on the adopted 0.27 s.
+3. **Step 2, global delay.** Subtract one device delay for every recording, 0.385 s: the stored R-to-PLETH-foot
+   delay's median over the release (0.655 s, tools/pat_offset_census.py) minus an adopted mean R-to-finger-foot PAT
+   of 0.27 s. Differences between patients are kept; the absolute level rests on the adopted 0.27 s. The PAT here is
+   to the steepest upstroke, so after step 2 it reads about 0.27 s plus the 0.059 s foot-to-upstroke time.
 4. **Maximum-likelihood smoothing** (after Ruffolo et al. 2025). For each 30 s window the latent PAT is the value
    that maximises the likelihood of the window's beats under the recording's per-beat error model
    (``physiosync.pat_measurement_model``: the PLETH fiducial's frame rounding or jitter and the ECG's sample
@@ -46,10 +47,12 @@ ECG, PPG, ART = "SNUADC/ECG_II", "SNUADC/PLETH", "SNUADC/ART"
 FS = 500.0
 ADOPTED = 0.27      # adopted population mean finger PAT (anaesthetised adults; atlas study ppg-offset-reference)
 # One device delay for every recording (PAT offset census, tools/pat_offset_census.py, 18 Oct 2026: 5,536
-# recordings; stored ECG->PLETH delay 715 ms in the median recording, one peak, no clusters by setup or case order).
-# Global delay = stored median minus the adopted finger PAT: 0.715 - 0.270 = 0.445 s.
-STORED_MEDIAN = 0.715
-GLOBAL_DELAY = STORED_MEDIAN - ADOPTED
+# recordings; one peak, no clusters by setup or case order). The adopted 0.27 s is R to the finger pulse's FOOT, so the
+# delay is taken at the foot: stored R-to-PLETH-foot median 0.655 s minus 0.270 s = 0.385 s. It is subtracted from
+# this example's steepest-upstroke PAT, which therefore reads 0.27 s plus the foot-to-upstroke time (0.059 s median).
+STORED_FOOT_MEDIAN = 0.655
+FOOT_TO_UPSTROKE = 0.059
+GLOBAL_DELAY = STORED_FOOT_MEDIAN - ADOPTED
 WIN = 30.0          # s per smoothing window
 COLOURS = {"raw": "#9e9e9e", "saw": "#3f51b5", "cor": "#e65100", "art": "#2e7d32"}
 
@@ -273,7 +276,10 @@ def cohort_figure(out: Path) -> None:
                       "finger_minus_art_sd_ms": {k: robust_sd(gap[k]) if gap[k] else None for k in gap}}))
 
 
-ADULT_RANGE_MS = (200, 285)   # awake adults, shared-clock studies (atlas: ppg-offset-reference); to be verified
+# awake adults, shared-clock studies, R to finger FOOT (atlas: ppg-offset-reference; to be verified), shifted by the
+# foot-to-upstroke time so it compares with this example's upstroke PAT
+ADULT_RANGE_FOOT_MS = (200, 285)
+ADULT_RANGE_MS = tuple(round(v + 59) for v in ADULT_RANGE_FOOT_MS)
 
 
 def distribution_figure(out: Path) -> None:
@@ -297,8 +303,9 @@ def distribution_figure(out: Path) -> None:
     x = {k: np.concatenate(v) for k, v in acc.items() if v}
     fig, ax = plt.subplots(figsize=(8, 3.6))
     ax.axvspan(*ADULT_RANGE_MS, color="#e5e5e5", zorder=0)
-    ax.text(ADULT_RANGE_MS[0] - 5, 0.0215, f"awake adults,\nshared-clock studies\n{ADULT_RANGE_MS[0]}–{ADULT_RANGE_MS[1]} ms"
-            "\n(to be verified)", ha="right", va="top", fontsize=7.5, color="#555")
+    ax.text(ADULT_RANGE_MS[1] + 8, 0.97, f"awake adults,\nshared-clock studies:\n{ADULT_RANGE_FOOT_MS[0]}–"
+            f"{ADULT_RANGE_FOOT_MS[1]} ms to the foot,\n+59 ms to the upstroke\n(to be verified)",
+            ha="left", va="top", fontsize=7.5, color="#555", transform=ax.get_xaxis_transform())
     bins = np.arange(0, 901, 10)
     spec = (("art", COLOURS["art"], f"arterial line, ECG → radial upstroke ({n['art']} cases)", dict(histtype="stepfilled", alpha=.35)),
             ("raw", COLOURS["raw"], f"finger PPG as stored ({n['raw']} cases)", dict(histtype="step", lw=2)),
