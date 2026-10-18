@@ -12,8 +12,9 @@ starting 10 minutes into their overlap:
    D(t) = offset + sawtooth(t): a creep at a fixed rate, reset by one 30 Hz frame at each slip (arterial
    upstrokes, where present, as the reference for the slips). Removing only the sawtooth part leaves the PAT at
    its stored level.
-3. **Step 2, offset correction.** Removing the offset as well snaps the PAT to an adopted population mean
-   (0.27 s). The offset cannot be measured from recordings, so after step 2 only changes in PAT are measured.
+3. **Step 2, global delay.** Subtract one device delay for every recording, 0.445 s: the stored delay's median over
+   the release (0.715 s, tools/pat_offset_census.py) minus an adopted mean finger PAT of 0.27 s. Differences between
+   patients are kept; the absolute level rests on the adopted 0.27 s.
 4. **Maximum-likelihood smoothing** (after Ruffolo et al. 2025). For each 30 s window the latent PAT is the value
    that maximises the likelihood of the window's beats under the recording's per-beat error model
    (``physiosync.pat_measurement_model``: the PLETH fiducial's frame rounding or jitter and the ECG's sample
@@ -43,7 +44,12 @@ from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital  #
 
 ECG, PPG, ART = "SNUADC/ECG_II", "SNUADC/PLETH", "SNUADC/ART"
 FS = 500.0
-ADOPTED = 0.27      # population mean PAT the corrected PPG is snapped to
+ADOPTED = 0.27      # adopted population mean finger PAT (anaesthetised adults; atlas study ppg-offset-reference)
+# One device delay for every recording (PAT offset census, tools/pat_offset_census.py, 18 Oct 2026: 5,536
+# recordings; stored ECG->PLETH delay 715 ms in the median recording, one peak, no clusters by setup or case order).
+# Global delay = stored median minus the adopted finger PAT: 0.715 - 0.270 = 0.445 s.
+STORED_MEDIAN = 0.715
+GLOBAL_DELAY = STORED_MEDIAN - ADOPTED
 WIN = 30.0          # s per smoothing window
 COLOURS = {"raw": "#9e9e9e", "saw": "#3f51b5", "cor": "#e65100", "art": "#2e7d32"}
 
@@ -137,7 +143,8 @@ def one_case(root: Path, case: int, minutes: float):
     m = fit_ecg_ppg_delay(r, p, adopted_pat_s=ADOPTED, frame_s=1 / 30, matched=True,
                           ref_t=a if has_art else None)
     saw = m.shift(p) - m.offset_s                     # the sawtooth part of the delay
-    pat = {"raw": p - r, "saw": p - saw - r, "cor": m.correct(p) - r}
+    # step 2: one global delay for every recording, so differences in PAT between patients are kept
+    pat = {"raw": p - r, "saw": p - saw - r, "cor": p - saw - r - GLOBAL_DELAY}
     rec = pat_measurement_model(m, ecg_fs=FS, ppg_fs=FS, r_t=r, ppg_t=p)
     noise = [s["beat_noise_s"] for s in rec["segments"] if s.get("beat_noise_s")]
     ppg_err = fiducial_error_model(ix, FS, frame_samples=FS / 30, pat_noise_s=float(np.median(noise)) if noise else None,
@@ -158,6 +165,17 @@ def one_case(root: Path, case: int, minutes: float):
     return res, {"t0": t0, "win": win, "slips": [s - t0 for s in m.slips_t]}
 
 
+MISPAIRED_BELOW_MS = 600   # stored median below this: pulses paired one beat out (fast heart rate or doubled R peaks)
+
+
+def usable(v: dict) -> bool:
+    """A case enters the cohort figures if it ran and its pulses were paired with the right beat. The stored
+    ECG->PLETH delay is about 0.7 s in every recording (PAT offset census), longer than one RR interval at fast heart
+    rates, where this example's nearest-upstroke search pairs a pulse with the next beat and the stored median comes
+    out near 0.45-0.55 s."""
+    return "within_case_sd_ms" in v and v.get("raw_median_ms", 0) >= MISPAIRED_BELOW_MS
+
+
 def figure(case: int, series: dict, out: Path) -> None:
     import matplotlib
     matplotlib.use("Agg")
@@ -165,7 +183,7 @@ def figure(case: int, series: dict, out: Path) -> None:
     w, t0 = series["win"], series["t0"]
     fig, ax = plt.subplots(figsize=(7.5, 4.4))
     lines = [("raw", "ECG → finger (PLETH), as stored"), ("saw", "ECG → finger, step 1: sawtooth removed"),
-             ("cor", "ECG → finger, step 2: offset removed (snapped to 0.27 s)")]
+             ("cor", f"ECG → finger, step 2: global delay removed ({GLOBAL_DELAY * 1000:.0f} ms)")]
     if "art" in w:
         lines.append(("art", "ECG → arterial line (ART): no correction needed"))
     for k, lab in lines:
@@ -190,7 +208,7 @@ def cohort_figure(out: Path) -> None:
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     s = json.loads((out / "summary.json").read_text())
-    ok = [v for v in s.values() if "within_case_sd_ms" in v]
+    ok = [v for v in s.values() if usable(v)]
     dev = {"raw": [], "saw": []}
     for v in ok:
         z = np.load(out / "windows" / f"{v['case']}.npz")
@@ -236,7 +254,8 @@ def cohort_figure(out: Path) -> None:
     ax[0].set_title("every case", fontsize=8, loc="left")
     ax[1].set_title("every case", fontsize=8, loc="left")
     ax[1].hist(raw_med, bins=30, color=COLOURS["raw"], alpha=0.8, label="as stored")
-    ax[1].axvline(ADOPTED * 1000, color=COLOURS["cor"], lw=1.5, label="step 2: every case at 270 ms")
+    ax[1].hist([m_ - GLOBAL_DELAY * 1000 for m_ in raw_med], bins=30, histtype="step", lw=1.5, color=COLOURS["cor"],
+               label=f"step 2: minus the global {GLOBAL_DELAY * 1000:.0f} ms")
     ax[1].set_xlabel("case median ECG → finger PAT (ms)")
     ax[1].set_ylabel("cases")
     ax[1].legend(frameon=False, fontsize=7)
@@ -266,7 +285,7 @@ def distribution_figure(out: Path) -> None:
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     s = json.loads((out / "summary.json").read_text())
-    ok = [v for v in s.values() if "within_case_sd_ms" in v]
+    ok = [v for v in s.values() if usable(v)]
     acc: dict[str, list] = {"raw": [], "cor": [], "art": []}
     n = {k: 0 for k in acc}
     for v in ok:
@@ -309,7 +328,7 @@ def scatter_figure(out: Path) -> None:
     pts: dict[str, list] = {"raw": [], "cor": []}
     cases = 0
     for v in s.values():
-        if "minus_art_sd_ms" not in v:
+        if "minus_art_sd_ms" not in v or not usable(v):
             continue
         z = np.load(out / "windows" / f"{v['case']}.npz")
         if "art_k" not in z.files or not len(z["art"]):
