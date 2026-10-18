@@ -34,6 +34,7 @@ convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["D"]
+"examples/**" = ["D103"]   # worked examples: module docstring documents the steps
 "tools/**" = ["D", "E701", "E702", "E731", "E741", "I001"]   # analysis scripts: compact style, module docstrings only
 
 [tool.pytest.ini_options]
