@@ -11,6 +11,10 @@ variant "model" (the adopted one): where SNUADC has no whole tooth and no correc
 (rate 0: frequent-small-correction mode); with step-mode corrections (an event of -0.4 s or more) but no whole tooth, the port's typical rate
 (--step-rates, from the cases with teeth); and where BIS has none, its unit's mean rate (else the
 case's sync_full rate) is used. Variant "syncfull" uses the sync_full rate for both devices throughout.
+Variant "model2" (19 Oct) is "model" except that a SNUADC track with no correction at all takes its port's typical
+step-mode rate unless the recording is in frequent-small-correction mode (--modes label "small"): the whole-release
+burst check showed such recordings drift like step mode (they end before their first reset). Ports come from
+--ports (every recording) when given, else from --units.
 """
 
 from __future__ import annotations
@@ -40,8 +44,12 @@ def main() -> None:
     ap.add_argument("--out", required=True)
     ap.add_argument("--variants", default="teeth,syncfull")
     ap.add_argument("--step-rates", default=None, help="JSON port -> typical SNUADC step-mode rate (ppm), '*' for any")
+    ap.add_argument("--modes", default=None, help="JSON case -> SNUADC correction mode label (step / small / none)")
+    ap.add_argument("--ports", default=None, help="JSON case -> {port: SNUADC port, ...} for every recording")
     a = ap.parse_args()
     step_rates = json.loads(Path(a.step_rates).read_text()) if a.step_rates else {}
+    modes = {int(k): v for k, v in json.loads(Path(a.modes).read_text()).items()} if a.modes else {}
+    ports = {int(k): (v or {}).get("port") for k, v in json.loads(Path(a.ports).read_text()).items()} if a.ports else {}
     U = {int(r["case"]): r for r in csv.DictReader(open(a.units))}
     done = set()
     if Path(a.out).exists():
@@ -73,15 +81,21 @@ def main() -> None:
                         known = float(known) if known not in (None, "") else None
                         unit = u.get(f"{dev}_unit_mean_ppm")
                         unit = float(unit) if unit not in (None, "") else None
-                        if variant == "model":
+                        if variant in ("model", "model2"):
                             clk = stamp_clock(tr.record_times, st, fs, correction_sign=sign)
                             if clk["rate_source"] == "fit":
                                 if dev == "snuadc":
                                     # no step-mode correction: stamps trusted; step-mode corrections but no whole
                                     # tooth: the port's typical step-mode rate
                                     ev = clk["corrections"]["median_event_s"]
-                                    fall = (step_rates.get(u.get("snuadc_port"), step_rates.get("*", 0.0))
-                                            if ev is not None and ev <= -0.4 else 0.0)
+                                    port = ports.get(c) or u.get("snuadc_port")
+                                    port_rate = step_rates.get(port, step_rates.get("*", 0.0))
+                                    if ev is not None and ev <= -0.4:
+                                        fall = port_rate
+                                    elif variant == "model2" and ev is None and modes.get(c) != "small":
+                                        fall = port_rate      # no correction at all: step mode before its first reset
+                                    else:
+                                        fall = 0.0
                                 else:
                                     fall = unit if unit is not None else known
                                 if fall is not None:
