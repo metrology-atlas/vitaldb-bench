@@ -18,4 +18,3 @@ scripts/local.env
 
 # zensical build output
 site/
-scripts/run.env

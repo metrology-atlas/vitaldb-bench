@@ -28,8 +28,9 @@ cp scripts/local.env.example scripts/local.env
 |---|---|
 | `VITALDB_ROOT` | The VitalDB release folder (holds `vital_files/` and `clinical_data.csv`). |
 | `VITALDB_PYTHON` | The Python that has this package installed. |
-| `VITALDB_WORK` | Work folder; the test-matrix scripts read `bench/cases_*.json` from it. |
+| `VITALDB_WORK` | Work folder for per-case output (never published); the test-matrix scripts read `bench/cases_*.json` from it. |
 | `VITALDB_TEST_DBS` | Where `t30_out.sh` copies finished test builds. |
+| `VITALDB_PYTHONPATH` | For the scan drivers in `tools/` and `examples/`: where `timenet-connectors` and `physiosync` live, if not pip-installed. |
 
 The Python commands below take the same paths as arguments (`--root` and so on).
 

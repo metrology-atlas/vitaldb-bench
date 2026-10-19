@@ -25,14 +25,15 @@ No VitalDB data are included. To reproduce, download the release from PhysioNet 
 ## Running the whole-release scans
 
 The scan drivers (`tools/run_tool_scan.sh`, `tools/run_burst_validation.sh`, `examples/run_scan.sh`,
-`examples/run_ppv_by_breath.sh`) run a script over every recording in 8 parallel parts. They need three settings,
-taken from the environment or from `scripts/run.env` (copy `scripts/run.env.example`; git ignores the copy):
+`examples/run_ppv_by_breath.sh`) run a script over every recording in 8 parallel parts. They read their paths
+from the environment or from `scripts/local.env` (copy `scripts/local.env.example`; git ignores the copy), like the
+other drivers in `scripts/`:
 
 | Variable | Meaning |
 |---|---|
-| `W` | Work folder for per-case output. It stays on your machine; only aggregates are published. |
-| `R` | The VitalDB 1.0.0 release folder. |
-| `PYTHONPATH` | Where `timenet-connectors` and `physiosync` live, if they are not pip-installed. |
+| `VITALDB_WORK` (or `W`) | Work folder for per-case output. It stays on your machine; only aggregates are published. |
+| `VITALDB_ROOT` (or `R`) | The VitalDB 1.0.0 release folder. |
+| `VITALDB_PYTHONPATH` (or `PYTHONPATH`) | Where `timenet-connectors` and `physiosync` live, if they are not pip-installed. |
 
 ```bash
 bash tools/run_tool_scan.sh continuity_sync          # writes $W/continuity_sync/part_*.jsonl

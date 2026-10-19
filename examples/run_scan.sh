@@ -5,14 +5,14 @@
 #   python examples/NAME.py agg $W/examples/NAME/part_*.jsonl --out $W/examples/NAME/agg
 set -euo pipefail
 NAME=${1:?example script name without .py}
-# W (work folder), R (VitalDB release) and PYTHONPATH come from the environment or scripts/run.env
-# (copy scripts/run.env.example); the environment wins.
+# Machine-specific paths come from the environment or scripts/local.env (copy scripts/local.env.example; git
+# ignores the copy); the environment wins. W is the work folder (VITALDB_WORK), R the VitalDB release (VITALDB_ROOT).
 _W=${W:-}; _R=${R:-}; _PP=${PYTHONPATH:-}
-ENVF="$(cd "$(dirname "$0")/.." && pwd)/scripts/run.env"
+ENVF="$(cd "$(dirname "$0")/.." && pwd)/scripts/local.env"
 [ -f "$ENVF" ] && . "$ENVF"
-W=${_W:-${W:-}}; R=${_R:-${R:-}}; export PYTHONPATH=${_PP:-${PYTHONPATH:-}}
-: "${W:?set W to your work folder, or create scripts/run.env (see scripts/run.env.example)}"
-: "${R:?set R to the VitalDB release folder, or create scripts/run.env (see scripts/run.env.example)}"
+W=${_W:-${VITALDB_WORK:-}}; R=${_R:-${VITALDB_ROOT:-}}; export PYTHONPATH=${_PP:-${VITALDB_PYTHONPATH:-}}
+: "${W:?set W or VITALDB_WORK to your work folder (see scripts/local.env.example)}"
+: "${R:?set R or VITALDB_ROOT to the VitalDB release folder (see scripts/local.env.example)}"
 O=$W/examples/$NAME
 cd "$(dirname "$0")/.."
 PY=${PY:-$(command -v python || command -v python3 || true)}
