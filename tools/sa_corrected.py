@@ -110,6 +110,11 @@ def main() -> None:
                                         fall = bis_rates.get(bport, bis_rates.get("*"))
                                 if fall is not None:
                                     clk = stamp_clock(tr.record_times, st, fs, rate_ppm=fall, correction_sign=sign)
+                        elif variant == "stamps":       # the recorded stamps, uncorrected (for figures)
+                            rec = np.repeat(np.arange(tr.record_times.size), tr.record_sizes[: tr.record_times.size])
+                            times[k] = (tr.record_times[rec] + (np.arange(rec.size) - st[rec]) / fs)[: x.size]
+                            clocks[k] = {"rate_ppm": None, "source": "stamps"}
+                            continue
                         elif variant == "syncfull" and known is not None:
                             clk = stamp_clock(tr.record_times, st, fs, rate_ppm=known, correction_sign=sign)
                         else:
