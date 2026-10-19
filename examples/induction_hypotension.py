@@ -9,11 +9,11 @@ Post-induction hypotension is usually defined from the charted anaesthesia start
 ([[study:emr-rounding]]), so the window opens after induction. Per case:
 
   induction   from the devices (tools/emr_markers.py): BIS loss of consciousness (BIS < 60 held 30 s after BIS >= 80),
-              else the first propofol pump rate; kept when within -20 to +25 min of the charted start;
+              else the first propofol pump rate; kept when within -20 to +40 min of the charted start;
   pressure    cuff readings (Solar8000 NIBP_MBP, a new value or a value after a gap) and arterial-line dips (ART_MBP
               numeric < 65 for 60 s or more, start times), from 30 min before to 60 min after the charted start;
   windows     20 minutes from the charted start, and 20 minutes from the device induction; a sweep of window
-              starts from -10 to +10 min around the device induction.
+              starts from -40 to +10 min around the device induction.
 Cases are split, as in the EMR rounding study, into 5-minute entries and minute entries by the recovered case clock
 (vitaldb_bench.case_clock). scan writes one JSON line per case (stays on this machine); agg writes DIR/summary.json
 (aggregates only) and DIR/induction_hypotension.png.
@@ -36,7 +36,7 @@ import emr_markers  # noqa: E402
 
 warnings.filterwarnings("ignore")
 LIM, WIN = 65.0, 1200.0
-SHIFTS = np.arange(-600, 601, 30)
+SHIFTS = np.arange(-2400, 601, 30)
 
 
 def scan_case(root, c, anestart):
@@ -102,6 +102,7 @@ def agg(a) -> None:
     from vitaldb_bench.case_clock import time_of_day
     clin = {int(r["caseid"]): r for r in csv.DictReader(open(Path(a.root) / "clinical_data.csv", encoding="utf-8-sig"))}
     rows = [json.loads(l) for p in a.parts for l in Path(p).read_text().splitlines() if l.strip()]
+    rows = list({r["case"]: r for r in rows}.values())   # one line per recording (a resumed run may repeat one)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     recs = []
@@ -113,9 +114,9 @@ def agg(a) -> None:
         mk = r["markers"]
         dev = mk.get("bis_loc")
         src = "bis"
-        if dev is None or not (-1200 <= dev - ane <= 1500) or dev - mk.get("bis_first_record", -1e9) < 30:
+        if dev is None or not (-1200 <= dev - ane <= 2400) or dev - mk.get("bis_first_record", -1e9) < 30:
             dev, src = mk.get("ppf_start"), "ppf"
-            if dev is None or not (-1200 <= dev - ane <= 1500) or dev - mk.get("ppf_first_record", -1e9) < 30:
+            if dev is None or not (-1200 <= dev - ane <= 2400) or dev - mk.get("ppf_first_record", -1e9) < 30:
                 continue
         clk = time_of_day(cl)
         if clk.get("status") != "ok":
@@ -171,7 +172,7 @@ def figure(recs, summ, out):
     for g in ("minute", "5-minute"):
         D = np.array([x["D"] for x in recs if x["group"] == g]) / 60
         if D.size:
-            ax[0].hist(np.clip(-D, -10, 20), bins=np.arange(-10, 20.5, 1), histtype="step", lw=1.3, color=col[g], density=True,
+            ax[0].hist(np.clip(-D, -40, 10), bins=np.arange(-40, 10.5, 1), histtype="step", lw=1.3, color=col[g], density=True,
                        label=f"{g} entries ({D.size:,})")
     ax[0].axvline(0, color="0.4", lw=0.8)
     ax[0].set_xlabel("charted start after device induction (min)")
@@ -182,6 +183,9 @@ def figure(recs, summ, out):
             ax[1].plot(np.array(summ["sweep_shift_s"]) / 60, np.array(summ["by_group"][g]["sweep_incidence"]) * 100,
                        color=col.get(g, "0.3"), lw=1.3 if g != "all" else 0.8, ls="-" if g != "all" else "--", label=g)
     ax[1].axvline(0, color="0.4", lw=0.8)
+    med = -summ["by_group"]["all"]["device_minus_charted_s_p10_25_50_75_90"][2] / 60
+    ax[1].axvline(med, color="0.6", lw=0.8, ls=":")
+    ax[1].annotate("median charted start", (med, ax[1].get_ylim()[0]), xytext=(4, 6), textcoords="offset points", fontsize=7)
     ax[1].set_xlabel("20-min window opens this long after device induction (min)")
     ax[1].set_ylabel("post-induction hypotension (%)")
     ax[1].legend(fontsize=7, frameon=False)
@@ -195,7 +199,7 @@ def figure(recs, summ, out):
                    f"{summ['by_group'][g]['labels_flip']:.0%} of labels flip", ha="center", fontsize=7)
     ax[2].set_xticks(x, [f"{g} entries" for g in gs])
     ax[2].set_ylabel("post-induction hypotension (%)")
-    ax[2].legend(fontsize=7, frameon=False, loc="lower right")
+    ax[2].legend(fontsize=7, frameon=True, loc="lower center", framealpha=0.9)
     ax[2].set_title("C. Cohort and patient", fontsize=9, loc="left")
     for a_ in ax:
         a_.spines[["top", "right"]].set_visible(False)

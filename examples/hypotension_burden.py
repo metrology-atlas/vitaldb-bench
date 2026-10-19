@@ -154,6 +154,7 @@ def scan(a) -> None:
 
 def agg(a) -> None:
     rows = [json.loads(l) for p in a.parts for l in Path(p).read_text().splitlines() if l.strip()]
+    rows = list({r["case"]: r for r in rows}.values())   # one line per recording (a resumed run may repeat one)
     ok = [r for r in rows if "num" in r]
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -233,9 +234,10 @@ def figure(ok, summ, out: Path) -> None:
     ax[2].axvline(0, color="0.3", lw=0.8)
     ax[2].set_xlabel("numeric minus waveform (minutes below 65)")
     ax[2].set_yticks([])
-    ax[2].set_title(f"C. Mean {summ['population']['mean_minutes_num_minus_wav']:+.1f} min; per patient p10-p90 "
-                    f"{summ['individual']['num_minus_wav_minutes_p10_25_50_75_90'][0]:+.1f} to "
-                    f"{summ['individual']['num_minus_wav_minutes_p10_25_50_75_90'][4]:+.1f}", fontsize=9, loc="left")
+    ax[2].set_title(f"C. Mean {summ['population']['mean_minutes_num_minus_wav']:+.1f} min; per patient "
+                    f"{summ['individual']['num_minus_wav_minutes_p10_25_50_75_90'][0]:+.0f} to "
+                    f"{summ['individual']['num_minus_wav_minutes_p10_25_50_75_90'][4]:+.0f} (p10-p90)", fontsize=9, loc="left")
+    ax[2].set_xlabel("numeric minus waveform (minutes below 65; ends pooled at ±15)")
     for a_ in ax:
         a_.spines[["top", "right"]].set_visible(False)
     fig.suptitle(f"Hypotension (MAP < 65 mmHg): {summ['used']:,} recordings, {summ['hours_common']:,.0f} hours",

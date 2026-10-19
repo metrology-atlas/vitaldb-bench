@@ -90,6 +90,7 @@ def scan(a) -> None:
 
 def agg(a) -> None:
     rows = [json.loads(l) for p in a.parts for l in Path(p).read_text().splitlines() if l.strip()]
+    rows = list({r["case"]: r for r in rows}.values())   # one line per recording (a resumed run may repeat one)
     ok = [r for r in rows if "cuff" in r]
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -174,7 +175,7 @@ def figure(cor, best, art, d, per_mean, summ, out):
     ax[0].axvline(LAGS[best], color="#e65100", lw=0.8, ls=":")
     ax[0].set_xlabel("arterial window ends this long before the cuff stamp (s)")
     ax[0].set_ylabel("correlation of changes")
-    ax[0].set_title(f"A. The cuff's moment: {LAGS[best]} s before its stamp", fontsize=9, loc="left")
+    ax[0].set_title(f"A. The cuff value belongs to its stamp ({-LAGS[best]:+d} s)", fontsize=9, loc="left")
     ax[1].scatter((art + art + d) / 2, d, s=2, alpha=0.15, color="#3f51b5", lw=0)
     lv = summ["population"]["by_arterial_level"]
     ax[1].plot([x["art_from"] + 5 for x in lv], [x["mean_diff"] for x in lv], "o-", color="#e65100", ms=3)
@@ -182,7 +183,7 @@ def figure(cor, best, art, d, per_mean, summ, out):
     ax[1].axvline(65, color="0.4", lw=0.8, ls=":")
     ax[1].set_xlim(30, 140); ax[1].set_ylim(-50, 50)
     ax[1].set_xlabel("mean of cuff and arterial MAP (mmHg)"); ax[1].set_ylabel("cuff minus arterial (mmHg)")
-    ax[1].set_title("B. Population: bias depends on the pressure", fontsize=9, loc="left")
+    ax[1].set_title("B. Population: almost no bias at any pressure", fontsize=9, loc="left")
     ax[2].hist(np.clip(per_mean, -30, 30), bins=np.arange(-30, 31, 2), color="#3f51b5", alpha=0.8)
     ax[2].axvline(0, color="0.4", lw=0.8)
     ax[2].set_xlabel("a patient's mean cuff minus arterial (mmHg)")
