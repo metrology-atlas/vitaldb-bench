@@ -1,0 +1,28 @@
+{
+  "title": "vitaldb-bench: timing and data-quality audit of VitalDB",
+  "upload_type": "software",
+  "description": "Timing and data-quality audit of VitalDB: device clock drift and synchronisation, the delay and averaging window of every numeric value, derived per-case labels, and the whole-release scans behind the VitalDB metrology atlas.",
+  "creators": [
+    {
+      "name": "Goodwin, Andrew J.",
+      "affiliation": "School of Biomedical Engineering, The University of Sydney",
+      "orcid": "0000-0002-2776-7039"
+    }
+  ],
+  "license": "mit",
+  "keywords": [
+    "VitalDB",
+    "clock synchronisation",
+    "data quality",
+    "physiological signals",
+    "anaesthesia"
+  ],
+  "access_right": "open",
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/metrology-atlas/vitaldb-bench",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    }
+  ]
+}
