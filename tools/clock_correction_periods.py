@@ -1,12 +1,12 @@
 # SPDX-License-Identifier: MIT
 """How often each device clock is corrected: correction times, sizes and intervals per track. This machine only.
 
-    python tools/clock_correction_periods.py ROOT cases.json out.jsonl
+    python tools/clock_correction_periods.py ROOT cases.json out.jsonl [time_budget_s]
 
 For SNUADC/ECG_II and BIS/EEG1_WAV: physiosync.stamp_clock correction events and the intervals between
 consecutive events inside one stretch. For those and Primus/AWP: small stamp steps (0.1 ms to 0.1 s, single-record
 flicks excluded), their sizes and spacing, and steps of 0.1 s or more (gaps and large corrections). Resumable;
-stops after about 160 s.
+stops after time_budget_s (default 160, for short sessions; pass a large value for a full run).
 """
 
 import json
@@ -17,6 +17,7 @@ import numpy as np
 from physiosync import stamp_clock
 from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
 R, cases_json, out = sys.argv[1], sys.argv[2], sys.argv[3]
+BUDGET = float(sys.argv[4]) if len(sys.argv) > 4 else 160.0
 cases = json.load(open(cases_json))
 done = set()
 try: done = {json.loads(l)['case'] for l in open(out)}
@@ -26,7 +27,7 @@ t0 = time.time()
 with open(out, 'a') as fh:
     for c in cases:
         if c in done: continue
-        if time.time() - t0 > 160: break
+        if time.time() - t0 > BUDGET: break
         res = {'case': c}
         try:
             v = read_vital(f'{R}/vital_files/{c:04d}.vital', track_names=set(TR))
