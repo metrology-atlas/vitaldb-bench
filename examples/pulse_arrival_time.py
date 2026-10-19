@@ -175,7 +175,8 @@ def usable(v: dict) -> bool:
     """A case enters the cohort figures if it ran and its pulses were paired with the right beat. The stored
     ECG->PLETH delay is about 0.7 s in every recording (PAT offset census), longer than one RR interval at fast heart
     rates, where this example's nearest-upstroke search pairs a pulse with the next beat and the stored median comes
-    out near 0.45-0.55 s."""
+    out near 0.45-0.55 s.
+    """
     return "within_case_sd_ms" in v and v.get("raw_median_ms", 0) >= MISPAIRED_BELOW_MS
 
 

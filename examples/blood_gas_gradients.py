@@ -223,7 +223,8 @@ def cohort_figure(df: pd.DataFrame, out: Path) -> None:
 def scatter_figure(df: pd.DataFrame, out: Path) -> None:
     """Lab value against the monitor at the estimated draw, one point per gas. Every value is a whole number, so
     each point is drawn at a random place within its rounding interval (the true value is somewhere in it; values
-    of 100 within 99.5-100), which shows the density that a grid of stacked points would hide."""
+    of 100 within 99.5-100), which shows the density that a grid of stacked points would hide.
+    """
     import matplotlib
 
     matplotlib.use("Agg")
@@ -315,7 +316,8 @@ LAGS_MIN = np.arange(-10, 15.5, 1.0)   # minutes from the start of the matched a
 
 def lagscan(a) -> None:
     """Timing scan: the monitor (median over +-60 s) at each offset in LAGS_MIN from the start of the access, per gas.
-    If the estimated draw is right, agreement with the lab value should peak near offset 0, not at the lab stamp."""
+    If the estimated draw is right, agreement with the lab value should peak near offset 0, not at the lab stamp.
+    """
     d = pd.read_csv(a.draws_csv)
     d = d[(d.panel == "blood_gas") & (d.label == "lab_draw:single")]
     lab = pd.read_csv(a.root / "lab_data.csv")

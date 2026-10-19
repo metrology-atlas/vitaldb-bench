@@ -6,7 +6,7 @@
 Three clocks against the SNUADC stamp-model timeline (the recorder PC's timeline, carried by the SNUADC):
   SNUADC  its record stamps minus the stamp model (the sawtooth of drift and half-second resets);
   BIS     its EEG stamps minus the stamp model plus the step-mode EEG-ECG constant (-0.804 s, from other recordings);
-  Primus  its airway-pressure stamps' drift: the AWP-to-CVP lag fitted with one slope and one offset per stretch
+  Primus  its airway-pressure stamps' drift: the AWP-to-CVP lag fitted with a slope and an offset in each stretch
           between AWP pauses, minus its median (the physiological airway-to-CVP delay is unknown and left out).
 Two checks between clocks, from the signals themselves:
   BIS vs SNUADC     the EEG-minus-ECG lag of shared electrocautery and muscle bursts, per 10-minute window, on the
@@ -63,7 +63,7 @@ def burst_lags(t_ecg, x_ecg, fs_e, t_eeg, x_eeg, fs_b):
 def stretch_fit(t, y, pauses):
     st = np.searchsorted(pauses, t)
     u = np.unique(st)
-    X = np.column_stack([t] + [(st == s).astype(float) for s in u])
+    X = np.column_stack([(st == s).astype(float) for s in u] + [t * (st == s) for s in u])
     beta = np.linalg.lstsq(X, y, rcond=None)[0]
     loo = []
     for i in range(t.size):
@@ -111,10 +111,10 @@ def main():
     pr_t, pr = P.cvp_lag(ta, xa, tc_r, xc, on)
     pm_t, pm = P.cvp_lag(ta, xa, tc_m[: tc_r.size], xc, on)
     beta, st, u, loo = stretch_fit(pm_t - z, pm, pa - z)
-    off = dict(zip(u, beta[1:]))
+    off, slope = dict(zip(u, beta[: u.size])), dict(zip(u, beta[u.size:]))
     grid = np.linspace(pm_t[0], pm_t[-1], 2000)
     gst = np.searchsorted(pa, grid)
-    fit_line = np.array([beta[0] * (g - z) + off.get(s, np.nan) for g, s in zip(grid, gst)])
+    fit_line = np.array([slope.get(s, np.nan) * (g - z) + off.get(s, np.nan) for g, s in zip(grid, gst)])
     phys = float(np.nanmedian(pm))
     prim_err = fit_line - phys
     # figure
@@ -176,7 +176,7 @@ def main():
     fig.tight_layout(rect=(0, 0, 1, 0.97))
     fig.savefig(a.out, dpi=150, facecolor="white")
     summ = {"case": a.case, "snuadc_rate_ppm": ce["rate_ppm"], "bis_rate_ppm": cb["rate_ppm"],
-            "primus_slope_ppm": beta[0] * 1e6, "burst_windows": [int(lb.size), int(la.size)],
+            "primus_slope_ppm": float(np.median(beta[u.size:])) * 1e6, "burst_windows": [int(lb.size), int(la.size)],
             "burst_abs_dev_ms_before_after": [float(1000 * np.median(np.abs(lb - np.median(lb)))) if lb.size else None,
                                               float(1000 * np.median(np.abs(la - np.median(la)))) if la.size else None],
             "burst_median_ms_after": float(1000 * np.median(la)) if la.size else None,

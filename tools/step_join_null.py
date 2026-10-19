@@ -1,7 +1,9 @@
 # SPDX-License-Identifier: MIT
 """Null controls for join_z (tools/step_classify.py): at ordinary record junctions with no step, and with one message
 or half a message removed. python tools/step_join_null.py ROOT 1,2,3 OUT.json (40 random cases are enough)."""
-import sys, numpy as np, json
+import sys
+import numpy as np
+import json
 from pathlib import Path
 from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
 R=Path(sys.argv[1]); cases=[int(c) for c in sys.argv[2].split(',')]

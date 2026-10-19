@@ -5,9 +5,14 @@
 #   python examples/NAME.py agg $W/examples/NAME/part_*.jsonl --out $W/examples/NAME/agg
 set -euo pipefail
 NAME=${1:?example script name without .py}
-W=${W:-/mnt/c/vitalDB/work}
-R=${R:-/mnt/c/vitalDB/vitaldb-a-high-fidelity-multi-parameter-vital-signs-database-in-surgical-patients-1.0.0}
-export PYTHONPATH=${PYTHONPATH:-/mnt/c/code/TimeNet/packages/timenet-connectors/src:/mnt/c/code/physiosync}
+# W (work folder), R (VitalDB release) and PYTHONPATH come from the environment or scripts/run.env
+# (copy scripts/run.env.example); the environment wins.
+_W=${W:-}; _R=${R:-}; _PP=${PYTHONPATH:-}
+ENVF="$(cd "$(dirname "$0")/.." && pwd)/scripts/run.env"
+[ -f "$ENVF" ] && . "$ENVF"
+W=${_W:-${W:-}}; R=${_R:-${R:-}}; export PYTHONPATH=${_PP:-${PYTHONPATH:-}}
+: "${W:?set W to your work folder, or create scripts/run.env (see scripts/run.env.example)}"
+: "${R:?set R to the VitalDB release folder, or create scripts/run.env (see scripts/run.env.example)}"
 O=$W/examples/$NAME
 cd "$(dirname "$0")/.."
 PY=${PY:-$(command -v python || command -v python3 || true)}

@@ -12,7 +12,7 @@ modulation gives a second, physiologically different reference. The Primus's AWP
 split each recording into stretches.
 
 Accuracy, three ways (agg):
-  1. Leave one out. Fit one slope and one offset per stretch with each window left out, predict it; the error
+  1. Leave one out. Fit a slope and an offset in each stretch with each window left out, predict it; the error
      distribution is the accuracy of a Primus time placed by the fit (per arm, over all windows).
   2. Two arms. In recordings with both, the slopes from CVP and from ART, and the CVP arm's prediction against the
      ART arm's windows after removing one constant (the physiology between the two references).
@@ -118,8 +118,11 @@ def fit(t, y, pauses):
 
 
 def loo_errors(t, y, pauses):
-    """Leave-one-out prediction errors (s) of the common-slope, per-stretch-offset fit."""
-    X, st = design(t, pauses)
+    """Leave-one-out prediction errors (s) of a line per stretch: its own slope and offset (adopted 20 Oct; 55 ms
+    median against 74 ms for one slope per recording, tools/primus_pause_aware.py)."""
+    st = np.searchsorted(np.asarray(pauses, float), t)
+    u = np.unique(st)
+    X = np.column_stack([(st == s).astype(float) for s in u] + [t / 3600 * (st == s) for s in u])
     err = []
     for i in range(t.size):
         m = np.ones(t.size, bool); m[i] = False

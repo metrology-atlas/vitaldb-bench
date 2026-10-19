@@ -47,7 +47,8 @@ NUM = "Solar8000/ART_SBP"
 
 def first_upstroke(t, x, r_t, rr):
     """The first PLETH upstroke (a local maximum of the slope) at least 0.1 s after each R peak, before the next R
-    peak plus 0.1 s; refined to the sub-sample peak as in the PAT example."""
+    peak plus 0.1 s; refined to the sub-sample peak as in the PAT example.
+    """
     sos = signal.butter(2, (0.5, 10), btype="bandpass", fs=FS, output="sos")
     d = np.gradient(signal.sosfiltfilt(sos, x))
     pk, _ = signal.find_peaks(d, distance=int(0.2 * FS), prominence=np.percentile(d, 99) * 0.3)

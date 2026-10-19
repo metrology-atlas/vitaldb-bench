@@ -33,11 +33,10 @@ import warnings
 from pathlib import Path
 
 import numpy as np
-from scipy import ndimage, signal
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 from pat import r_peaks, sample_times  # noqa: E402
-from vent_sync_pilot import G, binned, breath_onsets, env_series, harmonic, shape_lag, stretches_of, trig_avg, xlag  # noqa: E402
+from vent_sync_pilot import G, binned, breath_onsets, env_series, harmonic, shape_lag, trig_avg, xlag  # noqa: E402
 
 warnings.filterwarnings("ignore")
 SNU = {"ecg": "SNUADC/ECG_II", "art": "SNUADC/ART", "cvp": "SNUADC/CVP"}

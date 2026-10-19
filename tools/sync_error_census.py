@@ -13,7 +13,7 @@ Each link is checked by a signal that two clocks both record; the check never en
   Primus - SNUADC  the breath cycle in airway pressure and central venous pressure (10-min windows).
                    Before: the lag on both devices' recorded stamps, minus the recording's own median (the
                    physiological airway-to-CVP delay is unknown, so this before is a lower bound). After: each
-                   window predicted from all the others (one slope and one offset per stretch between AWP pauses).
+                   window predicted from all the others (its own slope and offset in each stretch between AWP pauses).
                    Inputs: W/primus_sync_raw (tools/primus_sync_accuracy.py scan --arms cvp_raw) and
                    W/primus_sync_accuracy (arm cvp).
   Primus - PC      the PIP numeric, stamped by the PC, against the airway-pressure breath it describes (30-min
@@ -65,10 +65,12 @@ def bursts(W, modes):
     return cat(before), cat(after), len(n)
 
 
-def stretch_loo(t, y, pauses):
+def stretch_loo(t, y, pauses, own_slope=True):
+    """Leave-one-out errors of a line per stretch between AWP pauses: its own offset, and its own slope unless
+    own_slope is False (one slope per recording; for 30-minute blocks, too few per stretch for a slope each)."""
     st = np.searchsorted(np.asarray(pauses, float), t)
     u = np.unique(st)
-    X = np.column_stack([t] + [(st == s).astype(float) for s in u])
+    X = np.column_stack([(st == s).astype(float) for s in u] + ([t * (st == s) for s in u] if own_slope else [t]))
     out = []
     for i in range(t.size):
         m = np.ones(t.size, bool); m[i] = False
@@ -85,12 +87,14 @@ def primus(W):
     for r in parts(W / "primus_sync_raw"):
         A = (r.get("arms") or {}).get("cvp_raw")
         if A and len(A["lag"]) >= 6:
-            y = np.array(A["lag"]); before.append(np.abs(y - np.median(y))); n.add(r["case"])
+            y = np.array(A["lag"]); before.append(np.abs(y - np.median(y)))
     for r in parts(W / "primus_sync_accuracy"):
         A = (r.get("arms") or {}).get("cvp")
         if A and len(A["t"]) >= 6:
-            after.append(np.abs(stretch_loo(np.array(A["t"]) / 3600, np.array(A["lag"]), np.array(r["pauses"]) / 3600)))
-            n.add(r["case"])
+            e = stretch_loo(np.array(A["t"]) / 3600, np.array(A["lag"]), np.array(r["pauses"]) / 3600)
+            if e:
+                after.append(np.abs(e))
+                n.add(r["case"])
     cat = lambda x: np.concatenate(x) if x else np.empty(0)
     return cat(before), cat(after), len(n)
 
@@ -102,7 +106,7 @@ def pip(W):
         if len(B) < 4:
             continue
         before.append(np.abs(B[:, 1] - np.median(B[:, 1])))
-        after.append(np.abs(stretch_loo(B[:, 0] / 3600, B[:, 1], np.array(r.get("pauses") or []) / 3600)))
+        after.append(np.abs(stretch_loo(B[:, 0] / 3600, B[:, 1], np.array(r.get("pauses") or []) / 3600, own_slope=False)))
         n += 1
     cat = lambda x: np.concatenate(x) if x else np.empty(0)
     return cat(before), cat(after), n
