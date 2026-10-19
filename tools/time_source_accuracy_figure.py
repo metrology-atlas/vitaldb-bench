@@ -18,6 +18,7 @@ Edit ENTRIES as models improve; keep the 'source' strings so each number can be 
 
 from __future__ import annotations
 
+import re
 import sys
 
 import matplotlib
@@ -109,9 +110,17 @@ def centre(e):
 
 
 def main():
-    fig = plt.figure(figsize=(18.5, 15.5))
-    ax = fig.add_axes([0.06, 0.08, 0.60, 0.84])
-    kx = fig.add_axes([0.68, 0.03, 0.31, 0.90])
+    paper = "--paper" in sys.argv          # print layout for a landscape page: no title, one-line key, print-size type
+    if paper:
+        sys.argv.remove("--paper")
+    S = (dict(fig=(9.7, 5.9), ax=[0.075, 0.105, 0.50, 0.875], kx=[0.60, 0.0, 0.40, 0.985], badge=6.0, lw=1.0, ms=8,
+              lab=7.5, tick=7, head=7.2, entry=6.2, step=0.0205, gap=0.008, leg=6.5, detail=False)
+         if paper else
+         dict(fig=(18.5, 15.5), ax=[0.06, 0.08, 0.60, 0.84], kx=[0.68, 0.03, 0.31, 0.90], badge=8.5, lw=1.8, ms=13,
+              lab=11, tick=None, head=10.5, entry=8.6, step=0.0262, gap=0.012, leg=9.5, detail=True))
+    fig = plt.figure(figsize=S["fig"])
+    ax = fig.add_axes(S["ax"])
+    kx = fig.add_axes(S["kx"])
     kx.axis("off")
     XL, YL = (1e-4, 3e5), (5e-5, 3e5)
     ax.set_xscale("log")
@@ -133,12 +142,12 @@ def main():
         w = max(np.log10(x1) - np.log10(x0), 0.2)
         h = max(np.log10(y1) - np.log10(y0), 0.2)
         lax.add_patch(Ellipse((cx, cy), w, h, facecolor=col, alpha=0.18, edgecolor="none"))
-        lax.add_patch(Ellipse((cx, cy), w, h, facecolor="none", edgecolor=col, lw=1.8,
+        lax.add_patch(Ellipse((cx, cy), w, h, facecolor="none", edgecolor=col, lw=S["lw"],
                               ls="-" if meas else (0, (4, 3))))
     for a, b in ARROWS:
         (x0, y0), (x1, y1) = np.log10(centre(ENTRIES[a])), np.log10(centre(ENTRIES[b]))
         lax.annotate("", xy=(x1 + 0.15, y1), xytext=(x0 - 0.15, y0),
-                     arrowprops=dict(arrowstyle="-|>", color="#52514e", lw=1.2, ls="--", mutation_scale=13))
+                     arrowprops=dict(arrowstyle="-|>", color="#52514e", lw=1.2 if not paper else 0.8, ls="--", mutation_scale=S["ms"]))
     # number badges, nudged apart where centres collide
     placed = []
     cands = [(0, 0)] + [(r * np.cos(a), r * np.sin(a)) for r in (0.35, 0.6, 0.85) for a in np.radians(np.arange(0, 360, 45))]
@@ -153,45 +162,61 @@ def main():
         if (bx, by) != (cx, cy):
             lax.plot([cx, bx], [cy, by], color=col, lw=0.9)
             lax.plot(cx, cy, "o", color=col, ms=3)
-        lax.text(bx, by, str(num[k]), ha="center", va="center", fontsize=8.5, fontweight="bold", color="#0b0b0b",
-                 bbox=dict(boxstyle="circle,pad=0.18", facecolor="white", edgecolor=col, lw=1.2), zorder=5)
+        lax.text(bx, by, str(num[k]), ha="center", va="center", fontsize=S["badge"], fontweight="bold", color="#0b0b0b",
+                 bbox=dict(boxstyle="circle,pad=0.18", facecolor="white", edgecolor=col, lw=1.2 if not paper else 0.8), zorder=5)
     from matplotlib.ticker import LogFormatterSciNotation, LogLocator, NullFormatter
     for axis in (ax.xaxis, ax.yaxis):
         axis.set_major_locator(LogLocator(base=10, numticks=40))          # a major tick at every power of 10
         axis.set_major_formatter(LogFormatterSciNotation(base=10))
         axis.set_minor_locator(LogLocator(base=10, subs=np.arange(2, 10), numticks=400))
         axis.set_minor_formatter(NullFormatter())
-    ax.tick_params(which="major", length=6)
+    ax.tick_params(which="major", length=6 if not paper else 3.5)
+    if S["tick"]:
+        ax.tick_params(labelsize=S["tick"])
     ax.tick_params(which="minor", length=3)
     ax.grid(which="major", axis="both", color="0.80", lw=0.9)
     ax.grid(which="minor", axis="both", color="0.93", lw=0.5)
     ax.set_axisbelow(True)
-    ax.set_xlabel("Accuracy: delay from the end of the interval a value describes to its stamp (or a stamp's clock "
-                  "error), on the working reference; add link A for UTC (s)", fontsize=11)
-    ax.set_ylabel("Resolution: width of the interval a time stands for (s)", fontsize=11)
-    fig.text(0.06, 0.955, "VitalDB time stamps: accuracy and resolution", fontsize=14, fontweight="bold")
-    fig.text(0.06, 0.93, "Current best estimates from the audit; ellipses span the measured or estimated range on each axis. "
+    if paper:
+        ax.set_xlabel("Accuracy: delay from the end of the interval a value describes to its stamp,\n"
+                      "or a stamp's clock error, on the working reference (s)", fontsize=S["lab"])
+    else:
+        ax.set_xlabel("Accuracy: delay from the end of the interval a value describes to its stamp (or a stamp's clock "
+                      "error), on the working reference; add link A for UTC (s)", fontsize=S["lab"])
+    ax.set_ylabel("Resolution: width of the interval a time stands for (s)", fontsize=S["lab"])
+    if not paper:
+        fig.text(0.06, 0.955, "VitalDB time stamps: accuracy and resolution", fontsize=14, fontweight="bold")
+        fig.text(0.06, 0.93, "Current best estimates from the audit; ellipses span the measured or estimated range on each axis. "
              "To be updated as temporal models and synchronisation improve.", fontsize=9.5, color="#52514e")
     # key
     y = 0.99
     for g, (col, gl) in GROUP.items():
-        kx.text(0.0, y, gl, fontsize=10.5, fontweight="bold", color="#0b0b0b", transform=kx.transAxes, va="top")
-        kx.add_patch(plt.Rectangle((-0.04, y - 0.022), 0.025, 0.018, color=col, transform=kx.transAxes, clip_on=False))
-        y -= 0.027
+        if paper:
+            gl = {"wave": "Waveforms", "num": "Numerics", "rec": "Records"}[g]
+        kx.text(0.0, y, gl, fontsize=S["head"], fontweight="bold", color="#0b0b0b", transform=kx.transAxes, va="top")
+        kx.add_patch(plt.Rectangle((-0.04, y - S["step"] * 0.84), 0.025, S["step"] * 0.69, color=col,
+                                   transform=kx.transAxes, clip_on=False))
+        y -= S["step"] * (1.03 if not paper else 1.15)
         for k in [k for k in order if ENTRIES[k][0] == g]:
             e = ENTRIES[k]
             lab = e[1].replace("\n", " ")
-            kx.text(0.0, y, f"{num[k]:>2}", fontsize=8.6, fontweight="bold", transform=kx.transAxes, va="top")
-            kx.text(0.06, y, lab + ("" if e[6] or "assumed" in lab else "  (estimated)"), fontsize=8.6, transform=kx.transAxes, va="top")
-            kx.text(0.06, y - 0.0118, e[9], fontsize=7.3, color="#52514e", transform=kx.transAxes, va="top")
-            y -= 0.0262
-        y -= 0.012
+            kx.text(0.0, y, f"{num[k]:>2}", fontsize=S["entry"], fontweight="bold", transform=kx.transAxes, va="top")
+            if paper:   # names only: the line style already says measured or estimated
+                lab = re.sub(r"\s*\([^)]*\)", "", lab).strip()
+                lab = {"caseend": "Case end"}.get(lab, lab)
+            else:
+                lab += "" if e[6] or "assumed" in lab else "  (estimated)"
+            kx.text(0.06, y, lab, fontsize=S["entry"], transform=kx.transAxes, va="top")
+            if S["detail"]:
+                kx.text(0.06, y - 0.0118, e[9], fontsize=7.3, color="#52514e", transform=kx.transAxes, va="top")
+            y -= S["step"]
+        y -= S["gap"]
     from matplotlib.lines import Line2D
     handles = [Line2D([0], [0], color="0.3", lw=1.8, label="measured in this audit"),
                Line2D([0], [0], color="0.3", lw=1.8, ls=(0, (4, 3)), label="estimated"),
                Line2D([0], [0], color="#52514e", lw=1.2, ls="--", marker=">", label="raw -> after synchronisation or per-case label")]
-    ax.legend(handles=handles, loc="upper left", fontsize=9.5, framealpha=0.95)
-    fig.savefig(sys.argv[1], dpi=120)
+    ax.legend(handles=handles, loc="upper left", fontsize=S["leg"], framealpha=0.95)
+    fig.savefig(sys.argv[1], dpi=120 if not paper else 300)
     if len(sys.argv) > 2:
         fig.savefig(sys.argv[2])
 
