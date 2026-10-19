@@ -17,7 +17,9 @@ A clock correction looks like a gap or an overlap on the stamps (a SNUADC reset 
 BIS correction pushes them forward by about 0.17 s) and disappears on the synchronised times; a real gap stays.
 Each case writes, per track and per state, the counts of gaps and of overlaps in log-spaced bins of size (1e-4 to
 1e4 s), the number of junctions and the track's duration: no times, no samples. agg sums them and draws
-N(gap >= x) against x for every signal, before and after.
+N(gap >= x) against x for every signal, before and after. A few files with broken record streams (duplicated,
+interleaved or overlapping records; see the atlas observations) hold almost all overlaps; agg leaves out, per track,
+any recording with more than --max-overlaps overlaps of 10 ms or more in either state, and reports how many.
 """
 
 from __future__ import annotations
@@ -94,9 +96,13 @@ def agg(a) -> None:
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     R = [json.loads(x) for p in a.parts for x in open(p, encoding="utf-8") if x.strip()]
-    S = {}
+    S, dropped = {}, {}
+    i10 = int(np.searchsorted(EDGES, 0.01))
     for r in R:
         for name, t in (r.get("tracks") or {}).items():
+            if max(sum(t[st]["overlap"][i10:]) for st in ("before", "after")) > a.max_overlaps:
+                dropped[name] = dropped.get(name, 0) + 1
+                continue
             s = S.setdefault(name, {"recordings": 0, "junctions": 0, "hours": 0.0,
                                     **{f"{st}_{k}": np.zeros(EDGES.size - 1, np.int64)
                                        for st in ("before", "after") for k in ("gap", "overlap")}})
@@ -111,11 +117,12 @@ def agg(a) -> None:
     summ = {"recordings_read": len(R), "errors": sum("error" in r for r in R), "edges_s": EDGES.round(6).tolist(),
             "tracks": {}}
     names = [n for n in TRACKS if n in S]
-    fig, axes = plt.subplots(1, len(names), figsize=(3.2 * len(names), 3.3), sharey=True, squeeze=False)
+    fig, axes = plt.subplots(1, len(names), figsize=(2.9 * len(names), 3.4), sharey=True, squeeze=False)
     GREY, BLUE = "#9b9a94", "#2a78d6"
     for ax, name in zip(axes[0], names):
         s = S[name]
-        row = {"recordings": s["recordings"], "junctions": s["junctions"], "hours": round(s["hours"], 1)}
+        row = {"recordings": s["recordings"], "left_out_broken_streams": dropped.get(name, 0),
+               "junctions": s["junctions"], "hours": round(s["hours"], 1)}
         for st in ("before", "after"):
             for k in ("gap", "overlap"):
                 h = s[f"{st}_{k}"]
@@ -126,21 +133,24 @@ def agg(a) -> None:
                 col = GREY if st == "before" else BLUE
                 ls = "-" if k == "gap" else ":"
                 m = ge > 0
-                ax.step(EDGES[:-1][m], ge[m], where="post", color=col, ls=ls, lw=1.8 if k == "gap" else 1.4,
+                ax.step(EDGES[:-1][m], ge[m], where="post", color=col, ls=ls,
+                        lw=(3.2 if k == "gap" else 2.4) if st == "before" else (1.4 if k == "gap" else 1.2),
                         label=f"{k}s, {'as recorded' if st == 'before' else 'synchronised'}")
         summ["tracks"][name] = row
         ax.set_xscale("log")
         ax.set_yscale("log")
         ax.set_xlim(1e-3, 1e4)
-        ax.set_title(f"{TRACKS[name][0]}\n{s['recordings']:,} recordings", fontsize=9, loc="left")
+        ax.set_title(f"{TRACKS[name][0]}", fontsize=9.5, fontweight="bold", loc="left", pad=16)
+        ax.text(0, 1.02, f"{s['recordings']:,} recordings", transform=ax.transAxes, fontsize=7.5, color="#5a6170")
         ax.set_xlabel("size (s)", fontsize=8)
         ax.tick_params(labelsize=7.5)
         ax.grid(color="#e4e3df", lw=0.6)
         for sp in ("top", "right"):
             ax.spines[sp].set_visible(False)
     axes[0][0].set_ylabel("number of gaps or overlaps at least this size", fontsize=8)
-    axes[0][0].legend(fontsize=7, frameon=False, loc="lower left")
-    fig.tight_layout()
+    h, lab = axes[0][0].get_legend_handles_labels()
+    fig.legend(h, lab, loc="lower center", ncol=4, fontsize=8, frameon=False)
+    fig.tight_layout(rect=(0, 0.08, 1, 1))
     fig.savefig(out / "continuity_sync.png", dpi=150, facecolor="white")
     (out / "summary.json").write_text(json.dumps(summ, indent=1))
     print(json.dumps({k: {kk: vv for kk, vv in v.items() if not isinstance(vv, list)} for k, v in summ["tracks"].items()},
@@ -153,6 +163,7 @@ def main() -> None:
     s = sp.add_parser("scan"); s.add_argument("--root", required=True); s.add_argument("--cases", required=True)
     s.add_argument("--out", required=True)
     g = sp.add_parser("agg"); g.add_argument("parts", nargs="+"); g.add_argument("--out", required=True)
+    g.add_argument("--max-overlaps", type=int, default=100)
     a = ap.parse_args()
     scan(a) if a.cmd == "scan" else agg(a)
 
