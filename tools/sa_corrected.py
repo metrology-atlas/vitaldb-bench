@@ -7,7 +7,7 @@ Each track's record stamps are refitted (one rate per recording, one offset per 
 sample placed on the fitted line; the ECG~EEG burst cross-correlation of shared_artifacts is then redone on
 those times. VitalDB-specific choices: SNUADC corrects downwards (correction_sign -1) and BIS upwards (+1);
 variant "teeth": where a track has no whole tooth, its rate is the sync_full rate of that case ("given");
-variant "model" (the adopted one): where SNUADC has no whole tooth and no correction its stamps are trusted
+variant "model" (the adopted one; run all variants with tools/run_burst_validation.sh): where SNUADC has no whole tooth and no correction its stamps are trusted
 (rate 0: frequent-small-correction mode); with step-mode corrections (an event of -0.4 s or more) but no whole tooth, the port's typical rate
 (--step-rates, from the cases with teeth); and where BIS has none, its unit's mean rate (else the
 case's sync_full rate) is used. Variant "syncfull" uses the sync_full rate for both devices throughout.
@@ -15,6 +15,9 @@ Variant "model2" (19 Oct) is "model" except that a SNUADC track with no correcti
 step-mode rate unless the recording is in frequent-small-correction mode (--modes label "small"): the whole-release
 burst check showed such recordings drift like step mode (they end before their first reset). Ports come from
 --ports (every recording) when given, else from --units.
+Variant "model3" (19 Oct) is "model2" except that a BIS track with no correction at all, no whole tooth and no known
+unit or case rate takes its port's median BIS rate against the recorder PC (--bis-rates, from the correction steps of the full
+release; '*' for ports with too few recordings) instead of the stamps' rate (0). Rates never come from the bursts.
 """
 
 from __future__ import annotations
@@ -45,11 +48,14 @@ def main() -> None:
     ap.add_argument("--variants", default="teeth,syncfull")
     ap.add_argument("--step-rates", default=None, help="JSON port -> typical SNUADC step-mode rate (ppm), '*' for any")
     ap.add_argument("--modes", default=None, help="JSON case -> SNUADC correction mode label (step / small / none)")
+    ap.add_argument("--bis-rates", default=None, help="JSON BIS port -> median BIS rate against the PC (ppm), '*' for any")
     ap.add_argument("--ports", default=None, help="JSON case -> {port: SNUADC port, ...} for every recording")
     a = ap.parse_args()
     step_rates = json.loads(Path(a.step_rates).read_text()) if a.step_rates else {}
+    bis_rates = json.loads(Path(a.bis_rates).read_text()) if a.bis_rates else {}
     modes = {int(k): v for k, v in json.loads(Path(a.modes).read_text()).items()} if a.modes else {}
     ports = {int(k): (v or {}).get("port") for k, v in json.loads(Path(a.ports).read_text()).items()} if a.ports else {}
+    bis_ports = {int(k): (v or {}).get("bis_port") for k, v in json.loads(Path(a.ports).read_text()).items()} if a.ports else {}
     U = {int(r["case"]): r for r in csv.DictReader(open(a.units))}
     done = set()
     if Path(a.out).exists():
@@ -81,7 +87,7 @@ def main() -> None:
                         known = float(known) if known not in (None, "") else None
                         unit = u.get(f"{dev}_unit_mean_ppm")
                         unit = float(unit) if unit not in (None, "") else None
-                        if variant in ("model", "model2"):
+                        if variant in ("model", "model2", "model3"):
                             clk = stamp_clock(tr.record_times, st, fs, correction_sign=sign)
                             if clk["rate_source"] == "fit":
                                 if dev == "snuadc":
@@ -92,12 +98,16 @@ def main() -> None:
                                     port_rate = step_rates.get(port, step_rates.get("*", 0.0))
                                     if ev is not None and ev <= -0.4:
                                         fall = port_rate
-                                    elif variant == "model2" and ev is None and modes.get(c) != "small":
+                                    elif variant in ("model2", "model3") and ev is None and modes.get(c) != "small":
                                         fall = port_rate      # no correction at all: step mode before its first reset
                                     else:
                                         fall = 0.0
                                 else:
                                     fall = unit if unit is not None else known
+                                    if (variant == "model3" and fall is None and clk["corrections"]["events"] == 0
+                                            and bis_rates):
+                                        bport = bis_ports.get(c) or u.get("bis_port")
+                                        fall = bis_rates.get(bport, bis_rates.get("*"))
                                 if fall is not None:
                                     clk = stamp_clock(tr.record_times, st, fs, rate_ppm=fall, correction_sign=sign)
                         elif variant == "syncfull" and known is not None:

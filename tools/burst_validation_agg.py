@@ -114,7 +114,7 @@ def main():
     bins = np.arange(-600, 601, 10)
     for sel, c, lab in ((both, BLUE, "both clocks fitted from whole teeth"),
                         (~both & ~nocorr, ORANGE, "one clock given a typical rate"),
-                        (nocorr, GREY, "SNUADC without corrections (drift assumed 0)")):
+                        (nocorr, GREY, "SNUADC without corrections (" + ("port's step-mode rate" if a.variant in ("model2", "model3") else "drift assumed 0") + ")")):
         ax.hist(P.slope_ms_h[sel].clip(-600, 600), bins=bins, histtype="step", lw=1.3, color=c, label=f"{lab} ({sel.sum():,})")
     ax.set_xlabel("slope of the EEG–ECG offset over the recording (ms/h)"); ax.set_ylabel("recordings")
     ax.legend(frameon=False, fontsize=7.5); ax.set_title("Drift left after the model", loc="left", fontsize=10)
