@@ -47,8 +47,9 @@ CLOCK = {
     "hr_late": "solar", "pleth_hr": "solar", "spo2": "solar", "utc": "utc",
 }
 # Drift against the reference between corrections (ppm). None = not known. Synchronised entries are 0 by
-# construction. BIS from its stamp model (measured); Primus 115 ppm is ASSUMED (see the measured-or-assumed table).
-DRIFT_PPM = {"ref": 0.0, "bis": 23.0, "primus": 115.0}
+# construction. Both against the recorder PC: BIS from its correction steps (whole release, median 25 ppm);
+# Primus by breath matching between AWP pauses (median 104 ppm, 178 recordings; earlier assumed 115 ppm).
+DRIFT_PPM = {"ref": 0.0, "bis": 25.0, "primus": 104.0}
 
 
 def budget(keys, resolve_s=None):
