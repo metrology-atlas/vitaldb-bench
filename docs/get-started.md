@@ -6,7 +6,7 @@ You need Python 3.11 or later and a copy of the VitalDB release (from PhysioNet)
 TimeNet and its VitalDB connector.
 
 ```bash
-git clone https://github.com/meshlab/vitaldb-bench.git
+git clone https://github.com/metrology-atlas/vitaldb-bench.git
 cd vitaldb-bench
 pip install -e .            # the package: builds, stores, checks
 pip install -e ".[tools]"   # also the analysis scripts in tools/
