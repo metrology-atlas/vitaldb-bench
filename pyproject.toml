@@ -1,6 +1,6 @@
 [project]
 name = "vitaldb-bench"
-version = "0.0.1"
+version = "0.1.0"
 description = "VitalDB timing and data-quality audit: device clock drift, numeric delays, derived labels and TimeNet builds"
 license = "MIT"
 license-files = ["LICENSE"]
