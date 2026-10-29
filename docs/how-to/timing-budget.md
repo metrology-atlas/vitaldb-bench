@@ -5,6 +5,12 @@ Before combining two or more VitalDB signals, check how well their times can lin
 entries behind the time-source accuracy figure) and reports what a joint analysis can resolve. It reads no
 data.
 
+!!! note "Superseded by the metrology atlas's planner (October 2026)"
+    This tool uses the "accuracy and resolution" entries of an earlier version of the time-source figure. The
+    [metrology atlas](https://vitaldb.metrology-atlas.org/planner.html) now describes every kind of time stamp by its
+    bias and standard uncertainty (VIM/GUM), with shared errors cancelling between signals, and its synchronisation
+    planner replaces this budget. The tool is kept because released results cite it.
+
 ```bash
 python tools/pair_timing_budget.py --list                 # the sources and their clock domains
 python tools/pair_timing_budget.py snu_model pleth        # ECG (SNUADC reference) + PPG
