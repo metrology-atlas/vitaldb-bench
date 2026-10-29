@@ -8,6 +8,8 @@ Most studies in the [VitalDB metrology atlas](https://vitaldb.metrology-atlas.or
 each study page links to the code it used. AtriumDB builds live in a separate GPL-licensed package (not yet public),
 because the AtriumDB SDK is GPL; nothing here imports it.
 
+Paper: Goodwin, A. J. (2026). *The Metrology Atlas: describing recorded physiological data as a measurement system, with VitalDB as a first application*. [arXiv:2610.29001](https://arxiv.org/abs/2610.29001).
+
 | Folder | Contents |
 |---|---|
 | `vitaldb_bench/` | Installed package: TimeNet builds (`build`), stores, fidelity and performance checks, case clock, timing report. |
