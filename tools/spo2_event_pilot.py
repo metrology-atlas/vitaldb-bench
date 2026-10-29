@@ -54,6 +54,7 @@ STALE = 5.0
 def envelope(t, x, fs, band, t0, n):
     ok = np.isfinite(x)
     x = np.where(ok, x, 0.0)
+    band = (band[0], min(band[1], 0.45 * fs))  # 100 Hz files: 30-240 Hz becomes 30-45 Hz (below Nyquist)
     sos = signal.butter(4, band, btype="bandpass", fs=fs, output="sos")
     y = signal.sosfiltfilt(sos, x) ** 2
     b = np.floor((t - t0) / DT).astype(np.int64)
@@ -223,7 +224,7 @@ def run_case(root, c, u, step_rates, seed):
 
     ec = bursts(e_ec)
     pl_hf = bursts(e_pl)
-    big = [(float(tb[s]), float(tb[e])) for s, e in runs(amp > 3 * med, 2, 1)]
+    big = [(float(tb[s]), float(tb[e - 1]) + 0.5) for s, e in runs(amp > 3 * med, 2, 1)]  # e is exclusive; tb is 0.5 s bins
     kind_of = {**{x: "hf" for x in pl_hf}, **{x: "big_amp" for x in big}}
     ec_on = np.array([a for a, _ in ec]) if ec else np.zeros(0)
     all_on = np.sort(np.r_[ec_on, [a for a, _ in pl_hf], [a for a, _ in big]])
