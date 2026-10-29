@@ -1,6 +1,12 @@
 # SPDX-License-Identifier: MIT
 """Accuracy against resolution for every kind of VitalDB time stamp (log-log; aggregates only).
 
+Superseded (29 Oct 2026, the VIM/GUM reframe): the paper's figure is now bias against standard uncertainty, drawn from
+the metrology atlas itself (metrology-atlas-paper/figures/src/fig_bias_uncertainty.py), and the atlas's chart likewise.
+"Accuracy" here is used quantitatively, which the VIM does not do, and the BIS raw entry has lost its sign (the BIS
+stamps come about 0.79 s early, not late). Kept unchanged under this name because the released code and its Zenodo
+record cite it (decision D7).
+
     python tools/time_source_accuracy_figure.py out.png [out.svg]
 
 Reference: UTC is the latent reference (timing graph). x is measured against the working reference, the recorder
