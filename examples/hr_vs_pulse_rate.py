@@ -41,6 +41,8 @@ import numpy as np
 warnings.filterwarnings("ignore")
 LAGS = np.round(np.arange(-20, 20.01, 0.5), 1)
 LEVEL_LAGS = [L for L in LAGS if -6 <= L <= 6]
+JOINT_LAGS = [0.0, 2.0]
+RECORD_S = 2.0      # both numerics are stamped together every 2 s, so a lag of 2k s reads k records later
 BLOCK = 10.0
 LEVELS = np.arange(30, 181, 10)
 BIG = 10.0
@@ -94,6 +96,11 @@ def scan_case(c, root):
             lv = np.clip(np.searchsorted(LEVELS, avg, side="right") - 1, 0, LEVELS.size - 2)
             row["lv"] = [[int(np.sum(lv == i)), round(float(d[lv == i].sum()), 2), round(float((d[lv == i] ** 2).sum()), 2)]
                          for i in range(LEVELS.size - 1)]
+        if L in JOINT_LAGS:
+            # joint histogram of the two rates, whole beats per minute: "hr,pr" -> count
+            hb, pb = np.floor(xh[ok]).astype(int), np.floor(p[ok]).astype(int)
+            u, n = np.unique(hb * 1000 + pb, return_counts=True)
+            row["joint"] = {f"{k // 1000},{k % 1000}": int(m) for k, m in zip(u, n)}
         out["lags"][str(L)] = row
     return out
 
@@ -202,8 +209,12 @@ def agg(a) -> None:
         if len(sub) >= 50:
             cg = pooled(sub)
             pred = np.median([atlas_lag[r["case"]] for r in sub if r["case"] in atlas_lag])
+            top = LAGS[cg >= 0.95 * np.nanmax(cg)]
+            cpred = np.median([centre_lag[r["case"]] for r in sub if r["case"] in centre_lag])
             by_group[g] = {"recordings": len(sub), "best_lag_s": float(LAGS[int(np.nanargmax(cg))]),
-                           "atlas_lag_median_s": round(float(pred), 2)}
+                           "plateau_s": [float(top.min()), float(top.max())], "plateau_centre_s": round(float(top.mean()), 2),
+                           "atlas_lag_median_s": round(float(pred), 2), "atlas_centre_lag_median_s": round(float(cpred), 2),
+                           "lag_curve": [round(float(x), 4) for x in cg]}
     summ = {
         "recordings_read": len(rows), "with_both": len(ok), "with_hr_delay_label": len(labelled),
         "pr_delay_s": a.pr_delay,
@@ -219,6 +230,80 @@ def agg(a) -> None:
                       "at_atlas_centre_lag": _agreement(labelled, lambda r: _nearest(centre_lag[r["case"]])),
                       "at_best_lag": _agreement(ok, lambda r: keys[best])},
     }
+    # Both numerics arrive in one message every 2 s, so between whole-record lags the curve is flat. The peak is read
+    # from the whole-record lags (2k s) by a parabola through the highest and its neighbours. For windows symmetric
+    # about their centre, the lag at which changes agree best is the difference of the two windows' centres
+    # (delay + half the window), whatever the signal's volatility, which sets only the curve's height and width.
+    # So L + d_HR + w_HR/2 is where PLETH_HR's window is centred before its stamp.
+    rec = [k for k in range(-8, 9)]
+
+    def step_peak(sub):
+        c = []
+        for k in rec:
+            t = np.zeros(6)
+            for r in sub:
+                x = r["lags"].get(str(float(RECORD_S * k)))
+                if x:
+                    t += np.array(x["ch"], float)
+            c.append(_corr(t))
+        c = np.array(c)
+        i = int(np.nanargmax(c))
+        y0, y1, y2 = c[i - 1], c[i], c[i + 1]
+        return RECORD_S * (rec[i] + 0.5 * (y0 - y2) / (y0 - 2 * y1 + y2))
+
+    mid = LEVELS[:-1] + 5.0
+
+    def rate(r):
+        lv = np.array(r["lags"]["0.0"]["lv"], float)
+        return float((lv[:, 0] * mid).sum() / lv[:, 0].sum()) if lv[:, 0].sum() else np.nan
+
+    centre = {}
+    for g in ("early", "late"):
+        sub = [r for r in ok if grp.get(r["case"]) == g and r["case"] in dh]
+        if len(sub) < 50:
+            continue
+        pk = step_peak(sub)
+        bt = [step_peak([sub[i] for i in rng.integers(0, len(sub), len(sub))]) for _ in range(50)]
+        dmean = float(np.mean([dh[r["case"]][0] for r in sub]))
+        wmean = float(np.mean([dh[r["case"]][1] for r in sub]))
+        strata = []
+        for lo, hi in ((40, 65), (65, 75), (75, 85), (85, 200)):
+            s_ = [r for r in sub if lo <= rate(r) < hi]
+            if len(s_) >= 100:
+                p_ = step_peak(s_)
+                d_ = float(np.mean([dh[r["case"]][0] for r in s_]))
+                strata.append({"rate_from": lo, "recordings": len(s_), "median_rate": round(float(np.median([rate(r) for r in s_])), 1),
+                               "lag_s": round(p_, 2), "hr_delay_s": round(d_, 2),
+                               "pleth_hr_centre_s": round(p_ + d_ + wmean / 2, 2)})
+        centre[g] = {"recordings": len(sub), "lag_s": round(pk, 2),
+                     "lag_boot_p2.5_p97.5": [round(float(np.percentile(bt, 2.5)), 2), round(float(np.percentile(bt, 97.5)), 2)],
+                     "hr_delay_mean_s": round(dmean, 2), "hr_window_s": round(wmean, 1),
+                     "pleth_hr_centre_s": round(pk + dmean + wmean / 2, 2), "by_rate": strata}
+    summ["timing"]["between_records"] = centre
+    if len(centre) == 2:
+        summ["timing"]["group_lag_difference_s"] = round(centre["early"]["lag_s"] - centre["late"]["lag_s"], 2)
+        summ["timing"]["group_hr_delay_difference_s"] = round(centre["late"]["hr_delay_mean_s"] - centre["early"]["hr_delay_mean_s"], 2)
+    # the joint histogram of the two rates, for the scatter
+    joint = {}
+    for r in ok:
+        for L in JOINT_LAGS:
+            for k, n in (r["lags"].get(str(L)) or {}).get("joint", {}).items():
+                joint.setdefault(str(L), {})
+                joint[str(L)][k] = joint[str(L)].get(k, 0) + n
+    if joint:
+        (out / "joint.json").write_text(json.dumps(joint))
+        scatter(joint, summ, out)
+    # the same comparisons on the recordings with an HR delay label only, so that the forms are compared on one set;
+    # and each recording at the best lag of its own HR delay group
+    group_best = {g: keys[list(LAGS).index(v["best_lag_s"])] for g, v in by_group.items()}
+    summ["agreement_labelled"] = {
+        "as_stamped": _agreement(labelled, lambda r: "0.0"),
+        "at_atlas_lag": summ["agreement"]["at_atlas_lag"],
+        "at_atlas_centre_lag": summ["agreement"]["at_atlas_centre_lag"],
+        "at_best_lag": _agreement(labelled, lambda r: keys[best]),
+        "at_group_best_lag": _agreement([r for r in labelled if grp.get(r["case"]) in group_best],
+                                        lambda r: group_best[grp[r["case"]]]),
+    }
     # Bland-Altman by level, at the cohort's best lag if it is within -6..6 s
     kb = keys[best] if LAGS[best] in LEVEL_LAGS else "0.0"
     tot = np.zeros((LEVELS.size - 1, 3))
@@ -231,42 +316,75 @@ def agg(a) -> None:
                                      for i, (n_, s_, ss_) in enumerate(tot) if n_ >= 500]
     (out / "summary.json").write_text(json.dumps(summ, indent=1))
     print(json.dumps({k: v for k, v in summ.items() if k != "timing"} | {"timing": {k: v for k, v in summ["timing"].items() if k != "lag_curve"}}, indent=1))
-    figure(cor, best, summ, atlas_lag, out)
+    figure(cor, best, summ, out)
 
 
-def figure(cor, best, summ, atlas_lag, out):
+def scatter(joint, summ, out):
+    """Pulse rate against heart rate as a density (log scale), as stamped and one record later."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from matplotlib.colors import LogNorm
+    keys = [k for k in ("0.0", "2.0") if k in joint]
+    fig, ax = plt.subplots(1, len(keys), figsize=(4.2 * len(keys), 4.0), squeeze=False)
+    for a_, k in zip(ax[0], keys):
+        H = np.zeros((171, 171))
+        for xy, n in joint[k].items():
+            x, y = (int(v) for v in xy.split(","))
+            if 30 <= x <= 200 and 30 <= y <= 200:
+                H[y - 30, x - 30] += n
+        im = a_.imshow(np.where(H > 0, H, np.nan), origin="lower", extent=(30, 201, 30, 201), cmap="viridis",
+                       norm=LogNorm(vmin=1, vmax=H.max()), interpolation="nearest")
+        a_.plot([30, 200], [30, 200], color="0.4", lw=0.6)
+        for f in (0.5, 2):
+            a_.plot([30, 200], [30 * f, 200 * f], color="0.6", lw=0.5, ls=":")
+        a_.set_xlim(30, 200); a_.set_ylim(30, 200)
+        a_.set_xlabel("heart rate, ECG (/min)"); a_.set_ylabel("pulse rate, plethysmogram (/min)")
+        a_.set_title("as stamped" if k == "0.0" else "pulse rate one record (2 s) later", fontsize=9, loc="left")
+    fig.colorbar(im, ax=ax[0].tolist(), shrink=0.8, label="values (log scale)")
+    fig.suptitle(f"Pulse rate against heart rate, every 2 s value in {summ['with_both']:,} recordings; dotted: half and double",
+                 fontsize=9, x=0.01, ha="left")
+    fig.savefig(out / "hr_vs_pulse_rate_scatter.png", dpi=140, bbox_inches="tight")
+    plt.close(fig)
+
+
+def figure(cor, best, summ, out):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots(1, 3, figsize=(11.5, 3.3))
-    ax[0].plot(LAGS, cor, color="#3f51b5")
-    ax[0].axvline(LAGS[best], color="#e65100", lw=0.8, ls=":", label=f"best {LAGS[best]:+.1f} s")
-    if summ["timing"]["atlas_lag_median_s"] is not None:
-        ax[0].axvline(summ["timing"]["atlas_lag_median_s"], color="0.3", lw=0.8, ls="--",
-                      label=f"atlas {summ['timing']['atlas_lag_median_s']:+.1f} s")
+    groups = summ["timing"]["by_hr_group"]
+    col = {"early": "#e65100", "late": "#3f51b5"}
+    for g, v in groups.items():
+        ax[0].plot(LAGS, v["lag_curve"], color=col[g], lw=1.2, label=f"HR {g} group")
+        ax[0].axvline(v["atlas_centre_lag_median_s"], color=col[g], lw=0.8, ls="--")
+    if not groups:
+        ax[0].plot(LAGS, cor, color="#3f51b5")
     ax[0].axvline(0, color="0.7", lw=0.6)
     ax[0].legend(frameon=False, fontsize=7)
     ax[0].set_xlabel("pulse rate read this long after the HR stamp (s)")
     ax[0].set_ylabel("correlation of 10 s changes")
-    ax[0].set_title("A. When the two agree", fontsize=9, loc="left")
+    ax[0].set_title("A. When they agree; dashed: the atlas's lag", fontsize=9, loc="left")
     lv = summ["agreement"]["by_level"]
     ax[1].errorbar([x["from"] + 5 for x in lv], [x["mean_diff"] for x in lv], yerr=[1.96 * x["sd_diff"] for x in lv],
                    fmt="o-", color="#e65100", ms=3, lw=1, capsize=2)
     ax[1].axhline(0, color="0.4", lw=0.8)
     ax[1].set_xlabel("mean of pulse rate and HR (/min)"); ax[1].set_ylabel("pulse rate minus HR (/min)")
     ax[1].set_title("B. Mean difference and 95% limits, by rate", fontsize=9, loc="left")
-    names = ["as_stamped", "at_atlas_lag", "at_best_lag"]
-    lab = ["as stamped", "atlas lag", "best lag"]
-    A = summ["agreement"]
+    names = ["as_stamped", "at_atlas_centre_lag", "at_group_best_lag"]
+    lab = ["as stamped", "atlas lag", "group's best lag"]
+    A = summ["agreement_labelled"]
     x = np.arange(3)
     ax[2].bar(x - 0.2, [A[k]["within_recording_sd"] for k in names], 0.4, color="#3f51b5", label="within a recording")
     ax[2].bar(x + 0.2, [A[k]["between_recording_sd"] for k in names], 0.4, color="#9fa8da", label="between recordings")
     ax[2].set_xticks(x, lab, fontsize=8); ax[2].set_ylabel("SD of the difference (/min)")
-    ax[2].legend(frameon=False, fontsize=7)
+    ax[2].set_ylim(0, 1.3 * max(A[k]["within_recording_sd"] for k in names))
+    ax[2].legend(frameon=False, fontsize=7, ncol=2, loc="upper center")
     ax[2].set_title("C. Where the difference lies", fontsize=9, loc="left")
     for a_ in ax:
         a_.spines[["top", "right"]].set_visible(False)
-    fig.suptitle(f"Pulse rate against heart rate: {summ['with_both']:,} recordings", fontsize=9, x=0.01, ha="left")
+    fig.suptitle(f"Pulse rate against heart rate: {summ['with_both']:,} recordings (A, B); C: the {summ['with_hr_delay_label']:,} with an HR delay label",
+                 fontsize=9, x=0.01, ha="left")
     fig.tight_layout()
     fig.savefig(out / "hr_vs_pulse_rate.png", dpi=140)
     plt.close(fig)
