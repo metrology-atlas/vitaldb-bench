@@ -292,6 +292,17 @@ def agg(a) -> None:
                 joint[str(L)][k] = joint[str(L)].get(k, 0) + n
     if joint:
         (out / "joint.json").write_text(json.dumps(joint))
+        h = np.array([[*(int(v) for v in k.split(",")), n] for k, n in joint["0.0"].items()], float)
+        x, y, n = h.T
+        far = np.abs(y - x) > BIG
+        lines = {}
+        for f, name in ((0.5, "1/2"), (2 / 3, "2/3"), (0.75, "3/4"), (4 / 3, "4/3"), (1.5, "3/2"), (2.0, "2")):
+            m = far & (np.abs(y - f * x) <= 2 + 0.03 * x)
+            lines[name] = round(float(n[m].sum() / n.sum()), 5)
+        summ["joint_as_stamped"] = {"values": int(n.sum()), "within_3": round(float(n[np.abs(y - x) <= 3].sum() / n.sum()), 4),
+                                    "beyond_10": round(float(n[far].sum() / n.sum()), 4),
+                                    "beyond_10_pulse_below": round(float(n[far & (y < x)].sum() / n[far].sum()), 3),
+                                    "on_ratio_lines": lines}
         scatter(joint, summ, out)
     # the same comparisons on the recordings with an HR delay label only, so that the forms are compared on one set;
     # and each recording at the best lag of its own HR delay group
@@ -326,7 +337,7 @@ def scatter(joint, summ, out):
     import matplotlib.pyplot as plt
     from matplotlib.colors import LogNorm
     keys = [k for k in ("0.0", "2.0") if k in joint]
-    fig, ax = plt.subplots(1, len(keys), figsize=(4.2 * len(keys), 4.0), squeeze=False)
+    fig, ax = plt.subplots(1, len(keys), figsize=(4.4 * len(keys), 4.2), squeeze=False, sharey=True)
     for a_, k in zip(ax[0], keys):
         H = np.zeros((171, 171))
         for xy, n in joint[k].items():
@@ -336,13 +347,17 @@ def scatter(joint, summ, out):
         im = a_.imshow(np.where(H > 0, H, np.nan), origin="lower", extent=(30, 201, 30, 201), cmap="viridis",
                        norm=LogNorm(vmin=1, vmax=H.max()), interpolation="nearest")
         a_.plot([30, 200], [30, 200], color="0.4", lw=0.6)
-        for f in (0.5, 2):
-            a_.plot([30, 200], [30 * f, 200 * f], color="0.6", lw=0.5, ls=":")
+        for f, lab in ((0.5, "1/2"), (2 / 3, "2/3"), (0.75, "3/4"), (2, "2")):
+            a_.plot([30, 200], [30 * f, 200 * f], color="#e65100", lw=0.6, ls=":", alpha=0.8)
+            xe = min(200, 200 / f) - 4
+            a_.text(xe, f * xe, lab, color="#e65100", fontsize=7, ha="right", va="bottom")
         a_.set_xlim(30, 200); a_.set_ylim(30, 200)
-        a_.set_xlabel("heart rate, ECG (/min)"); a_.set_ylabel("pulse rate, plethysmogram (/min)")
+        a_.set_xlabel("heart rate, ECG (/min)")
+        if a_ is ax[0][0]:
+            a_.set_ylabel("pulse rate, plethysmogram (/min)")
         a_.set_title("as stamped" if k == "0.0" else "pulse rate one record (2 s) later", fontsize=9, loc="left")
     fig.colorbar(im, ax=ax[0].tolist(), shrink=0.8, label="values (log scale)")
-    fig.suptitle(f"Pulse rate against heart rate, every 2 s value in {summ['with_both']:,} recordings; dotted: half and double",
+    fig.suptitle(f"Pulse rate against heart rate, every 2 s value in {summ['with_both']:,} recordings; dotted: pulse rate a fixed share of HR",
                  fontsize=9, x=0.01, ha="left")
     fig.savefig(out / "hr_vs_pulse_rate_scatter.png", dpi=140, bbox_inches="tight")
     plt.close(fig)
