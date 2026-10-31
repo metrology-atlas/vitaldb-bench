@@ -10,7 +10,7 @@ NAME=${1:?example script name without .py}
 _W=${W:-}; _R=${R:-}; _PP=${PYTHONPATH:-}
 ENVF="$(cd "$(dirname "$0")/.." && pwd)/scripts/local.env"
 [ -f "$ENVF" ] && . "$ENVF"
-W=${_W:-${VITALDB_WORK:-}}; R=${_R:-${VITALDB_ROOT:-}}; export PYTHONPATH=${_PP:-${VITALDB_PYTHONPATH:-}}
+W=${_W:-${VITALDB_WORK:-}}; R=${_R:-${VITALDB_ROOT:-}}; export W; export PYTHONPATH=${_PP:-${VITALDB_PYTHONPATH:-}}
 : "${W:?set W or VITALDB_WORK to your work folder (see scripts/local.env.example)}"
 : "${R:?set R or VITALDB_ROOT to the VitalDB release folder (see scripts/local.env.example)}"
 # a worked example (examples/NAME.py) or a study tool (tools/NAME.py); output goes to $W/examples/NAME either way

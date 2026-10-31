@@ -86,6 +86,14 @@ def roll_n(x, N, how):
     if how == "mean":
         c = np.r_[0.0, np.cumsum(x)]
         y = (c[N:] - c[:-N]) / N
+    elif how == "tmean":                  # mean without the largest and the smallest
+        w = sliding_window_view(x, N)
+        y = (w.sum(axis=1) - w.max(axis=1) - w.min(axis=1)) / (N - 2)
+    elif how == "rmean":                  # mean of the values within 25% of the window's median
+        w = sliding_window_view(x, N)
+        med = np.median(w, axis=1)[:, None]
+        keep = np.abs(w - med) <= 0.25 * np.abs(med)
+        y = np.where(keep, w, 0).sum(axis=1) / np.maximum(keep.sum(axis=1), 1)
     else:
         y = np.median(sliding_window_view(x, N), axis=1)
     return np.r_[np.full(N - 1, np.nan), y]
@@ -118,6 +126,9 @@ def candidates(kind, tc, x, wave=None):
             out[f"60/mean_int|n|{N}"] = 60.0 / roll_n(x, N, "mean")
             out[f"mean_rate|n|{N}"] = roll_n(inst, N, "mean")
             out[f"median|n|{N}"] = 60.0 / roll_n(x, N, "median")
+            if N >= 4:
+                out[f"tmean_int|n|{N}"] = 60.0 / roll_n(x, N, "tmean")
+                out[f"rmean_int|n|{N}"] = 60.0 / roll_n(x, N, "rmean")
             if N > 1:
                 out[f"ewma_rate|n|{N}"] = ewma(inst, N)
         for T in TL:
@@ -401,12 +412,25 @@ def analyse_track(name, ot, ov, og, cands, *, solar, span, ev_int=None):
                     "n_all": int(a_t.size)})
     top.sort(key=lambda r: -r["ll_all"])
     best = top[0]
+
+    def exact(r):
+        """Share of records the candidate reproduces exactly at its delay (middle of each record's phase interval)."""
+        tc, y = cands[r["cand"]]
+        okc = np.isfinite(y)
+        pred = lookup(tc[okc], y[okc], a_t - r["d"] - a_g / 2) + r["b"]
+        pq = np.round(pred / q) * q if r["quant"] == "round" else np.floor(pred / q + 1e-9) * q
+        m = np.isfinite(pq)
+        return round(float(np.mean(np.abs(pq[m] - a_v[m]) < q / 2)), 4) if m.any() else None
+
+    for r in top:
+        r["exact"] = exact(r)
     fam = {}
     for r in rows:
         fn, wt, _ = r["cand"].split("|")
         key = f"{fn}|{wt}|{r['quant']}"
         if key not in fam:
-            fam[key] = {"cand": r["cand"], "ll": round(r["ll"], 2), "d": r["d"], "b": round(r["b"], 3), "s": round(r["s"], 3)}
+            fam[key] = {"cand": r["cand"], "ll": round(r["ll"], 2), "d": r["d"], "b": round(r["b"], 3), "s": round(r["s"], 3),
+                        "exact": exact(r)}
     out = {"n": int(ot.size), "n_fit": int(s_t.size), "q": q, "gap_median": float(np.median(og)),
            "best": best, "top": top, "families": fam, "ll_best_stage1": round(rows[0]["ll"], 2)}
     if rate:
@@ -618,7 +642,22 @@ def select(root, path, n, seed, out):
     print(len(got), "selected")
 
 
+SAMPLE_MOD, SAMPLE_REM = 10, 3     # scan mode (run_scan.sh): every tenth recording, about 640 of 6,388
+
+
 def main() -> None:
+    scan_mode = len(sys.argv) > 1 and sys.argv[1] == "scan"
+    if scan_mode:                     # bash examples/run_scan.sh numeric_derivation_pilot
+        import os
+        sys.argv.pop(1)
+        w = os.environ.get("VITALDB_WORK") or os.environ.get("W") or ""
+        if "--units" not in sys.argv:
+            sys.argv += ["--units", f"{w}/results/sync_full/units.csv"]
+        if "--step-rates" not in sys.argv:
+            sys.argv += ["--step-rates", f"{w}/results/pat/snuadc_step_rates.json"]
+        for k in ("--time-budget",):
+            if k in sys.argv:
+                i = sys.argv.index(k); del sys.argv[i:i + 2]
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--root", required=True)
     ap.add_argument("--cases")
@@ -638,7 +677,7 @@ def main() -> None:
     if Path(a.out).exists():
         done = {json.loads(l)["case"] for l in Path(a.out).read_text().splitlines() if l.strip()}
     for c in [int(x) for x in a.cases.split(",") if x]:
-        if c in done:
+        if c in done or (scan_mode and c % SAMPLE_MOD != SAMPLE_REM):
             continue
         t1 = time.time()
         try:

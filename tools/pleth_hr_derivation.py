@@ -19,6 +19,8 @@ Candidates at each PLETH_HR record stamp t, using the pulses up to t - d, for d 
   median|n|N   60 / median of the last N pulse intervals        N = 4..16
   mean|t|T     60 / mean of the intervals ending in the last T s  T = 4..16 s
   count|t|T    pulses in the last T s, per minute                T = 4..16 s
+  tmean|n|N    60 / mean of the last N intervals without the longest and shortest   N = 6..14
+  rmean|n|N    60 / mean of the last N intervals within 25% of their median         N = 6..14
 each truncated to a whole number (as HR is) and also rounded. Score: the share of records reproduced exactly. Up to
 3,000 records per recording, spread over its first 4 hours of plethysmogram.
 
@@ -69,7 +71,16 @@ def roll_n(iv, N, how):
     if iv.size < N:
         return out
     w = np.lib.stride_tricks.sliding_window_view(iv, N)
-    out[N - 1:] = w.mean(axis=1) if how == "mean" else np.median(w, axis=1)
+    if how == "mean":
+        out[N - 1:] = w.mean(axis=1)
+    elif how == "median":
+        out[N - 1:] = np.median(w, axis=1)
+    elif how == "tmean":           # mean without the longest and the shortest interval
+        out[N - 1:] = (w.sum(axis=1) - w.max(axis=1) - w.min(axis=1)) / (N - 2)
+    elif how == "rmean":           # mean of the intervals within 25% of the window's median
+        med = np.median(w, axis=1)[:, None]
+        keep = np.abs(w - med) <= 0.25 * med
+        out[N - 1:] = np.where(keep, w, 0).sum(axis=1) / np.maximum(keep.sum(axis=1), 1)
     return out
 
 
@@ -100,6 +111,9 @@ def scan_case(c, root):
     for N in NS:
         cands[f"mean|n|{N}"] = ("n", roll_n(iv, N, "mean"), N)
         cands[f"median|n|{N}"] = ("n", roll_n(iv, N, "median"), N)
+        if 6 <= N <= 14:
+            cands[f"tmean|n|{N}"] = ("n", roll_n(iv, N, "tmean"), N)
+            cands[f"rmean|n|{N}"] = ("n", roll_n(iv, N, "rmean"), N)
     cs = np.r_[0.0, np.cumsum(iv)]
     out = {"case": c, "records": int(ts.size), "pulses": int(pt.size), "median_interval_s": round(float(np.median(iv[good_iv])), 3),
            "cands": {}}
@@ -182,7 +196,22 @@ def agg(a) -> None:
             mn, md = f"mean|n|{N}|{lab}", f"median|n|{N}|{lab}"
             if mn in names and md in names:
                 mean_vs_median[f"{N}|{lab}"] = int(sum(r["cands"][mn][1] > r["cands"][md][1] for r in ok))
-    summ = {"recordings_read": len(rows), "analysed": len(ok),
+    fam_best = {}
+    good = [r for r in ok if max(v[1] for v in r["cands"].values()) >= 0.8]
+    for fam in ("mean", "median", "tmean", "rmean"):
+        keys_ = [n for n in names if n.startswith(fam + "|n|") and n.endswith("|round")]
+        if keys_:
+            fam_best[fam] = {"pooled_exact_all": round(max(pooled[n][0] / pooled[n][1] for n in keys_), 4),
+                             "best": max(keys_, key=lambda n: pooled[n][0] / pooled[n][1])}
+    fam_wins = {}
+    for r in good:
+        sc = {}
+        for fam in fam_best:
+            sc[fam] = max(r["cands"][n][1] for n in names if n.startswith(fam + "|n|") and n.endswith("|round"))
+        w_ = max(sc, key=sc.get)
+        fam_wins[w_] = fam_wins.get(w_, 0) + 1
+    summ = {"recordings_read": len(rows), "analysed": len(ok), "families": fam_best,
+            "family_wins_well_reproduced": fam_wins, "well_reproduced": len(good),
             "ranking": [{"candidate": n, "pooled_exact": round(pooled[n][0] / pooled[n][1], 4), "wins": wins[n]} for n in rank[:15]],
             "best": {"candidate": top, "delay_median_s": float(np.median(delays)),
                      "delay_p10_p90_s": [float(np.percentile(delays, 10)), float(np.percentile(delays, 90))],

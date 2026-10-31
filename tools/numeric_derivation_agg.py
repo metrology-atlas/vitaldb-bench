@@ -105,6 +105,21 @@ def main():
             out["primus_drift_best_ppm"] = Counter(max(p, key=lambda x: x["ll"])["ppm"] for p in P).most_common()
             out["primus_drift_dll_115_minus_0_iqr"] = q([[x["ll"] for x in p if x["ppm"] == 115][0] -
                                                          [x["ll"] for x in p if x["ppm"] == 0][0] for p in P])
+        # exact matches (release-scale runs): which family reproduces the most values, per recording and pooled
+        E = [t for t in T if any("exact" in v for v in t["families"].values())]
+        if E:
+            wins = Counter()
+            pooled = defaultdict(list)
+            for t in E:
+                ex = {k: v["exact"] for k, v in t["families"].items() if v.get("exact") is not None}
+                if ex:
+                    wins[max(ex, key=ex.get)] += 1
+                    for k, v in ex.items():
+                        pooled[k].append(v)
+            out["exact"] = {"cases": len(E), "wins": wins.most_common(8),
+                            "median_exact_by_family": sorted(((k, round(float(np.median(v)), 4)) for k, v in pooled.items()
+                                                             if len(v) >= 0.5 * len(E)), key=lambda kv: -kv[1])[:8],
+                            "best_exact_iqr": q([t["best"].get("exact") for t in E], nd=3)}
         S["tracks"][name] = out
     json.dump(S, open(a.summary, "w"), indent=1)
     print(json.dumps(S, indent=1)[:20000])
