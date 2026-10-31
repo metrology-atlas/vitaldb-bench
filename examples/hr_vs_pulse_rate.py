@@ -303,6 +303,35 @@ def agg(a) -> None:
                                     "beyond_10": round(float(n[far].sum() / n.sum()), 4),
                                     "beyond_10_pulse_below": round(float(n[far & (y < x)].sum() / n[far].sum()), 3),
                                     "on_ratio_lines": lines}
+        # The ridge just below the diagonal: for each whole HR from 55 to 140, the pulse rate between 0.78 and 0.95
+        # of it with the largest excess over a log-linear background. A window of a fixed time T would put the ridge
+        # at a constant offset (one missed pulse is 60/T fewer per minute); a mean over N pulses at a constant ratio
+        # (N/(N+1)); a median would leave no ridge.
+        Hm = {}
+        for xy, n_ in joint["0.0"].items():
+            a_, b_ = (int(v) for v in xy.split(","))
+            Hm[(a_, b_)] = Hm.get((a_, b_), 0) + n_
+        rid = []
+        for hx in range(55, 141):
+            lo, hi = int(0.78 * hx), int(0.95 * hx)
+            yy = np.arange(lo, hi + 1)
+            seg = np.array([Hm.get((hx, int(v)), 0) for v in yy], float)
+            if seg.sum() < 500:
+                continue
+            lg = np.log(seg + 1)
+            A_ = np.c_[np.ones_like(yy), yy]
+            res = lg - A_ @ np.linalg.lstsq(A_, lg, rcond=None)[0]
+            i_ = int(np.argmax(res))
+            rid.append((hx, yy[i_] + 0.5, float(np.exp(res[i_]))))
+        if rid:
+            rx, ry, rw = np.array(rid).T
+            k_ = float(np.sum(rw * rx * ry) / np.sum(rw * rx * rx))
+            c_ = float(np.average(rx - ry, weights=rw))
+            summ["joint_as_stamped"]["ridge"] = {
+                "hr_from_to": [55, 140], "ratio": round(k_, 4),
+                "ratio_rms_per_min": round(float(np.sqrt(np.average((ry - k_ * rx) ** 2, weights=rw))), 2),
+                "offset_per_min": round(c_, 2),
+                "offset_rms_per_min": round(float(np.sqrt(np.average((ry - (rx - c_)) ** 2, weights=rw))), 2)}
         scatter(joint, summ, out)
     # the same comparisons on the recordings with an HR delay label only, so that the forms are compared on one set;
     # and each recording at the best lag of its own HR delay group

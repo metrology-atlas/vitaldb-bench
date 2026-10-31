@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Run a worked example's "scan" over every recording in 8 parallel parts (WSL), then aggregate where matplotlib exists.
+# Run a worked example's (or a study tool's) "scan" over every recording in 8 parallel parts (WSL), then aggregate where matplotlib exists.
 #   bash examples/run_scan.sh hypotension_burden          (writes $W/examples/hypotension_burden/part_*.jsonl)
 # The example script must take: scan --root R --cases LIST --out PART.  Aggregate afterwards with:
 #   python examples/NAME.py agg $W/examples/NAME/part_*.jsonl --out $W/examples/NAME/agg
@@ -13,6 +13,9 @@ ENVF="$(cd "$(dirname "$0")/.." && pwd)/scripts/local.env"
 W=${_W:-${VITALDB_WORK:-}}; R=${_R:-${VITALDB_ROOT:-}}; export PYTHONPATH=${_PP:-${VITALDB_PYTHONPATH:-}}
 : "${W:?set W or VITALDB_WORK to your work folder (see scripts/local.env.example)}"
 : "${R:?set R or VITALDB_ROOT to the VitalDB release folder (see scripts/local.env.example)}"
+# a worked example (examples/NAME.py) or a study tool (tools/NAME.py); output goes to $W/examples/NAME either way
+SCRIPT=examples/$NAME.py
+[ -f "$(dirname "$0")/$NAME.py" ] || SCRIPT=tools/$NAME.py
 O=$W/examples/$NAME
 cd "$(dirname "$0")/.."
 PY=${PY:-$(command -v python || command -v python3 || true)}
@@ -24,7 +27,7 @@ N=$(ls "$R"/vital_files/*.vital | wc -l); echo "$N recordings; output in $O"
 start=$(date +%s)
 for i in 0 1 2 3 4 5 6 7; do
   PART=$(ls "$R"/vital_files/*.vital | sed 's#.*/0*##; s#\.vital##' | awk -v i=$i 'NR % 8 == i' | paste -sd,)
-  "$PY" -W ignore examples/$NAME.py scan --root "$R" --cases "$PART" --out "$O/part_$i.jsonl" > "$O/log_$i.txt" 2>&1 &
+  "$PY" -W ignore "$SCRIPT" scan --root "$R" --cases "$PART" --out "$O/part_$i.jsonl" > "$O/log_$i.txt" 2>&1 &
 done
 while [ "$(jobs -r | wc -l)" -gt 0 ]; do
   sleep 60; echo "$(( ($(date +%s) - start) / 60 )) min: $(cat "$O"/part_*.jsonl 2>/dev/null | wc -l) of $N recordings"
