@@ -192,6 +192,18 @@ def scan(a):
             fh.flush()
 
 
+def _by_rate(good):
+    """Resolved event lags per breath rate (rounded 60 / T): a mode that moves with the period would mean the
+    events themselves are ambiguous by a breath; a mode that stays put is a stamp offset."""
+    out = {}
+    lag = np.array([x["lag"] for x in good]); rate = np.round(60 / np.array([x["T"] for x in good]))
+    for r_ in (10, 12, 14, 16, 18):
+        m = rate == r_
+        if m.sum() >= 50:
+            out[f"{r_}/min"] = {"n": int(m.sum()), "hist_0.5s_bins_from_-2": np.histogram(lag[m], bins=np.arange(-2, 12.01, 0.5))[0].tolist()}
+    return out
+
+
 def agg(a):
     R = [json.loads(l) for p in a.parts for l in open(p, encoding="utf-8") if l.strip()]
     rows = []
@@ -219,7 +231,17 @@ def agg(a):
             "k_breaths_off_p5_10_25_50_75_90_95": q(kk),
             "k_histogram_bins_-3.5..3.5": np.histogram(kk, bins=np.arange(-3.5, 3.51, 1))[0].tolist() if kk.size else None,
             "share_k_within_0.25_of_0": round(float(np.mean(np.abs(kk) < 0.25)), 3) if kk.size else None,
-            "share_k_within_0.25_of_1": round(float(np.mean(np.abs(kk - 1) < 0.25)), 3) if kk.size else None}
+            "share_k_within_0.25_of_1": round(float(np.mean(np.abs(kk - 1) < 0.25)), 3) if kk.size else None,
+            "k_histogram_0.1_bins_from_-1.5": np.histogram(kk, bins=np.arange(-1.5, 2.01, 0.1))[0].tolist() if kk.size else None,
+            "event_lag_by_set_rate": _by_rate(good),
+            "by_arm": {arm: {"resolved": sum(x["arm"] == arm for x in good),
+                             "event_lag_s_p10_25_50_75_90": [round(float(v), 2) for v in np.percentile(
+                                 [x["lag"] for x in good if x["arm"] == arm] or [np.nan], [10, 25, 50, 75, 90])],
+                             "event_lag_over_T_histogram_0.25_bins_from_-0.5": np.histogram(
+                                 [x["lag"] / x["T"] for x in good if x["arm"] == arm], bins=np.arange(-0.5, 2.51, 0.25))[0].tolist(),
+                             "k_histogram_0.1_bins_from_-1.5": np.histogram([x["k"] for x in near if x["arm"] == arm],
+                                                                           bins=np.arange(-1.5, 2.01, 0.1))[0].tolist()}
+                       for arm in ("cvp", "art")}}
     o = Path(a.out); o.mkdir(parents=True, exist_ok=True)
     (o / "summary.json").write_text(json.dumps(summ, indent=1))
     (o / "event_edges.json").write_text(json.dumps(rows))
