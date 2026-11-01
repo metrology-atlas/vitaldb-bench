@@ -37,7 +37,7 @@ arms_summary.json and arms.json.
 
 gapsteps: joins each pause step (breaths.json) with its AWP gap (records/part_*.jsonl, matched by time within
 2 s): is the gap a whole number of records (the 0.48 s grid carries on) or not (a new anchor)? Steps by gap kind,
-in seconds and in breath periods. Writes gapsteps_summary.json.
+in seconds and in breath periods. Writes gapsteps_summary.json and gapsteps.json (one row per step).
 
     python tools/primus_awp_anchor.py gapsteps --out $W/primus_awp_anchor
 
@@ -297,6 +297,7 @@ def gapsteps(a):
                       "share_abs_step_0.75_to_1.25_T": round(float(np.mean((np.abs(k) > 0.75) & (np.abs(k) < 1.25))), 3) if len(m) else None,
                       "gap_s_p5_50_95": q(np.array([x["gap_s"] for x in m]))[::3] if len(m) else None}
     (out / "gapsteps_summary.json").write_text(json.dumps(summ, indent=1))
+    (out / "gapsteps.json").write_text(json.dumps(rows))
     print(json.dumps(summ, indent=1))
 
 

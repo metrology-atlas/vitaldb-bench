@@ -20,7 +20,7 @@ Lag = CVP breath time minus AWP stamp, so bias = -lag.
     whole breath period either way with probability p / 2 each, the period drawn from the windows' own); the
     breath error holds for a whole stretch, whose median length is reported.
   - raw and shift forms: the per-recording median of the corrected window lags, its 5th and 95th percentiles and
-    robust SD between recordings.
+    robust SD between recordings (per_recording.json: each recording's median).
 """
 from __future__ import annotations
 
@@ -54,7 +54,7 @@ def main():
             K[(x["case"], x["stretch"])] = (0 if a.uncorrected else x["k"], x["T"], x["step"])
     loo = rule["leave_one_out"]
     p_step = {1: 0.0, 2: 1 - loo["step2_right_share"], 3: 1 - loo["step3_right_share"]}
-    E, C, RAW, PW, TW, steps, SL = [], [], [], [], [], {1: 0, 2: 0, 3: 0}, []
+    E, C, RAW, PW, TW, steps, SL, RC = [], [], [], [], [], {1: 0, 2: 0, 3: 0}, [], []
     missing = 0
     for p in sorted(glob.glob(str(W / "primus_sync_accuracy" / "part_*.jsonl"))):
         for line in open(p, encoding="utf-8"):
@@ -76,7 +76,7 @@ def main():
             near = np.array([np.min(np.abs(x - pa)) < STRADDLE_S if pa.size else False for x in t])
             e = np.array([predict("line_each", t, yc, st, i) - yc[i] for i in range(t.size)])
             m = ~near & np.isfinite(e)
-            E += list(e[m]); C += [r["case"]] * int(m.sum()); RAW.append(float(np.median(yc)))
+            E += list(e[m]); C += [r["case"]] * int(m.sum()); RAW.append(float(np.median(yc))); RC.append(r["case"])
             for (k, T, step), keep in zip(ks, m):
                 if keep and step is not None:
                     PW.append(p_step[step]); TW.append(T); steps[step] += 1
@@ -107,7 +107,9 @@ def main():
            "raw_lag_per_recording_s": {"median": round(float(np.median(RAW)), 3), "p5": round(float(np.percentile(RAW, 5)), 3),
                                        "p95": round(float(np.percentile(RAW, 95)), 3), "n": int(RAW.size), "rsd": round(rsd_c(RAW), 3)}}
     o = Path(a.out); o.mkdir(parents=True, exist_ok=True)
-    (o / ("summary.json" if not a.uncorrected else "summary_uncorrected.json")).write_text(json.dumps(out, indent=1))
+    tag = "" if not a.uncorrected else "_uncorrected"
+    (o / f"summary{tag}.json").write_text(json.dumps(out, indent=1))
+    (o / f"per_recording{tag}.json").write_text(json.dumps({"case": RC, "lag_median_s": [round(x, 4) for x in RAW]}))
     print(json.dumps(out, indent=1))
 
 
