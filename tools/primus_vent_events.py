@@ -192,6 +192,22 @@ def scan(a):
             fh.flush()
 
 
+def _bias(near):
+    """Where the event and the matching agree on the breath (|k| < 0.25), event lag minus matched lag (s): a bias of
+    the envelope method shows as a non-zero median. Split by arm, by edge (stop, restart), by peak correlation and by
+    the time between the event and the matched window (drift)."""
+    q = lambda v: [round(float(x), 3) for x in np.percentile(v, [10, 25, 50, 75, 90])] if len(v) else None
+    out = {}
+    for arm in ("cvp", "art"):
+        A = [x for x in near if x["arm"] == arm and abs(x["k"]) < 0.25]
+        d = lambda S: [x["lag"] - x["matched_lag"] for x in S]  # noqa: E731
+        out[arm] = {"n": len(A), "event_minus_matched_s_p10_25_50_75_90": q(d(A)),
+                    "by_edge": {e: q(d([x for x in A if x["edge"] == e])) for e in ("stop", "restart")},
+                    "r_0.5_0.7": q(d([x for x in A if x["r"] < 0.7])), "r_over_0.7": q(d([x for x in A if x["r"] >= 0.7])),
+                    "matched_within_120_s": q(d([x for x in A if abs(x["matched_dt_s"]) <= 120]))}
+    return out
+
+
 def _by_rate(good):
     """Resolved event lags per breath rate (rounded 60 / T): a mode that moves with the period would mean the
     events themselves are ambiguous by a breath; a mode that stays put is a stamp offset."""
@@ -234,6 +250,7 @@ def agg(a):
             "share_k_within_0.25_of_1": round(float(np.mean(np.abs(kk - 1) < 0.25)), 3) if kk.size else None,
             "k_histogram_0.1_bins_from_-1.5": np.histogram(kk, bins=np.arange(-1.5, 2.01, 0.1))[0].tolist() if kk.size else None,
             "event_lag_by_set_rate": _by_rate(good),
+            "bias_check": _bias(near),
             "by_arm": {arm: {"resolved": sum(x["arm"] == arm for x in good),
                              "event_lag_s_p10_25_50_75_90": [round(float(v), 2) for v in np.percentile(
                                  [x["lag"] for x in good if x["arm"] == arm] or [np.nan], [10, 25, 50, 75, 90])],
