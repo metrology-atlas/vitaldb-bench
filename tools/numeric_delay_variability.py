@@ -8,7 +8,7 @@ The pilot (tools/numeric_derivation_pilot.py) let each case choose its own windo
 the window. Here every case uses the consensus algorithm of the pilot, so the delay d (from the window's close,
 uniform phase model, same likelihood) is comparable across cases and blocks:
 
-    HR       60/median(R-R) over 6 s, truncated      ART_SBP  median of beat max over 3 s
+    HR       60/mean of last 8 R-R within 15%, trunc. ART_SBP  median of beat max over 3 s
     ART_MBP  EWMA of beat mean, 1/4                  ART_DBP  EWMA of beat min, 1/2
     CVP      mean of the waveform over 4 s           ETCO2, PIP  last breath
     RR_CO2   60/mean(breath interval) over 30 s, rounded
@@ -56,7 +56,9 @@ PHASE_RECORD = {"ETCO2", "PIP"}
 D = np.round(np.arange(-3.0, 15.0001, 0.05), 3)
 # track: (algorithm, quantisation, free bias, window (s, for the window centre), reference series key)
 ALGO = {
-    "HR": ("median|t|6", "floor", False, 6.0, "rr"),
+    # HR: 60 / mean of the last 8 R-R intervals within 15% of their median, truncated (tools/hr_derivation.py,
+    # 1 Nov 2026; was 60 / median R-R over 6 s). The window is 8 beats, so no fixed span in seconds.
+    "HR": ("rmean|n|8", "floor", False, None, "rr"),
     "ART_SBP": ("median|t|3", "round", True, 3.0, "sbp"),
     "ART_MBP": ("ewma|n|4", "round", True, None, "mbp"),
     "ART_DBP": ("ewma|n|2", "round", True, None, "dbp"),
@@ -67,9 +69,26 @@ ALGO = {
 }
 
 
+HR_BAND = 0.15
+
+
+def rmean_n(x, N, band):
+    """Mean of the last N values within band x their median (the Solar8000 HR rule; tools/hr_derivation.py)."""
+    from numpy.lib.stride_tricks import sliding_window_view
+    if x.size < N:
+        return np.full(x.size, np.nan)
+    w = sliding_window_view(x, N)
+    med = np.median(w, axis=1)[:, None]
+    keep = np.abs(w - med) <= band * med
+    y = np.where(keep, w, 0).sum(axis=1) / np.maximum(keep.sum(axis=1), 1)
+    return np.r_[np.full(N - 1, np.nan), y]
+
+
 def series(algo, tc, x, wave=None):
     fn, wt, w = algo.split("|")
     w = float(w)
+    if fn == "rmean" and wt == "n":
+        return tc, 60.0 / rmean_n(x, int(w), HR_BAND)
     if fn == "median" and wt == "t" and algo.startswith("median|t|6"):
         return tc, 60.0 / ndp.roll_t(tc, x, w, "median")
     if fn == "median":
