@@ -1,7 +1,12 @@
 # SPDX-License-Identifier: MIT
 """The VitalDB clock-link edge table: every measured link between two clocks, per recording, from existing outputs.
 
-    python tools/clock_edges.py --work W --out W/clock_network/edges.csv
+    python tools/clock_edges.py --work W --out W/clock_network/edges.csv [--atlas A] [--reset-loss] [--drop-missed]
+
+Adopted run (loop-closure): --reset-loss --drop-missed. Three constants are read from the atlas's parameter files
+(--atlas, default code/metrology-atlas/datasets/vitaldb, two levels above this repository), not typed here: the true step-mode
+correction (snuadc-step-correction-size), the step the stamps show (snuadc-reset-stamp-step) and the stamp
+arithmetic (snuadc-stamp-arithmetic). The values used are written beside the edge table (<out>.params.json).
 
 One row per measured link: recording, clocks a and b, value = x[a] - x[b], its standard error, the method, the data
 it came from (sources, ';'-separated), and a label. Here x is a clock's drift rate against the recorder PC (ppm),
@@ -18,12 +23,12 @@ Clocks (nodes):
 
 Edges (methods) and their inputs under W:
   resets        snuadc_stamps-pc  signal_survey/continuity/snuadc_reset_drift_per_recording.csv (reset size / interval);
-                with --reset-loss, scaled by 0.498 / 0.480: the stamps show 0.480 s of each 0.498 s correction, the
-                rest being signal never sampled (paced-ecg), so size / interval understates the drift by 3.7%;
+                with --reset-loss, scaled by true / shown: the stamps show 0.4804 s of each 0.500 s correction, the
+                rest being signal never sampled (paced-ecg), so size / interval understates the drift by 4.1%;
                 with --drop-missed, recordings whose interval rate is under 1/1.5 of the rate timed from the first
                 reset (snuadc_drift_per_recording.csv ppm_first) are left out: their interval most likely spans a
                 reset that was not seen (in a gap), which halves the apparent rate
-  arithmetic    snuadc_stamps-snuadc  +0.954 ppm in every recording (stamps fall behind the count by 0.954 ppm,
+  arithmetic    snuadc_stamps-snuadc  +0.954 ppm (minus parameter snuadc-stamp-arithmetic) in every recording (stamps fall behind the count by 0.954 ppm,
                 so the PC gains 0.954 ppm more on the stamps than on the count); se 0.05
   bis_steps     bis-pc            signal_survey/continuity/bis_drift_per_recording.csv (step / interval)
   bursts        bis-snuadc        direct_rate_intervals/agg/direct_rate_per_interval.csv (ECG-EEG lag slope on both
@@ -50,8 +55,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-ARITH_PPM, ARITH_SE = 0.954, 0.05
-RESET_TRUE_S, RESET_STAMPS_S = 0.498, 0.4804
+ARITH_SE = 0.05
 MISSED_RATIO = 1.5
 SNU_SWING, SNU_QUANT = 1.2, 0.3
 BIS_SWING, BIS_QUANT = 3.5, 1.0
@@ -73,7 +77,20 @@ def stretch_slope(t_s, y, pauses_s):
     return float(beta[0]), float(np.sqrt(cov[0, 0]))
 
 
-def edges(W: Path, reset_loss: bool = False, drop_missed: bool = False) -> pd.DataFrame:
+def atlas_params(atlas: Path) -> dict:
+    """The constants this table needs, from the atlas's parameter files (values as written there)."""
+    import yaml
+
+    def val(pid):
+        return float(yaml.safe_load((atlas / "parameters" / f"{pid}.yaml").read_text(encoding="utf-8"))["value"])
+
+    return {"reset_true_s": val("snuadc-step-correction-size"),          # +0.500: true size of a correction
+            "reset_stamps_s": -val("snuadc-reset-stamp-step"),          # +0.4804: the step the stamps show
+            "arith_ppm": -val("snuadc-stamp-arithmetic")}               # +0.954: PC gains this on the stamps vs count
+
+
+def edges(W: Path, reset_loss: bool = False, drop_missed: bool = False, params: dict | None = None) -> pd.DataFrame:
+    P = params
     rows = []
     cont = W / "signal_survey" / "continuity"
     s = pd.read_csv(cont / "snuadc_reset_drift_per_recording.csv")
@@ -84,7 +101,7 @@ def edges(W: Path, reset_loss: bool = False, drop_missed: bool = False) -> pd.Da
     for r in s.itertuples():
         n = max(int(r.n), 1)
         se = float(np.hypot(SNU_SWING, SNU_QUANT) / np.sqrt(n))
-        v = r.ppm * (RESET_TRUE_S / RESET_STAMPS_S if reset_loss else 1.0)
+        v = r.ppm * (P["reset_true_s"] / P["reset_stamps_s"] if reset_loss else 1.0)
         rows.append([r.case, "snuadc_stamps", "pc", v, se, "resets", "snuadc stamps", f"{n} intervals"])
     b = pd.read_csv(cont / "bis_drift_per_recording.csv")
     for r in b.itertuples():
@@ -120,7 +137,7 @@ def edges(W: Path, reset_loss: bool = False, drop_missed: bool = False) -> pd.Da
     E = E[np.isfinite(E.value) & np.isfinite(E.se) & (E.se > 0)]
     # the stamp arithmetic joins the SNUADC stamps to its count wherever both SNUADC nodes are used
     need = set(E.recording[E.method == "resets"]) & set(E.recording[E.method == "bursts"])
-    E = pd.concat([E, pd.DataFrame([[c, "snuadc_stamps", "snuadc", ARITH_PPM, ARITH_SE, "arithmetic", "snuadc stamps",
+    E = pd.concat([E, pd.DataFrame([[c, "snuadc_stamps", "snuadc", P["arith_ppm"], ARITH_SE, "arithmetic", "snuadc stamps",
                                      "constant"] for c in sorted(need)], columns=FIELDS)], ignore_index=True)
     return E.sort_values(["recording", "method"]).reset_index(drop=True)
 
@@ -129,12 +146,17 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--work", required=True)
     ap.add_argument("--out", required=True)
-    ap.add_argument("--reset-loss", action="store_true", help="scale reset-based SNUADC rates by 0.498 / 0.480")
+    ap.add_argument("--atlas", default=str(Path(__file__).resolve().parents[3] / "metrology-atlas" / "datasets" / "vitaldb"))
+    ap.add_argument("--reset-loss", action="store_true", help="scale reset-based SNUADC rates by true / shown correction")
     ap.add_argument("--drop-missed", action="store_true", help="leave out reset intervals that likely span a missed reset")
     a = ap.parse_args()
-    E = edges(Path(a.work), a.reset_loss, a.drop_missed)
+    P = atlas_params(Path(a.atlas))
+    E = edges(Path(a.work), a.reset_loss, a.drop_missed, P)
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     E.to_csv(a.out, index=False)
+    Path(a.out + ".params.json").write_text(json.dumps({"atlas": str(a.atlas), "reset_loss": a.reset_loss,
+                                                       "drop_missed": a.drop_missed, **P}, indent=1))
+    print("parameters:", P)
     print(E.groupby("method").agg(edges=("value", "size"), median=("value", "median"), se_median=("se", "median")).round(2))
 
 
