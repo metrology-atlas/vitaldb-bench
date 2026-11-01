@@ -4,7 +4,7 @@
     python tools/primus_awp_anchor_figs.py --work $W --root $R --out DIR
         [--modes M --ports P --step-rates S]   (defaults: $W/results/sync_full/..., $W/results/pat/...)
 
-Writes three figures into DIR:
+Writes three figures into DIR, their panels stacked vertically for the study page's column:
   primus-awp-breath-ambiguity.png  why breath matching can sit a breath off, from two recordings read here:
       A the breath-triggered averages of airway pressure and CVP in one 10-minute window;
       B their shape correlation against lag: peaks one breath period apart, nearly equal;
@@ -73,7 +73,7 @@ def fig_ambiguity(a, out):
         tc = P.model_times(cv, ports.get(c), modes.get(c), rates); xc = cv.physical().astype(float)[: tc.size]
         return ta, xa, tc, xc, P.breath_onsets(ta, xa, float(aw.srate)), float(cv.srate)
 
-    fig, ax = plt.subplots(1, 3, figsize=(13, 3.4), gridspec_kw={"width_ratios": [1, 1, 1.4]})
+    fig, ax = plt.subplots(3, 1, figsize=(7, 10.5))
     c, mid = EXAMPLES["profile"]
     ta, xa, tc, xc, on, fs = load(c)
     z = ta[0]; t0 = float(np.floor(min(ta[0], tc[0])))
@@ -154,7 +154,7 @@ def fig_rates(a, out):
     rows = [(s_["at_start"], s_["T"], K.get((r["case"], s_["i"], r["arm"]), {}).get("corrected_start_s"))
             for r in B for s_ in r["stretches"] if s_.get("T")]
     rates = (18, 16, 14, 12)
-    fig, ax = plt.subplots(1, len(rates), figsize=(13, 3.2), sharey=False)
+    fig, ax = plt.subplots(len(rates), 1, figsize=(7, 11), sharex=True)
     bins = np.arange(-2, 9.01, 0.25)
     for k, r_ in enumerate(rates):
         sel = [x for x in rows if round(60 / x[1]) == r_]
@@ -171,9 +171,9 @@ def fig_rates(a, out):
         ax[k].text(m0 + T + 0.15, ymax * 0.97, f"one breath\nlater (+{T:.2f} s)", fontsize=7, color=ORANGE, va="top")
         outn = len(before) - len(inr(before))
         title(ax[k], f"{'ABCD'[k]}. Set rate {r_}/min\n{len(sel):,} stretches" + (f" ({outn} outside −2 to 9 s)" if outn else ""))
-        ax[k].set_xlabel("offset at the stretch start (s)", fontsize=8, color=MUTED)
+        ax[k].set_ylabel("stretches", fontsize=8, color=MUTED)
         style(ax[k])
-    ax[0].set_ylabel("stretches", fontsize=8, color=MUTED)
+    ax[-1].set_xlabel("offset at the stretch start (s)", fontsize=8, color=MUTED)
     ax[-1].legend(fontsize=7, frameon=False, labelcolor=INK, loc="center right")
     fig.tight_layout()
     fig.savefig(out / "primus-awp-offsets-by-rate.png", dpi=150, facecolor="white")
@@ -186,7 +186,7 @@ def fig_correction(a, out):
     after = json.loads((W / "primus_numbers" / "per_recording.json").read_text())["lag_median_s"]
     S = json.loads((W / "primus_breath_rule" / "summary.json").read_text())["leave_one_out"]
     G = json.loads((W / "primus_awp_anchor" / "gapsteps.json").read_text())
-    fig, ax = plt.subplots(1, 3, figsize=(13, 3.3), gridspec_kw={"width_ratios": [1.2, 0.9, 1.2]})
+    fig, ax = plt.subplots(3, 1, figsize=(7, 10.5))
     bins = np.arange(-8, 2.01, 0.25)
     b_, a_ = -np.array(before), -np.array(after)
     nout = int(np.sum((b_ < -8) | (b_ > 2)) + np.sum((a_ < -8) | (a_ > 2)))
