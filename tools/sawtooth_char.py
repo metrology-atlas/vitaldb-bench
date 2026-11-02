@@ -2395,6 +2395,89 @@ def label_eval_cmd(a) -> None:
     print(json.dumps(S["estimate"], indent=1))
 
 
+def _wave_channel(t: np.ndarray, x: np.ndarray, t0: float, half: float, step: int) -> dict | None:
+    """One waveform channel for the labelling page: samples within t0 +/- half, every step-th, as int16 with a
+    scale and offset (base64, little-endian); times relative to t0."""
+    import base64
+    sel = np.flatnonzero((t >= t0 - half) & (t <= t0 + half))[::step]
+    if sel.size < 10:
+        return None
+    v = np.asarray(x[sel], dtype=np.float64)
+    ok = np.isfinite(v)
+    if ok.mean() < 0.5:
+        return None
+    v = np.where(ok, v, np.nanmedian(v))
+    lo, hi = float(np.min(v)), float(np.max(v))
+    scale = (hi - lo) / 60000.0 or 1.0
+    q_ = np.round((v - lo) / scale - 30000).astype("<i2")
+    gaps = np.flatnonzero(np.diff(t[sel]) > 1.5 * step / FS)
+    return {"t0": round(float(t[sel[0]] - t0), 4), "fs": FS / step, "offset": lo + 30000 * scale, "scale": scale,
+            "n": int(sel.size), "gaps": [round(float(t[sel[g]] - t0), 3) for g in gaps], "b64": base64.b64encode(q_.tobytes()).decode()}
+
+
+def label_waves_cmd(a) -> None:
+    """The waveforms behind each labelling event (or worked example): ECG lead II (250 Hz), PLETH and ART (125 Hz)
+    over +/- HALF s, every R peak the detector of the scan finds in the recording's stretch (marked whether it was
+    matched to a pulse and so used in the delays), and the matched beats' PPG fiducials and arterial upstrokes.
+    One file per event, OUT/<id>.json, no case id. Resumable; stops before TIME_BUDGET s."""
+    import base64  # noqa: F401
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    items = []
+    if a.key:
+        key = json.loads(Path(a.key).read_text())
+        items += [(eid, v["case"], v["t"]) for eid, v in sorted(key["events"].items())]
+    if a.spec:
+        spec = json.loads(Path(a.spec).read_text())
+        items += [(f"X{i + 1}", ex["case"], float(ex["t"])) for i, ex in enumerate(spec["examples"])]
+    t_start, slowest, n = time.time(), 0.0, 0
+    for eid, c, t0 in items:
+        f = out / f"{eid}.json"
+        if f.exists():
+            continue
+        if time.time() - t_start + max(1.5 * slowest, 5) > a.time_budget:
+            break
+        t1 = time.time()
+        z = np.load(Path(a.scan) / f"{c:04d}.npz")
+        case = read_vital(Path(a.root) / "vital_files" / f"{c:04d}.vital", track_names={ECG, PPG, ART})
+        e, p = case.tracks[ECG], case.tracks[PPG]
+        te, tp = sample_times(e), sample_times(p)
+        # the scan's stretch, found the same way, so the R peaks are those the scan found
+        gap = np.flatnonzero(np.abs(np.diff(te) - 1 / FS) > 0.01 / FS)
+        be = np.r_[0, gap + 1, te.size]
+        k = int(np.argmax(np.diff(be)))
+        ea, eb = be[k], min(be[k + 1], be[k] + int(a.minutes * 60 * FS))
+        xe_all = e.physical()
+        xe = xe_all[ea:eb].astype(np.float64)
+        rp = r_peaks(xe, FS)
+        r_all = te[ea] + ecg_subsample(xe, rp, FS) / FS
+        r_m = z["r_t"]
+        win = lambda v: (v >= t0 - a.half) & (v <= t0 + a.half)  # noqa: E731
+        rr = r_all[win(r_all)]
+        used = np.isin(np.round(rr, 4), np.round(r_m, 4))
+        rec = {"id": eid, "half_s": a.half,
+               "ecg": _wave_channel(te, xe_all, t0, a.half, 2),
+               "ppg": _wave_channel(tp, p.physical(), t0, a.half, 4),
+               "r": [[round(float(x - t0), 4), int(u)] for x, u in zip(rr, used)],
+               "beats": []}
+        tr = case.tracks.get(ART)
+        if tr is not None and tr.record_times.size and float(tr.srate) == FS:
+            rec["art"] = _wave_channel(sample_times(tr), tr.physical(), t0, a.half, 4)
+        for i in np.flatnonzero(win(r_m)):
+            b = {"r": round(float(r_m[i] - t0), 4)}
+            for j in ("foot", "up", "peak"):
+                if np.isfinite(z[j][i]):
+                    b[j] = round(float(z[j][i] - t0), 4)
+            if np.isfinite(z["art_t"][i]):
+                b["art"] = round(float(z["art_t"][i] - t0), 4)
+            rec["beats"].append(b)
+        f.write_text(json.dumps(rec, separators=(",", ":")))
+        slowest = max(slowest, time.time() - t1)
+        n += 1
+    print(json.dumps({"new": n, "done": len(list(out.glob("*.json"))), "of": len(items),
+                      "seconds": round(time.time() - t_start, 1)}))
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -2457,6 +2540,15 @@ def main() -> None:
     p.add_argument("--spec", required=True, help="examples_spec.json")
     p.add_argument("--key", help="the labelling sample's key.json (examples from its cases are refused)")
     p.add_argument("--out", required=True, help="examples.json")
+    p = sub.add_parser("label-waves")
+    p.add_argument("--scan", required=True)
+    p.add_argument("--root", required=True, help="the VitalDB release")
+    p.add_argument("--key", help="the labelling sample's key.json")
+    p.add_argument("--spec", help="examples_spec.json (the worked examples, ids X1, X2, ...)")
+    p.add_argument("--out", required=True, help="a folder: one <id>.json per event")
+    p.add_argument("--half", type=float, default=62.0, help="half width of the window (s)")
+    p.add_argument("--minutes", type=float, default=90.0, help="as in scan: the stretch's maximum length")
+    p.add_argument("--time-budget", type=float, default=150)
     p = sub.add_parser("label-eval")
     p.add_argument("--key", required=True)
     p.add_argument("--labels", required=True, help="the labels exported from the labelling page (JSON)")
@@ -2464,7 +2556,7 @@ def main() -> None:
     a = ap.parse_args()
     {"scan": scan, "slips": slips_cmd, "agg": agg_cmd, "plot": plot_cmd, "mech": mech_cmd,
      "mech-agg": mech_agg_cmd, "pause-plot": pause_plot_cmd, "label-sample": label_sample_cmd,
-     "label-examples": label_examples_cmd, "label-eval": label_eval_cmd}[a.cmd](a)
+     "label-examples": label_examples_cmd, "label-eval": label_eval_cmd, "label-waves": label_waves_cmd}[a.cmd](a)
 
 
 if __name__ == "__main__":
