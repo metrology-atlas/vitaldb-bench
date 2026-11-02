@@ -23,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import vent_sync_pilot as V
 from pat import r_peaks
 from physiosync import corrected_times, stamp_clock
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.vital_file import read_vital
 
 ap = argparse.ArgumentParser()
 for k in ("--root", "--cases", "--units", "--step-rates", "--bursts", "--out"):

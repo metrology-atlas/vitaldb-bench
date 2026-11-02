@@ -95,7 +95,7 @@ def cardiac_lag(t_sig, x_res, mask, r_times, rr, rng, prev=None):
 
 
 def scan_case(c, a, modes, ports, step_rates):
-    from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+    from vitaldb_reader.vital_file import read_vital
     v = read_vital(Path(a.root) / "vital_files" / f"{c:04d}.vital",
                    track_names={"SNUADC/ECG_II", "SNUADC/CVP", "Primus/AWP", "Primus/CO2"})
     ecg, aw, co2, cv = (v.tracks.get(n) for n in ("SNUADC/ECG_II", "Primus/AWP", "Primus/CO2", "SNUADC/CVP"))

@@ -34,7 +34,7 @@ from scipy.optimize import nnls
 
 sys.path.insert(0, str(Path(__file__).parent))
 from pat import sample_times  # noqa: E402
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital  # noqa: E402
+from vitaldb_reader.vital_file import read_vital  # noqa: E402
 
 FS = 128
 LAGS = np.arange(-10, 121)

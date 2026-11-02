@@ -9,7 +9,7 @@ Usage: python tools/primus_awp_vs_co2.py ROOT CASE   (needs saw2.jsonl from art_
 import sys, json
 from pathlib import Path
 import numpy as np
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.vital_file import read_vital
 root, case = Path(sys.argv[1]), int(sys.argv[2]); F2 = 62.5
 fu = float(np.median([d for d in map(json.loads, open("saw2.jsonl")) if d["case"] == case][0]["co2_update_hz"]))
 v = read_vital(root / "vital_files" / f"{case:04d}.vital", track_names={"Primus/AWP", "Primus/CO2"})

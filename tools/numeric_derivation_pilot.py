@@ -57,7 +57,7 @@ from scipy.special import ndtr
 sys.path.insert(0, str(Path(__file__).parent))
 from pat import r_peaks, sample_times  # noqa: E402
 from vent_sync_pilot import breath_onsets, snu_times, stretches_of  # noqa: E402
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital  # noqa: E402
+from vitaldb_reader.vital_file import read_vital  # noqa: E402
 
 warnings.filterwarnings("ignore")
 

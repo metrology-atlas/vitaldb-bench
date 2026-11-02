@@ -28,8 +28,8 @@ from physiosync import corrected_times, stamp_clock
 
 sys.path.insert(0, str(Path(__file__).parent))
 from shared_artifacts import BAND, DT, burst_probe, envelope
-from timenet_connectors.datasets.vitaldb.vitaldb.resets import RULE_VERSION as RESET_RULE, reorder_case
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.resets import RULE_VERSION as RESET_RULE, reorder_case
+from vitaldb_reader.vital_file import read_vital
 
 DEVICES = {"SNUADC": -1, "BIS": 1}           # device -> correction_sign
 PROBE = {"ecg": "SNUADC/ECG_II", "eeg1": "BIS/EEG1_WAV", "eeg2": "BIS/EEG2_WAV"}

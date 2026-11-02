@@ -102,7 +102,7 @@ def mode_paired(r, u, lo, hi, tol=0.12):
 
 def scan_case(root: Path, case: int) -> dict:
     from pat import r_peaks, sample_times  # noqa: PLC0415
-    from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital  # noqa: PLC0415
+    from vitaldb_reader.vital_file import read_vital  # noqa: PLC0415
 
     v = read_vital(root / "vital_files" / f"{case:04d}.vital", track_names={ECG, PPG, ART})
     tr = {k: v.tracks.get(k) for k in (ECG, PPG, ART)}

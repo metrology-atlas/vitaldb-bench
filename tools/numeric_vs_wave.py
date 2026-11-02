@@ -76,7 +76,7 @@ def stat(t, v, tn, win, lag, how):
 
 
 def scan_case(root, case):
-    from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital  # noqa: PLC0415
+    from vitaldb_reader.vital_file import read_vital  # noqa: PLC0415
     v = read_vital(Path(root) / "vital_files" / f"{case:04d}.vital")
     out = {}
     cache = {}

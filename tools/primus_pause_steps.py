@@ -97,7 +97,7 @@ def stamp_steps(tr):
 
 def scan_case(c, a, modes, ports, step_rates):
     from physiosync import stamp_clock
-    from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+    from vitaldb_reader.vital_file import read_vital
     v = read_vital(Path(a.root) / "vital_files" / f"{c:04d}.vital", track_names={"Primus/AWP", "Primus/CO2", "SNUADC/CVP"})
     aw, co2, cv = v.tracks.get("Primus/AWP"), v.tracks.get("Primus/CO2"), v.tracks.get("SNUADC/CVP")
     if aw is None or cv is None or not aw.record_times.size or not cv.record_times.size:

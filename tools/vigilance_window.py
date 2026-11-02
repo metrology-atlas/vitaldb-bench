@@ -28,7 +28,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import numeric_derivation_pilot as ndp  # noqa: E402
 from pat import r_peaks  # noqa: E402
 from vent_sync_pilot import snu_times  # noqa: E402
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital  # noqa: E402
+from vitaldb_reader.vital_file import read_vital  # noqa: E402
 
 ndp.N_BEATS = [32, 64, 128, 256, 512, 768, 1024, 1280, 1536, 1792, 2048, 2560, 3072, 3584, 4096]
 ndp.T_BEATS = [30, 60, 120, 180, 300, 450, 600, 750, 900, 1050, 1200, 1500, 1800, 2100, 2400, 2700, 3000, 3600]

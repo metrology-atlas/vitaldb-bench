@@ -19,8 +19,8 @@ import sqlite3
 
 import numpy as np
 
-from timenet_connectors.datasets.vitaldb.vitaldb.timing import runs
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import TRACK_WAVE, read_vital
+from vitaldb_reader.timing import runs
+from vitaldb_reader.vital_file import TRACK_WAVE, read_vital
 
 
 def expected_intervals(track) -> tuple[int, int]:

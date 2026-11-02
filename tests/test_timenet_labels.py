@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-vdb = pytest.importorskip("timenet_connectors.datasets.vitaldb.vitaldb")
+vdb = pytest.importorskip("timenet_connectors.datasets.vitaldb.vitaldb")  # TimeNet builds use the connector
 
 from vitaldb_bench.label_families import FAMILIES  # noqa: E402
 from vitaldb_bench.stores import TimeNetStore, newest_version  # noqa: E402

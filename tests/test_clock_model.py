@@ -8,7 +8,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-vdb = pytest.importorskip("timenet_connectors.datasets.vitaldb.vitaldb")
+vdb = pytest.importorskip("timenet_connectors.datasets.vitaldb.vitaldb")  # TimeNet builds use the connector
 physiosync = pytest.importorskip("physiosync")
 
 from vitaldb_bench import clock_model as cm  # noqa: E402
@@ -39,8 +39,8 @@ def test_population_constants_are_leave_one_out():
 
 def test_tables_and_corrected_read_back(tmp_path):
     from test_timenet_labels import FIXTURES, _build  # noqa: PLC0415
-    from timenet_connectors.datasets.vitaldb.vitaldb.resets import RULE_VERSION, reorder_case  # noqa: PLC0415
-    from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital  # noqa: PLC0415
+    from vitaldb_reader.resets import RULE_VERSION, reorder_case  # noqa: PLC0415
+    from vitaldb_reader.vital_file import read_vital  # noqa: PLC0415
 
     build = _build(tmp_path)
     tool = _fit_tool()

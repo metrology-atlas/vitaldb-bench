@@ -11,7 +11,7 @@ import csv, sys
 from pathlib import Path
 import numpy as np
 BLK = 10
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.vital_file import read_vital
 
 def phase_runs(tr, f_line, min_s=600):
     rt, rs, fs = tr.record_times, tr.record_sizes, float(tr.srate)

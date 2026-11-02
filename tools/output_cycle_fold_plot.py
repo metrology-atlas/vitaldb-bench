@@ -11,7 +11,7 @@ from pathlib import Path
 import numpy as np, matplotlib
 matplotlib.use("Agg"); import matplotlib.pyplot as plt
 from scipy import signal
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.vital_file import read_vital
 GREY, BLUE, ORANGE, GREEN, PURPLE, INK, MUTED, GRID = "#9b9a94", "#2a78d6", "#e65100", "#2e7d32", "#7b3fa0", "#1f2430", "#5a6170", "#e4e3df"
 root = Path(sys.argv[1]); cases = [int(c) for c in sys.argv[2:]]
 CH = [("SNUADC/ECG_II", "ECG II", BLUE), ("SNUADC/ART", "Arterial", ORANGE), ("SNUADC/PLETH", "Pleth", GREEN), ("SNUADC/CVP", "CVP", PURPLE)]

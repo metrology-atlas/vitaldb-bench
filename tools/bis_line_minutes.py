@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 import numpy as np, matplotlib
 matplotlib.use("Agg"); import matplotlib.pyplot as plt
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.vital_file import read_vital
 GREY, BLUE, INK, MUTED, GRID = "#9b9a94", "#2a78d6", "#1f2430", "#5a6170", "#e4e3df"
 root = Path(sys.argv[1]); CASES = [int(c) for c in sys.argv[2:]]
 

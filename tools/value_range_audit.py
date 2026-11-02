@@ -63,7 +63,7 @@ def grid_of(x):
 
 
 def scan_case(root, c):
-    from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+    from vitaldb_reader.vital_file import read_vital
     v = read_vital(Path(root) / "vital_files" / f"{c:04d}.vital")
     res = {"case": c, "version": int(v.version), "devices": {k: [d.type_name, d.port] for k, d in v.devices.items()},
            "tracks": {}, "markers": {}}

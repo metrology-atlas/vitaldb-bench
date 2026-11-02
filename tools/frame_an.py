@@ -33,7 +33,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).parent))
 from pat import PPG
 from physiosync import fit_ecg_ppg_delay
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import (
+from vitaldb_reader.vital_file import (
     read_vital,
 )
 

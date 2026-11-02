@@ -29,7 +29,7 @@ from pathlib import Path
 
 import numpy as np
 
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.vital_file import read_vital
 
 TRACKS = {"Orchestra/PPF20_RATE", "Orchestra/PHEN_RATE", "Orchestra/NEPI_RATE", "Orchestra/RFTN20_RATE", "BIS/BIS",
           "Solar8000/ART_MBP", "Solar8000/HR", "Solar8000/CVP", "FMS/FLOW_RATE", "Invos/SCO2_L", "Invos/SCO2_R",

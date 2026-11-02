@@ -96,7 +96,7 @@ def lines(x, fs, snr_min=20.0):
 
 
 def one(root, case, block_min):
-    from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+    from vitaldb_reader.vital_file import read_vital
     v = read_vital(Path(root) / "vital_files" / f"{case:04d}.vital", track_names=set(SNU + BIS))
     out = {"case": case, "tracks": {}}
     for k in SNU + BIS:

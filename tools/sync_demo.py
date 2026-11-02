@@ -36,7 +36,7 @@ import ppv_by_breath as P  # noqa: E402
 from pat import sample_times  # noqa: E402
 from physiosync import corrected_times, stamp_clock  # noqa: E402
 from shared_artifacts import BAND, DT, burst_probe, envelope  # noqa: E402
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital  # noqa: E402
+from vitaldb_reader.vital_file import read_vital  # noqa: E402
 
 EEG_ECG_STEP_MODE_S = -0.804
 LOSS_S = 0.0177

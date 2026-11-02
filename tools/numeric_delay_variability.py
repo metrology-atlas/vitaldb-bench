@@ -45,7 +45,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent))
 import numeric_derivation_pilot as ndp  # noqa: E402
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import TRACK_NUMERIC  # noqa: E402
+from vitaldb_reader.vital_file import TRACK_NUMERIC  # noqa: E402
 
 warnings.filterwarnings("ignore")
 

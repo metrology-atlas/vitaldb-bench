@@ -172,7 +172,7 @@ def empty_track():
 
 
 def scan_tracks(root, cases):
-    from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+    from vitaldb_reader.vital_file import read_vital
     A = defaultdict(empty_track)
     ev_labels, ev_res = Counter(), defaultdict(Counter)
     for c in cases:
@@ -296,7 +296,7 @@ def cautery(root, cases, out):
     sys.path.insert(0, str(Path(__file__).parent))
     from shared_artifacts import envelope  # noqa: E402
     from pat import sample_times  # noqa: E402
-    from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+    from vitaldb_reader.vital_file import read_vital
     done = set()
     if Path(out).exists():
         done = {json.loads(l)["case"] for l in open(out)}

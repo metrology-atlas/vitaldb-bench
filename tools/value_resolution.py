@@ -54,7 +54,7 @@ def float_grid(x):
 
 
 def scan(root, cases):
-    from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import FORMAT_DTYPES, read_vital
+    from vitaldb_reader.vital_file import FORMAT_DTYPES, read_vital
     A = defaultdict(lambda: {"cases": 0, "fmt": Counter(), "gain": Counter(), "offset": Counter(), "unit": Counter(),
                              "step": Counter(), "eff_bits": [], "lo": [], "hi": [], "fq": Counter(), "fgrid": Counter(),
                              "type": Counter()})

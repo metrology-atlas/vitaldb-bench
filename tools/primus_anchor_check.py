@@ -70,7 +70,7 @@ def unique_delays(pt, pv, peak_t, peak_v, window=15.0):
 
 
 def scan_case(root, c):
-    from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+    from vitaldb_reader.vital_file import read_vital
     v = read_vital(Path(root) / "vital_files" / f"{c:04d}.vital", track_names={"Primus/AWP", "Primus/PIP_MBAR"})
     aw, pip = v.tracks.get("Primus/AWP"), v.tracks.get("Primus/PIP_MBAR")
     if aw is None or pip is None or not aw.record_times.size or not pip.record_times.size:

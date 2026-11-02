@@ -5,7 +5,7 @@ Ad hoc helper from the VitalDB timing audit, kept for provenance (see tools/adho
 per-case files that stay on the analysis machine; not maintained as a tool.
 """
 import json, sys, numpy as np
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.vital_file import read_vital
 R, out, cases = sys.argv[1], sys.argv[2], [int(x) for x in sys.argv[3].split(',') if x]
 done = set()
 try: done = {json.loads(l)['case'] for l in open(out)}

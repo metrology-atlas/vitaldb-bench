@@ -40,7 +40,7 @@ SHIFTS = np.arange(-2400, 601, 30)
 
 
 def scan_case(root, c, anestart):
-    from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+    from vitaldb_reader.vital_file import read_vital
     m = emr_markers.scan_case(root, c)
     v = read_vital(Path(root) / "vital_files" / f"{c:04d}.vital", track_names={"Solar8000/NIBP_MBP", "Solar8000/ART_MBP"})
     lo, hi = anestart - 1800, anestart + 3600

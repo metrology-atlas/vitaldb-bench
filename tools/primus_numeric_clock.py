@@ -31,7 +31,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "examples"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from vent_sync_pilot import breath_onsets  # noqa: E402
 from pat import sample_times  # noqa: E402
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital  # noqa: E402
+from vitaldb_reader.vital_file import read_vital  # noqa: E402
 
 D = np.arange(0.0, 12.0001, 0.05)
 BLOCK_S, MIN_REC, TOL = 1800.0, 60, 0.6

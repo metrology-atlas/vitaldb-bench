@@ -8,7 +8,7 @@ Usage: python tools/output_cycle_fold.py ROOT OUT.jsonl CASE [CASE ...]
 import sys, json
 from pathlib import Path
 import numpy as np
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.vital_file import read_vital
 root, out = Path(sys.argv[1]), Path(sys.argv[2]); cases = [int(c) for c in sys.argv[3:]]
 CH = ["SNUADC/ECG_II", "SNUADC/ECG_V5", "SNUADC/ART", "SNUADC/PLETH", "SNUADC/CVP", "SNUADC/FEM"]
 rel = lambda x: np.abs(np.diff(x)) / (np.convolve(np.abs(np.diff(x)), np.ones(25) / 25, "same") + 1e-9)

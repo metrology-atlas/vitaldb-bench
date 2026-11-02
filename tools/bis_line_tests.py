@@ -8,7 +8,7 @@ Usage: python tools/bis_line_tests.py ROOT RATES.csv CASE [CASE ...]
 import csv, sys
 from pathlib import Path
 import numpy as np
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.vital_file import read_vital
 
 def demod(tr, f_line, sub=10.0):
     """Phase per `sub`-second block on the sample count; block times from the first stamp + count (whole track),

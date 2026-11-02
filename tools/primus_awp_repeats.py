@@ -9,7 +9,7 @@ Usage: python tools/primus_awp_repeats.py ROOT CASE   (appends awp.jsonl in the 
 import sys, json
 from pathlib import Path
 import numpy as np
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.vital_file import read_vital
 root, case = Path(sys.argv[1]), int(sys.argv[2]); F2 = 62.5
 NOM = [4.23, 8.52, 12.35, 12.76, 16.58, 20.84, 24.58, 25.105, 28.93, 29.34]
 v = read_vital(root / "vital_files" / f"{case:04d}.vital", track_names={"Primus/AWP"})

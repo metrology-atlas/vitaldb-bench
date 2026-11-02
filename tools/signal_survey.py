@@ -169,7 +169,7 @@ def numeric(tr) -> dict:
 
 
 def scan_case(root: Path, case: int) -> dict:
-    from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital  # noqa: PLC0415
+    from vitaldb_reader.vital_file import read_vital  # noqa: PLC0415
 
     v = read_vital(root / "vital_files" / f"{case:04d}.vital")
     res = {"case": case, "devices": {k: [d.type_name, d.port] for k, d in v.devices.items()}, "wave": {}, "num": {}}

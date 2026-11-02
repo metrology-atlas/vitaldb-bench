@@ -134,7 +134,7 @@ def slope(x, y):
 
 
 def scan_case(root, c, minutes):
-    from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+    from vitaldb_reader.vital_file import read_vital
     v = read_vital(Path(root) / "vital_files" / f"{c:04d}.vital", track_names={P.ECG, P.PPG, P.ART, NUM})
     tr = {k: v.tracks.get(k) for k in (P.ECG, P.PPG, P.ART)}
     if any(tr[k] is None or not tr[k].record_times.size or tr[k].srate != FS for k in tr):

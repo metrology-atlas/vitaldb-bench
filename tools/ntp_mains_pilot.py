@@ -9,7 +9,7 @@ Usage: python tools/ntp_mains_pilot.py ROOT CASE [CASE ...]
 import sys, json
 from pathlib import Path
 import numpy as np
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.vital_file import read_vital
 root = Path(sys.argv[1])
 for c in map(int, sys.argv[2:]):
     best = None

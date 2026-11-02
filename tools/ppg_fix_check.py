@@ -25,7 +25,7 @@ from pat import ECG, PPG, r_peaks, sample_times
 from pat_res import ecg_subsample, ppg_onsets
 from physiosync import detect_slips, fit_ecg_ppg_delay, match_beats
 from physiosync.ecg_ppg import _p2p
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import (
+from vitaldb_reader.vital_file import (
     read_vital,
 )
 

@@ -23,7 +23,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).parent))
 from pat import ECG, PPG, analyse_window, sample_times  # noqa: E402
 
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital  # noqa: E402
+from vitaldb_reader.vital_file import read_vital  # noqa: E402
 
 
 def boundaries(scan_dirs: list[str], cases: set[int]) -> dict:

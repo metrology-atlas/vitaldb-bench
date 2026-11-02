@@ -33,7 +33,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).parent))
 from physiosync import corrected_times, stamp_clock  # noqa: E402
 from shared_artifacts import BAND, DT, burst_probe, envelope  # noqa: E402
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital  # noqa: E402
+from vitaldb_reader.vital_file import read_vital  # noqa: E402
 
 TR = {"ecg": ("SNUADC/ECG_II", -1, 0.0177), "eeg1": ("BIS/EEG1_WAV", 1, 0.0), "eeg2": ("BIS/EEG2_WAV", 1, 0.0)}
 GOOD_PEAK, GOOD_MARGIN, LAG_RANGE_MS = 0.3, 0.15, (-2500.0, 500.0)

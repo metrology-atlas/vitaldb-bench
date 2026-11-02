@@ -21,7 +21,7 @@ from pathlib import Path
 
 import numpy as np
 from scipy import ndimage
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.vital_file import read_vital
 
 FS = 62.5
 

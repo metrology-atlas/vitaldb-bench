@@ -32,8 +32,8 @@ from collections import Counter
 from pathlib import Path
 
 import numpy as np
-from timenet_connectors.datasets.vitaldb.vitaldb.resets import _clusters
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.resets import _clusters
+from vitaldb_reader.vital_file import read_vital
 
 TRACKS = ["SNUADC/ECG_II", "SNUADC/ART", "SNUADC/PLETH", "SNUADC/CVP", "SNUADC/ECG_V5", "SNUADC/FEM"]
 RESET_LO, RESET_HI = -0.6, -0.3   # summed backward step of a reset cluster, s

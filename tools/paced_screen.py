@@ -20,7 +20,7 @@ from pathlib import Path
 
 import numpy as np
 from scipy import signal
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.vital_file import read_vital
 
 LEADS = ("SNUADC/ECG_II", "SNUADC/ECG_V5")
 FS_EXPECTED = 500.0

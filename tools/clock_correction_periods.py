@@ -15,7 +15,7 @@ import time
 
 import numpy as np
 from physiosync import stamp_clock
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.vital_file import read_vital
 R, cases_json, out = sys.argv[1], sys.argv[2], sys.argv[3]
 BUDGET = float(sys.argv[4]) if len(sys.argv) > 4 else 160.0
 cases = json.load(open(cases_json))

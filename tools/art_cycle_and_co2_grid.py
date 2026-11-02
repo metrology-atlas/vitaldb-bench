@@ -14,7 +14,7 @@ import sys, json
 from pathlib import Path
 import numpy as np
 from scipy import signal
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.vital_file import read_vital
 root, outd, case = Path(sys.argv[1]), Path(sys.argv[2]), int(sys.argv[3]); MIN = float(sys.argv[4]) if len(sys.argv) > 4 else 90
 FS = 500.0
 v = read_vital(root / "vital_files" / f"{case:04d}.vital", track_names={"SNUADC/ECG_II", "SNUADC/ART", "Primus/CO2"})

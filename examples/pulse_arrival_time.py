@@ -41,7 +41,7 @@ from scipy import signal
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 from pat import r_peaks, sample_times  # noqa: E402
 from physiosync import error_samples, fiducial_error_model, fit_ecg_ppg_delay, pat_measurement_model  # noqa: E402
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital  # noqa: E402
+from vitaldb_reader.vital_file import read_vital  # noqa: E402
 
 ECG, PPG, ART = "SNUADC/ECG_II", "SNUADC/PLETH", "SNUADC/ART"
 FS = 500.0

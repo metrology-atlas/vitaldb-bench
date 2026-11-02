@@ -77,7 +77,7 @@ def snuadc(s, out):
 
 
 def records(root, case, track):
-    from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital  # noqa: PLC0415
+    from vitaldb_reader.vital_file import read_vital  # noqa: PLC0415
     tr = read_vital(Path(root) / "vital_files" / f"{case:04d}.vital").tracks[track]
     rt = np.asarray(tr.record_times, float); sz = np.asarray(tr.record_sizes, int)
     x = np.asarray(tr.values, float) * float(tr.gain) + float(tr.offset)

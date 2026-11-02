@@ -26,7 +26,7 @@ correction of about 0.48 s, the true one is about 0.498 s. Measured on fixed-rat
 (`physiosync.stamp_clock(..., event_loss_s=...)`), so samples after a correction are no longer 17.7 ms early.
 
 At every reset the recorder also writes five records out of order. The fit reads the case through
-`timenet_connectors.datasets.vitaldb.vitaldb.resets.reorder_case`, as the TimeNet connector does by default
+`vitaldb_reader.resets.reorder_case`, as the TimeNet connector does by default
 (`VITALDB_RESET_ORDER=on`), so sample counts in the fit and in the build agree. Each fit row records the order it
 used (`sample_order`); a build stored in a different order is left uncorrected, with a note, rather than shifted
 by up to two records.

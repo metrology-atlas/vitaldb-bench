@@ -32,7 +32,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 from frame_an import ibi_lock, phase_scan
 from pat import ECG, sample_times
 from physiosync.ecg_ppg import _local_steps, _p2p
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.vital_file import read_vital
 
 from physiosync import detect_slips
 

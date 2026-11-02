@@ -31,7 +31,7 @@ from scipy import signal
 sys.path.insert(0, str(Path(__file__).parent))
 from lineaccess import line_accesses, line_events
 from pat import sample_times
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.vital_file import read_vital
 
 ap = argparse.ArgumentParser()
 ap.add_argument("--root", required=True)

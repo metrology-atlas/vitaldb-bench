@@ -36,7 +36,7 @@ import itertools
 from pat import ECG, PPG, r_peaks, sample_times
 from pat_res import ecg_subsample, ppg_onsets
 from physiosync import match_beats
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.vital_file import read_vital
 
 warnings.filterwarnings("ignore")
 ART = "SNUADC/ART"

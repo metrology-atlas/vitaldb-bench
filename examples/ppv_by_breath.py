@@ -142,7 +142,7 @@ def compare(a, b):
 
 
 def scan_case(c, a, modes, ports, step_rates):
-    from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+    from vitaldb_reader.vital_file import read_vital
     v = read_vital(Path(a.root) / "vital_files" / f"{c:04d}.vital", track_names={*SNU.values(), "Primus/AWP"})
     aw = v.tracks.get("Primus/AWP")
     if aw is None or not aw.record_times.size or any(v.tracks.get(SNU[k]) is None for k in ("ecg", "art")):

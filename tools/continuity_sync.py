@@ -52,7 +52,7 @@ def hist(j: np.ndarray) -> dict:
 
 def scan_case(c: int, root: str) -> dict:
     from physiosync import corrected_times, stamp_clock
-    from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+    from vitaldb_reader.vital_file import read_vital
     v = read_vital(Path(root) / "vital_files" / f"{c:04d}.vital", track_names=set(TRACKS))
     out = {"case": c, "tracks": {}}
     for name, (_, sign, loss) in TRACKS.items():

@@ -17,7 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'examples')); sys.p
 import numpy as np
 import ppv_by_breath as P
 from pat import sample_times
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.vital_file import read_vital
 from pathlib import Path
 root=Path.home()/'mnt/vitalDB/vitaldb-a-high-fidelity-multi-parameter-vital-signs-database-in-surgical-patients-1.0.0'
 W=Path.home()/'mnt/vitalDB/work'

@@ -15,7 +15,7 @@ from pathlib import Path
 import numpy as np
 
 from physiosync import stamp_clock
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.vital_file import read_vital
 
 WAVES = ["SNUADC/ECG_II", "SNUADC/ECG_V5", "SNUADC/PLETH", "SNUADC/ART", "SNUADC/CVP", "SNUADC/FEM",
          "BIS/EEG1_WAV", "BIS/EEG2_WAV", "Primus/AWP", "Primus/CO2", "CardioQ/ABP", "CardioQ/FLOW"]

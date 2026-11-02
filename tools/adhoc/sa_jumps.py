@@ -6,7 +6,7 @@ per-case files that stay on the analysis machine; not maintained as a tool.
 """
 import json,os,sys,numpy as np
 from pathlib import Path
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.vital_file import read_vital
 R=Path(os.environ["VITALDB_ROOT"]) / "vital_files"
 rs={json.loads(l)["case"]:json.loads(l) for l in open(sys.argv[1])}
 cases=[int(c) for c in sys.argv[2].split(",")]

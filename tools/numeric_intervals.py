@@ -75,7 +75,7 @@ def add(acc, t, x, sizes):
 
 
 def scan(root, cases):
-    from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+    from vitaldb_reader.vital_file import read_vital
     A = {n: empty() for n in TRACKS}
     for c in cases:
         p = Path(root) / "vital_files" / f"{c:04d}.vital"

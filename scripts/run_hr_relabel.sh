@@ -15,7 +15,7 @@ W=${_W:-${VITALDB_WORK:-}}; R=${_R:-${VITALDB_ROOT:-}}; export W; export PYTHONP
 : "${W:?set W or VITALDB_WORK}"; : "${R:?set R or VITALDB_ROOT}"
 cd "$(dirname "$0")/.."
 PY=${PY:-$(command -v python || command -v python3)}
-"$PY" -c "from timenet_connectors.datasets.vitaldb.vitaldb.timing_model import NUMERIC_LAG as L; import sys; a=L['Solar8000/HR'].algorithm; print('timing model HR:', a); sys.exit(0 if 'mean' in a and '8' in a else 1)" \
+"$PY" -c "from vitaldb_reader.timing_model import NUMERIC_LAG as L; import sys; a=L['Solar8000/HR'].algorithm; print('timing model HR:', a); sys.exit(0 if 'mean' in a and '8' in a else 1)" \
   || { echo "Update the TimeNet timing model's HR entry first"; exit 1; }
 S=$W/examples/hr_relabel; O=$W/results/hr_relabel; mkdir -p "$S" "$O"
 N=$(ls "$R"/vital_files/*.vital | wc -l); echo "$N recordings; scan in $S"

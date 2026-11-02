@@ -29,9 +29,9 @@ from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
-from timenet_connectors.datasets.vitaldb.vitaldb.resets import reorder_case
-from timenet_connectors.datasets.vitaldb.vitaldb.timing import TimingMode, segments
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import TRACK_STRING, TRACK_WAVE, VitalTrack, read_vital
+from vitaldb_reader.resets import reorder_case
+from vitaldb_reader.timing import TimingMode, segments
+from vitaldb_reader.vital_file import TRACK_STRING, TRACK_WAVE, VitalTrack, read_vital
 
 from vitaldb_bench.stores import TimeNetStore, TrackData
 

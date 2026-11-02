@@ -34,7 +34,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).parent))
 from physiosync import corrected_times, stamp_clock
 from shared_artifacts import BAND, DT, burst_probe, envelope
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.vital_file import read_vital
 
 TR = {"ecg": ("SNUADC/ECG_II", "snuadc", -1), "eeg1": ("BIS/EEG1_WAV", "bis", 1), "eeg2": ("BIS/EEG2_WAV", "bis", 1)}
 

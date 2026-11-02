@@ -114,7 +114,7 @@ def events_of(on, ta, pauses):
 
 
 def scan_case(c, a, modes, ports, step_rates):
-    from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+    from vitaldb_reader.vital_file import read_vital
     v = read_vital(Path(a.root) / "vital_files" / f"{c:04d}.vital", track_names={"Primus/AWP", "SNUADC/CVP", "SNUADC/ART"})
     aw = v.tracks.get("Primus/AWP")
     refs = {k: v.tracks.get(f"SNUADC/{k.upper()}") for k in ("cvp", "art")}

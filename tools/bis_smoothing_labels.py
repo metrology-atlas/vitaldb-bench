@@ -42,7 +42,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from timenet_connectors.datasets.vitaldb.vitaldb.timing_model import MODEL_VERSION  # noqa: E402
+from vitaldb_reader.timing_model import MODEL_VERSION  # noqa: E402
 
 CASE_START = 4102444800.0  # 2100-01-01 00:00 UTC, the release's case start
 METHOD = "bis_index_delay rank-one lag kernel, boxcar + slow tail + floor"

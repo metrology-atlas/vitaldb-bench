@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 import numpy as np, matplotlib
 matplotlib.use("Agg"); import matplotlib.pyplot as plt
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.vital_file import read_vital
 GREY, BLUE, ORANGE, INK, MUTED, GRID = "#9b9a94", "#2a78d6", "#e65100", "#1f2430", "#5a6170", "#e4e3df"
 root, case = Path(sys.argv[1]), int(sys.argv[2])
 x = np.asarray(read_vital(root / "vital_files" / f"{case:04d}.vital", track_names={"BIS/EEG1_WAV"}).tracks["BIS/EEG1_WAV"].values, np.float64)

@@ -21,7 +21,7 @@ import argparse, json, time
 from pathlib import Path
 import numpy as np
 from scipy import signal
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.vital_file import read_vital
 
 def longest_run(t, max_s):
     rt, rs, fs = t.record_times, np.asarray(t.record_sizes), float(t.srate)

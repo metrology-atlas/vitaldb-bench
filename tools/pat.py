@@ -30,7 +30,7 @@ import time
 import numpy as np
 from scipy import signal
 
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.vital_file import read_vital
 
 ECG, PPG = "SNUADC/ECG_II", "SNUADC/PLETH"
 EDGES = np.arange(-1.0, 1.0 + 1e-9, 0.002)

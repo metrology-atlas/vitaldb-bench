@@ -108,7 +108,7 @@ def stretches(a):
 
 
 def rr(a):
-    from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+    from vitaldb_reader.vital_file import read_vital
     out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
     f = out / "rr.jsonl"
     done = {json.loads(l)["case"] for l in f.read_text().splitlines() if l.strip()} if f.exists() else set()
@@ -319,7 +319,7 @@ def _rec_track(tr):
 
 
 def records(a):
-    from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+    from vitaldb_reader.vital_file import read_vital
     out = Path(a.out); out.parent.mkdir(parents=True, exist_ok=True)
     done = {json.loads(l)["case"] for l in out.read_text().splitlines() if l.strip()} if out.exists() else set()
     with open(out, "a", encoding="utf-8") as fh:

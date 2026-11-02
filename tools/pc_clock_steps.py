@@ -23,7 +23,7 @@ import time
 from pathlib import Path
 
 import numpy as np
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.vital_file import read_vital
 
 NUM = ("Solar8000/HR", "Primus/ETCO2")
 WAVE = ("SNUADC/ECG_II", "BIS/EEG1_WAV")

@@ -70,7 +70,7 @@ def held_time(t, mask, min_s):
 
 
 def scan_case(root, c):
-    from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+    from vitaldb_reader.vital_file import read_vital
     v = read_vital(Path(root) / "vital_files" / f"{c:04d}.vital", track_names=TRACKS)
     m = {"case": c}
     for n, key in (("Orchestra/PPF20_RATE", "ppf"), ("Orchestra/RFTN20_RATE", "rftn")):

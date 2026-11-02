@@ -13,7 +13,7 @@ import numpy as np
 from scipy import signal
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from pat import r_peaks, sample_times
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.vital_file import read_vital
 root = Path(sys.argv[1])
 
 def trig_avg(t, x, fs, beats, lo=-1.6, hi=0.6):

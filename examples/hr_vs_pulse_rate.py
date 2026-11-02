@@ -58,7 +58,7 @@ def _held(t, x, at):
 
 
 def scan_case(c, root):
-    from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+    from vitaldb_reader.vital_file import read_vital
     v = read_vital(Path(root) / "vital_files" / f"{c:04d}.vital", track_names={"Solar8000/HR", "Solar8000/PLETH_HR"})
     hr, pr = v.tracks.get("Solar8000/HR"), v.tracks.get("Solar8000/PLETH_HR")
     if hr is None or pr is None or hr.record_times.size < 300 or pr.record_times.size < 300:

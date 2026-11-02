@@ -33,7 +33,7 @@ from pathlib import Path
 import numpy as np
 from physiosync import corrected_times, stamp_clock
 from scipy import signal
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.vital_file import read_vital
 
 HALF = 50          # template half-width, samples (100 ms at 500 Hz)
 

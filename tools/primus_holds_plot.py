@@ -7,7 +7,7 @@ import sys, json
 from pathlib import Path
 import numpy as np, matplotlib
 matplotlib.use("Agg"); import matplotlib.pyplot as plt
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.vital_file import read_vital
 GREY, BLUE, ORANGE, INK, MUTED, GRID = "#9b9a94", "#2a78d6", "#e65100", "#1f2430", "#5a6170", "#e4e3df"
 root, case = Path(sys.argv[1]), int(sys.argv[2])
 v = read_vital(root / "vital_files" / f"{case:04d}.vital", track_names={"Primus/CO2", "Primus/AWP"})

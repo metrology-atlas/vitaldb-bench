@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 sys.path.insert(0, str(Path(__file__).parent))
 from pat import sample_times
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.vital_file import read_vital
 
 rs = [json.loads(l) for l in open(sys.argv[1])]
 R = [{**x, "case": r["case"]} for r in rs for f in r.get("flushes", []) for x in f["releases"]]

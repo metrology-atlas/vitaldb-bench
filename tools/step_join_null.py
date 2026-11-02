@@ -5,7 +5,7 @@ import sys
 import numpy as np
 import json
 from pathlib import Path
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.vital_file import read_vital
 R=Path(sys.argv[1]); cases=[int(c) for c in sys.argv[2].split(',')]
 rng=np.random.default_rng(0)
 out={}

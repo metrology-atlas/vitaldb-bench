@@ -76,7 +76,7 @@ def xcorr(a, b, maxlag):
 
 
 def scan_case(root, case, pauses):
-    from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital  # noqa: PLC0415
+    from vitaldb_reader.vital_file import read_vital  # noqa: PLC0415
     v = read_vital(Path(root) / "vital_files" / f"{case:04d}.vital", track_names={"Primus/AWP", "Primus/CO2"})
     if "Primus/AWP" not in v.tracks or "Primus/CO2" not in v.tracks:
         return []

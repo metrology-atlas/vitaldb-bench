@@ -60,7 +60,7 @@ def fig_ambiguity(a, out):
     from primus_breath_id import CORE, TAUS
     from primus_sync_accuracy import lowpass_mean
     from primus_vent_events import DT, envelope
-    from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+    from vitaldb_reader.vital_file import read_vital
     from vent_sync_pilot import G, binned, trig_avg
     modes = {int(k): v for k, v in json.loads(Path(a.modes).read_text()).items()}
     ports = {int(k): (v or {}).get("port") for k, v in json.loads(Path(a.ports).read_text()).items()}

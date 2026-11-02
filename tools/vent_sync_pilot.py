@@ -41,7 +41,7 @@ from scipy import ndimage, signal
 sys.path.insert(0, str(Path(__file__).parent))
 from pat import r_peaks, sample_times
 from physiosync import corrected_times, stamp_clock
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.vital_file import read_vital
 
 warnings.filterwarnings("ignore")
 SNU = {"ecg": "SNUADC/ECG_II", "cvp": "SNUADC/CVP", "art": "SNUADC/ART"}

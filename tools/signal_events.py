@@ -92,7 +92,7 @@ def main() -> None:
     ap.add_argument("--out", required=True)
     ap.add_argument("--time-budget", type=float, default=1e9)
     a = ap.parse_args()
-    from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital  # noqa: PLC0415
+    from vitaldb_reader.vital_file import read_vital  # noqa: PLC0415
 
     od = Path(a.out)
     od.mkdir(parents=True, exist_ok=True)

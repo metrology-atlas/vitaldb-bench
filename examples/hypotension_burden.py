@@ -89,7 +89,7 @@ def plausible(t, v, extra_ok=None, win=30.0):
 
 
 def scan_case(c, root):
-    from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+    from vitaldb_reader.vital_file import read_vital
     v = read_vital(Path(root) / "vital_files" / f"{c:04d}.vital", track_names=set(TR.values()))
     num, wav = v.tracks.get(TR["num"]), v.tracks.get(TR["wav"])
     if num is None or wav is None or not num.record_times.size or not wav.record_times.size:

@@ -10,8 +10,8 @@ import json
 import sys
 import time
 import numpy as np
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
-from timenet_connectors.datasets.vitaldb.vitaldb.resets import reorder_track
+from vitaldb_reader.vital_file import read_vital
+from vitaldb_reader.resets import reorder_track
 R, out, shard, nsh = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4])
 fits = {json.loads(l)['case']: json.loads(l) for f in sys.argv[5:] for l in open(f)}
 cases = [c for c, f in sorted(fits.items()) if f.get('snuadc_mode') == 'step'][shard::nsh]

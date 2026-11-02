@@ -35,7 +35,7 @@ other drivers in `scripts/`:
 |---|---|
 | `VITALDB_WORK` (or `W`) | Work folder for per-case output. It stays on your machine; only aggregates are published. |
 | `VITALDB_ROOT` (or `R`) | The VitalDB 1.0.0 release folder. |
-| `VITALDB_PYTHONPATH` (or `PYTHONPATH`) | Where `timenet-connectors` and `physiosync` live, if they are not pip-installed. |
+| `VITALDB_PYTHONPATH` (or `PYTHONPATH`) | Where `vitaldb-reader`, `physiosync` and (for TimeNet builds) `timenet-connectors` live, if they are not pip-installed. The scripts read VitalDB files with [vitaldb-reader](https://github.com/metrology-atlas/vitaldb-reader) (pinned to 0.1.0); only `vitaldb_bench.build` needs the TimeNet VitalDB connector. |
 
 ```bash
 bash tools/run_tool_scan.sh continuity_sync          # writes $W/continuity_sync/part_*.jsonl

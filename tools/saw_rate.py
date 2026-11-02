@@ -27,7 +27,7 @@ import numpy as np
 sys.path.insert(0, str(Path(__file__).parent))
 from pat import ECG, PPG, r_peaks, sample_times
 from pat_res import ecg_subsample, ppg_onsets, resets
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import (
+from vitaldb_reader.vital_file import (
     read_vital,
 )
 

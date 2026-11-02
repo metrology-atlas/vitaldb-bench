@@ -34,7 +34,7 @@ import time
 from pathlib import Path
 
 import numpy as np
-from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+from vitaldb_reader.vital_file import read_vital
 
 WAVE = "SNUADC/ECG_II"
 ALIGNED = ("SNUADC/ECG_II", "SNUADC/ART", "SNUADC/PLETH", "Primus/CO2", "Solar8000/HR")

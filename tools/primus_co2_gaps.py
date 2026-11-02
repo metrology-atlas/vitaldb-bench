@@ -28,7 +28,7 @@ AWP_GAP_S, CO2_GAP_S, NEAR_S = 5.0, 1.0, 30.0
 
 
 def scan_case(c: int, root: str) -> dict:
-    from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+    from vitaldb_reader.vital_file import read_vital
     v = read_vital(Path(root) / "vital_files" / f"{c:04d}.vital", track_names={"Primus/AWP", "Primus/CO2"})
     aw, co2 = v.tracks.get("Primus/AWP"), v.tracks.get("Primus/CO2")
     if aw is None or not aw.record_times.size:

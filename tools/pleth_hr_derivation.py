@@ -85,7 +85,7 @@ def roll_n(iv, N, how):
 
 
 def scan_case(c, root):
-    from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital
+    from vitaldb_reader.vital_file import read_vital
     v = read_vital(Path(root) / "vital_files" / f"{c:04d}.vital", track_names={"SNUADC/PLETH", "Solar8000/PLETH_HR"})
     pl, pr = v.tracks.get("SNUADC/PLETH"), v.tracks.get("Solar8000/PLETH_HR")
     if pl is None or pr is None or pr.record_times.size < 200:

@@ -40,7 +40,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from timenet_connectors.datasets.vitaldb.vitaldb.timing_model import MODEL_VERSION, NUMERIC_LAG  # noqa: E402
+from vitaldb_reader.timing_model import MODEL_VERSION, NUMERIC_LAG  # noqa: E402
 
 SOLAR = {"HR", "ART_SBP", "ART_MBP", "ART_DBP", "CVP"}
 TRACK = {"HR": "Solar8000/HR", "ART_SBP": "Solar8000/ART_SBP", "ART_MBP": "Solar8000/ART_MBP",
@@ -85,7 +85,7 @@ def posterior_late(x: float, se: float, m: dict) -> float:
 
 
 def spans(root: str, case: int, tracks: set[str]) -> dict[str, tuple[float, float]]:
-    from timenet_connectors.datasets.vitaldb.vitaldb.vital_file import read_vital  # noqa: PLC0415
+    from vitaldb_reader.vital_file import read_vital  # noqa: PLC0415
 
     v = read_vital(Path(root) / "vital_files" / f"{case:04d}.vital", track_names=tracks)
     out = {}
