@@ -19,7 +19,9 @@ Commands (resumable; skips finished cases; time-boxed):
     python tools/snuadc_stamp_census.py scan --root $R --out $W/results/clock/census/stamps.jsonl --time-budget 150
     python tools/snuadc_stamp_census.py summary --scan $W/results/clock/census/stamps.jsonl --out $W/results/clock/census
 
-``summary`` writes ``stamp_census_summary.json`` and three figures (aggregates only):
+``summary`` writes ``stamp_census_summary.json`` (with the share of stretches and of recording hours near the
+six-file value, the spread of the files outside it, and their share by tenth of the release by case id) and three
+figures (aggregates only):
 ``stamp_slope_hist.png``, ``reset_cluster_classes.png``, ``reset_unmatched_patterns.png``.
 """
 
@@ -137,6 +139,15 @@ def _anomalous(r: dict) -> bool:
     return r.get("clusters", 0) > 2 * max(r.get("hours", 0), 0.1) or r.get("overlap_share", 0) > 0.01
 
 
+SIX_FILE_PPM = -0.954   # the six-file study's value (atlas parameter snuadc-stamp-arithmetic), which the census tests
+
+
+def _spearman(x, y) -> float:
+    """Spearman rank correlation (average ranks for ties)."""
+    from scipy.stats import spearmanr
+    return round(float(spearmanr(x, y).statistic), 4)
+
+
 def summary(a) -> None:
     import matplotlib
     matplotlib.use("Agg")
@@ -151,6 +162,11 @@ def summary(a) -> None:
     ppm = np.array([p for r in have for p in r.get("stretch_ppm", [])])
     hrs = np.array([h for r in have for h in r.get("stretch_hours", [])])
     per_file = np.array([np.median(r["stretch_ppm"]) for r in have if r.get("stretch_ppm")])
+    case_ids = np.array([r["case"] for r in have if r.get("stretch_ppm")])
+    near = np.abs(ppm - SIX_FILE_PPM) < 0.05
+    off = np.abs(per_file - SIX_FILE_PPM) >= 0.05
+    off_v = per_file[off]
+    dec = np.array_split(np.argsort(case_ids), 10)   # files in tenths of the release by case id
     pats = Counter()
     for r in have:
         pats.update(r.get("unmatched_patterns", {}))
@@ -160,8 +176,17 @@ def summary(a) -> None:
         "stretch_ppm": {"median": float(np.median(ppm)) if ppm.size else None,
                         "p1": float(np.percentile(ppm, 1)) if ppm.size else None,
                         "p99": float(np.percentile(ppm, 99)) if ppm.size else None,
-                        "share_within_0.05_of_-0.954": float(np.mean(np.abs(ppm + 0.954) < 0.05)) if ppm.size else None},
-        "files_median_ppm_outside_-0.954_pm_0.05": int(np.sum(np.abs(per_file + 0.954) >= 0.05)),
+                        "share_within_0.05_of_-0.954": float(np.mean(near)) if ppm.size else None,
+                        "share_hours_within_0.05_of_-0.954": float(hrs[near].sum() / hrs.sum()) if ppm.size else None},
+        "files_median_ppm_outside_-0.954_pm_0.05": int(off.sum()),
+        "files_outside": ({"n": int(off.sum()), "share": float(off.mean()), "median": float(np.median(off_v)),
+                           "min": float(off_v.min()), "max": float(off_v.max()),
+                           "p5": float(np.percentile(off_v, 5)), "p95": float(np.percentile(off_v, 95)),
+                           "below": int(np.sum(off_v < SIX_FILE_PPM)), "above": int(np.sum(off_v > SIX_FILE_PPM))}
+                          if off.any() else None),
+        "files_outside_by_case_tenth": {"case_id_range": [[int(case_ids[d].min()), int(case_ids[d].max())] for d in dec],
+                                        "share_outside": [round(float(off[d].mean()), 4) for d in dec],
+                                        "spearman_case_vs_outside": _spearman(case_ids, off.astype(float))},
         "ceil_overwrites": {"total": int(sum(r.get("ceil_overwrites", 0) for r in have)),
                             "per_hour": round(sum(r.get("ceil_overwrites", 0) for r in have)
                                               / max(sum(r.get("hours", 0) for r in have), 1e-9), 4)},
@@ -187,7 +212,7 @@ def summary(a) -> None:
     if ppm.size:
         lo, hi = np.percentile(ppm, [0.5, 99.5])
         ax.hist(np.clip(ppm, lo, hi), bins=120, weights=hrs, color="#3f51b5")
-    ax.axvline(-0.954, color="#e65100", ls="--", lw=1, label="six-file value, -0.954 ppm")
+    ax.axvline(SIX_FILE_PPM, color="#e65100", ls="--", lw=1, label="six-file value, -0.954 ppm")
     ax.set_xlabel("stamp minus sample count, slope within a stretch (ppm)")
     ax.set_ylabel("recording hours")
     ax.set_title(f"SNUADC stamp arithmetic: {ppm.size:,} stretches in {len(have):,} files", fontsize=10)
