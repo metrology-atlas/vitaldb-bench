@@ -101,6 +101,15 @@ Stage 4, mechanism (``mech`` then ``mech-agg``; from a finished ``slips`` run):
 * **More injections** (``slips --inj-seeds N``): on each clean host, N more fiducial-shift injections with their own
   rate and phase; seeds 0-2 were used to set the thresholds, the rest are held out. Recall is also given for the
   slips at least 30 beats from either end of the stretch (nearer, persistence cannot be measured).
+Manual labels (``label-sample`` then ``label-eval``): a stratified, blinded sample of real events from a slips run
+(both detectors' slips, each one's own, grid-predicted slips not found, downward steps, mid-tooth and slip-free
+controls), shown as delay traces only. The labeller says what each trace does at the event (ECG->PPG and ART->PPG: up, down,
+no step, can't tell or artefact; ECG->ART: flat, steps, can't tell or artefact; for each step, whether it is about one
+frame), and may mark the step in each trace separately, flag and annotate each trace, and mark any number of brief dips or spikes, artefacts and other
+features in any trace. The verdict comes from the answers through ECG->PPG = ECG->ART + ART->PPG: a PPG
+slip moves both PPG delays with ECG->ART flat; a step in ECG->PPG with ART->PPG flat is ECG->ART moving (physiology or
+ECG/arterial timing), not the PPG. Scores weight each stratum by its size in the run.
+
 * **Injected ground truth**, two kinds: the waveform warped (above), and the same slips as a shift of the fiducial
   times with the waveform untouched; both scored on clean hosts only: no one-frame step either way in the un-injected beats;
   some recordings without upward slips carry a reversed sawtooth): slips found and false, error and coverage of the brackets, the period error, and
@@ -1789,10 +1798,30 @@ def mech_cmd(a) -> None:
     print(json.dumps({"part": a.part, "done": sum(1 for _ in out.open()), "seconds": round(time.time() - t_start, 1)}))
 
 
+def _read_jsonl_parts(paths: list[str]) -> tuple[list[dict], dict]:
+    """Rows from one or more JSON-lines files (e.g. the parts of a run), one per case. A case seen more than once
+    (a part run twice) is kept once; identical copies are counted, differing copies stop the aggregation."""
+    seen, dup = {}, 0
+    for pth in paths:
+        for x in Path(pth).read_text().splitlines():
+            if not x.strip():
+                continue
+            r = json.loads(x)
+            c = r.get("case")
+            if c in seen:
+                if json.dumps(seen[c], sort_keys=True) != json.dumps(r, sort_keys=True):
+                    raise SystemExit(f"case {c} appears twice with different results ({pth})")
+                dup += 1
+                continue
+            seen[c] = r
+    return [seen[c] for c in sorted(seen, key=lambda v: (v is None, v))], {"files": len(paths), "duplicates_dropped": dup}
+
+
 def mech_agg_cmd(a) -> None:
     import csv
-    rows = [json.loads(x) for x in Path(a.mech).read_text().splitlines() if x.strip()]
-    S = {"cases": len(rows), "errors": sum(1 for r in rows if "error" in r)}
+    Path(a.out).mkdir(parents=True, exist_ok=True)
+    rows, read = _read_jsonl_parts(a.mech)
+    S = {"cases": len(rows), "errors": sum(1 for r in rows if "error" in r), "input": read}
     ok = [r for r in rows if "error" not in r]
     # 1. sub-frame steps
     subs = [s_ | {"case": r["case"]} for r in ok for s_ in r.get("sub_frame", [])]
@@ -2090,6 +2119,282 @@ def pause_plot_cmd(a) -> None:
     print(json.dumps({"a": pick_a[0] if pick_a else None, "b": pick_b[0] if pick_b else None, "out": str(out)}))
 
 
+# ------------------------------------------------------------------------------------------------ manual labels
+
+LABEL_STRATA = {          # stratum: (target count, what it is)
+    "both": (25, "an upward slip both detectors find (within 10 s)"),
+    "new_only": (30, "an upward slip only the new detector finds (no physiosync slip within 60 s)"),
+    "physiosync_only": (30, "a physiosync slip (moved to PPG time) with no step of either kind from the new detector within 60 s"),
+    "grid_predicted": (25, "the middle of a two-tooth stretch whose slips lie on one grid run (a slip the grid predicts, not found)"),
+    "down": (25, "a downward one-frame step"),
+    "mid_tooth": (25, "a random point 35-65% through an ordinary tooth (no slip expected)"),
+    "no_slip_recording": (15, "a random point in a recording with no one-frame step either way"),
+}
+
+
+def _event_traces(z, t0: float) -> dict:
+    """What the labeller sees around time t0 (PPG time): beat by beat over +/- 60 s, ECG->PPG (median of foot,
+    upstroke and peak minus R), ART->PPG and ECG->ART where there is a line, in ms relative to the ECG->PPG median
+    of the window; and 15-beat medians of ECG->PPG over +/- 8 min. No case id, no detector output."""
+    r = z["r_t"]
+    F = {j: z[j] for j in FIDS}
+    t = F["up"]
+    y = combined(F, r)
+    art = z["art_t"] if np.isfinite(z["art_t"]).mean() > 0.3 else None
+    sel = np.flatnonzero(np.abs(t - t0) <= 60)
+    ref = float(np.nanmedian(y[sel])) if sel.size else 0.0
+    out = {"zoom_t": np.round(t[sel] - t0, 2).tolist(), "ecg_ppg": np.round((y[sel] - ref) * 1000, 1).tolist()}
+    if art is not None:
+        ap = combined(F, art)[sel]
+        ea = (art - r)[sel]
+        if np.isfinite(ap).mean() > 0.5:
+            out["art_ppg"] = [None if not np.isfinite(v) else round(float((v - np.nanmedian(ap)) * 1000), 1) for v in ap]
+            out["ecg_art"] = [None if not np.isfinite(v) else round(float((v - np.nanmedian(ea)) * 1000), 1) for v in ea]
+    sel2 = np.flatnonzero(np.abs(t - t0) <= 480)
+    m = sel2.size // 15
+    if m > 2:
+        tm = t[sel2[: 15 * m]].reshape(m, 15).mean(1)
+        ym = np.nanmedian(y[sel2[: 15 * m]].reshape(m, 15), 1)
+        out["ov_t"] = np.round((tm - t0) / 60, 3).tolist()
+        out["ov_y"] = np.round((ym - ref) * 1000, 1).tolist()
+    return out
+
+
+def label_sample_cmd(a) -> None:
+    """Stratified, blinded sample of real events for manual labelling (from a finished slips run): writes
+    OUT/events.json (what the page shows: id and traces only) and OUT/key.json (each id's stratum, case, time and
+    detector output, and each stratum's size in the run, for weighting). Seeded."""
+    rng = np.random.default_rng(a.seed)
+    rows = [json.loads(x) for x in Path(a.slips).read_text().splitlines() if x.strip()]
+    rows = [r for r in rows if "real" in r and "error" not in r]
+    pools = {k: [] for k in LABEL_STRATA}
+    for r in rows:
+        c, R = r["case"], r["real"]
+        up = R.get("slips", [])
+        dn = R.get("control", [])
+        allstep = np.array([x["t"] for x in up + dn + R.get("slips_rejected_by_art", []) + R.get("control_rejected_by_art", [])])
+        ps = np.array(r["fit"].get("slips_t", [])) + r.get("delay_mode_s", 0.0)
+        for x in up:
+            near_ps = ps.size and np.min(np.abs(ps - x["t"]))
+            if ps.size and near_ps < 10:
+                pools["both"].append((c, x["t"], {"found_by": x.get("found_by"), "lo": x["lo"], "hi": x["hi"]}))
+            elif not ps.size or near_ps >= 60:
+                pools["new_only"].append((c, x["t"], {"found_by": x.get("found_by"), "lo": x["lo"], "hi": x["hi"]}))
+        for p_ in ps:
+            if not allstep.size or np.min(np.abs(allstep - p_)) >= 60:
+                pools["physiosync_only"].append((c, float(p_), {}))
+        for x in dn:
+            pools["down"].append((c, x["t"], {"lo": x["lo"], "hi": x["hi"]}))
+        srt = sorted(up, key=lambda x: x["t"])
+        for x0, x1 in zip(srt[:-1], srt[1:]):
+            if x0.get("run") is not None and x0.get("run") == x1.get("run"):
+                dnum = x1.get("num", 0) - x0.get("num", 0)
+                if dnum == 2:
+                    pools["grid_predicted"].append((c, 0.5 * (x0["t"] + x1["t"]), {"gap_s": x1["t"] - x0["t"]}))
+                elif dnum == 1:
+                    pools["mid_tooth"].append((c, x0["t"] + float(rng.uniform(0.35, 0.65)) * (x1["t"] - x0["t"]), {}))
+        if not up and not dn:
+            z_path = Path(a.scan) / f"{c:04d}.npz"
+            if z_path.exists():
+                pools["no_slip_recording"].append((c, None, {}))
+    events, key = [], {"strata": {k: {"target": v[0], "what": v[1], "pool": len(pools[k])} for k, v in LABEL_STRATA.items()},
+                       "events": {}, "seed": a.seed, "slips": str(a.slips)}
+    picked = []
+    for k, (n, _) in LABEL_STRATA.items():
+        pool = pools[k]
+        idx = rng.permutation(len(pool))[:n]
+        picked += [(k,) + pool[i] for i in idx]
+    rng.shuffle(picked)
+    for i, (k, c, t0, info) in enumerate(picked):
+        z = np.load(Path(a.scan) / f"{c:04d}.npz")
+        t = z["up"]
+        if t0 is None:
+            t0 = float(rng.uniform(t[0] + 120, t[-1] - 120))
+        if t0 - t[0] < 60 or t[-1] - t0 < 60:
+            continue
+        eid = f"E{i + 1:03d}"
+        events.append({"id": eid} | _event_traces(z, t0))
+        key["events"][eid] = {"stratum": k, "case": int(c), "t": float(t0)} | info
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "events.json").write_text(json.dumps({"events": events}, separators=(",", ":")))
+    (out / "key.json").write_text(json.dumps(key, indent=1))
+    print(json.dumps({"events": len(events), "pools": {k: len(v) for k, v in pools.items()}}))
+
+
+def label_examples_cmd(a) -> None:
+    """Training examples for the labelling page: SPEC is a JSON file {"examples": [{case, t, title, caption, label,
+    flags}]}; writes OUT (examples.json) with the same traces as the labelled events, plus the title, caption and
+    suggested label. Refuses a case that is in the labelling sample (KEY), so the examples never show an event the
+    labeller will see."""
+    spec = json.loads(Path(a.spec).read_text())
+    insample = {v["case"] for v in json.loads(Path(a.key).read_text())["events"].values()} if a.key else set()
+    out = []
+    for ex in spec["examples"]:
+        if ex["case"] in insample:
+            raise SystemExit(f"case {ex['case']} is in the labelling sample")
+        z = np.load(Path(a.scan) / f"{ex['case']:04d}.npz")
+        out.append({k: ex[k] for k in ("title", "caption", "label", "flags")} | _event_traces(z, float(ex["t"])))
+    Path(a.out).write_text(json.dumps({"examples": out}, separators=(",", ":")))
+    print(json.dumps({"examples": len(out)}))
+
+
+LABEL_VERDICTS = ("ppg_slip_up", "ppg_slip_down", "ppg_step_up_unconfirmed", "ppg_step_down_unconfirmed", "ecg_art_step",
+                  "art_timing_step", "step_not_one_frame", "steps_apart", "none", "inconsistent", "unclear", "artefact")
+LABEL_APART_S = 3.0  # step marks in ECG->PPG and ART->PPG further apart than this are two events, not one slip
+
+
+def _mark_span(m) -> tuple[float, float] | None:
+    """A step mark from the page: a time (s from the event) or an interval [t0, t1] it lies within."""
+    if isinstance(m, (int, float)):
+        return float(m), float(m)
+    if isinstance(m, (list, tuple)) and len(m) == 2:
+        return float(min(m)), float(max(m))
+    return None
+
+
+def _mark_mid(m) -> float | None:
+    sp = _mark_span(m)
+    return None if sp is None else (sp[0] + sp[1]) / 2
+
+
+def label_verdict(d: dict) -> str:
+    """The verdict from one labelled event (page schema 2; each trace is up, down, none, unclear or artefact, ECG->ART
+    flat, step, unclear or artefact). With an arterial line, a PPG slip is ECG->PPG and ART->PPG stepping the same way
+    with ECG->ART flat; ECG->PPG stepping with ART->PPG flat and ECG->ART stepping is ecg_art_step (physiology, or ECG
+    or arterial timing); ART->PPG stepping with ECG->PPG flat and ECG->ART stepping is art_timing_step. Where only one
+    PPG delay can be read (no arterial line, or ART->PPG or ECG->ART marked an artefact, or ECG->PPG marked an artefact
+    while ART->PPG steps), its step cannot be checked against the other trace: ppg_step_*_unconfirmed. A step whose
+    size is marked clearly not one frame, in either PPG delay, is step_not_one_frame. Where both PPG delays step the
+    same way but their step marks (points, or intervals the step lies within) are more than LABEL_APART_S apart, the steps are two events: steps_apart. Every
+    readable trace an artefact: artefact. Answers that break ECG->PPG = ECG->ART + ART->PPG are inconsistent."""
+    if d.get("artefact") == "yes":  # an early page version had one artefact answer for the whole event
+        return "artefact"
+    ep, ap_, ea = d.get("ecg_ppg"), d.get("art_ppg"), d.get("ecg_art")
+    sz = d.get("size") or {}
+    sz = sz if isinstance(sz, dict) else {"ecg_ppg": sz, "art_ppg": sz, "ecg_art": sz}
+    steps = ("up", "down")
+    has_art = d.get("has_art", ap_ is not None)
+
+    def single(v, tr):
+        if v == "artefact":
+            return "artefact"
+        if v in (None, "unclear"):
+            return "unclear"
+        if v == "none":
+            return "none"
+        return "step_not_one_frame" if sz.get(tr) == "other" else f"ppg_step_{v}_unconfirmed"
+
+    if not has_art:
+        return single(ep, "ecg_ppg")
+    if ep == "artefact" and ap_ == "artefact":
+        return "artefact"
+    if ep == "artefact":
+        return single(ap_, "art_ppg") if ap_ in steps else ("unclear" if ap_ in (None, "unclear") else "artefact")
+    if ap_ == "artefact" or ea == "artefact":
+        return single(ep, "ecg_ppg")
+    if "unclear" in (ep, ap_, ea) or None in (ep, ap_, ea):
+        return "unclear"
+    if ep == "none" and ap_ == "none":
+        return "none" if ea == "flat" else "inconsistent"
+    cl = d.get("clicks") or {}
+    a_, b_ = _mark_span(cl.get("ecg_ppg")), _mark_span(cl.get("art_ppg"))
+    if ep in steps and ap_ == ep and a_ and b_ and max(a_[0] - b_[1], b_[0] - a_[1]) > LABEL_APART_S:
+        return "steps_apart"
+    if ep in steps and ap_ == ep and ea == "flat":
+        return "step_not_one_frame" if "other" in (sz.get("ecg_ppg"), sz.get("art_ppg")) else f"ppg_slip_{ep}"
+    if ep in steps and ap_ == "none" and ea == "step":
+        return "ecg_art_step"
+    if ep == "none" and ap_ in steps and ea == "step":
+        return "art_timing_step"
+    return "inconsistent"
+
+
+def label_eval_cmd(a) -> None:
+    """Score the detectors against manual labels. LABELS is a JSON list (or {"rows": [...]}) of the page's documents
+    (schema 2: ecg_ppg, art_ppg, ecg_art, size: per trace that steps, frame, other or unclear, artefact, has_art, flags: per trace, a list of disturbed, gradual, two_steps, recurring_dips; trace_notes: per trace; note, clicks: the step mark per trace, a time or an interval [t0, t1] it lies within, features: other marks, each
+    {trace, t, kind: dip, artefact or other}, with t0 and t1 for an interval); each becomes a verdict
+    (label_verdict). A real upward slip is ppg_slip_up, or ppg_step_up_unconfirmed where only one PPG delay can be read;
+    both are also given apart. Per stratum: the verdicts; and, weighting each stratum by its pool, how many of each
+    detector's slips are real (precision) and how many real slips each misses. Unclear verdicts are left out of the
+    shares; artefacts and inconsistent answers are counted as not slips."""
+    key = json.loads(Path(a.key).read_text())
+    raw = json.loads(Path(a.labels).read_text())
+    raw = raw.get("rows", raw) if isinstance(raw, dict) else raw
+    lab, skipped = {}, 0
+    for d in raw:
+        d = d.get("data", d)
+        eid = d.get("id") or d.get("event")
+        if not eid:
+            continue
+        if d.get("schema") != 2:
+            skipped += 1
+            continue
+        lab[eid] = d | {"verdict": label_verdict(d)}
+    from collections import Counter
+    UP = ("ppg_slip_up", "ppg_step_up_unconfirmed")
+    S = {"labelled": len(lab), "skipped_old_schema": skipped, "events": len(key["events"]),
+         "verdicts": dict(Counter(v["verdict"] for v in lab.values())), "strata": {}}
+    for k, st in key["strata"].items():
+        ids = [e for e, v in key["events"].items() if v["stratum"] == k]
+        got = [lab[e] for e in ids if e in lab]
+        cnt = Counter(d["verdict"] for d in got)
+        n = len(got)
+        decided = n - cnt.get("unclear", 0)
+        art = [d for d in got if d.get("has_art")]
+        art_dec = sum(1 for d in art if d["verdict"] != "unclear")
+        real_up = sum(cnt.get(v, 0) for v in UP)
+        S["strata"][k] = {
+            "what": st["what"], "pool": st["pool"], "shown": len(ids), "labelled": n, "verdicts": dict(cnt),
+            "share_up": round(real_up / decided, 3) if decided else None,
+            "share_down": round((cnt.get("ppg_slip_down", 0) + cnt.get("ppg_step_down_unconfirmed", 0)) / decided, 3) if decided else None,
+            "with_art": {"labelled": len(art), "share_up": round(sum(1 for d in art if d["verdict"] == "ppg_slip_up") / art_dec, 3) if art_dec else None,
+                         "share_ecg_art_step": round(sum(1 for d in art if d["verdict"] == "ecg_art_step") / art_dec, 3) if art_dec else None},
+            "est_up_in_pool": round(real_up / decided * st["pool"], 1) if decided else None}
+        for tr in ("ecg_ppg", "art_ppg"):
+            ms = [d["clicks"][tr] for d in got if (d.get("clicks") or {}).get(tr) is not None and d["verdict"].startswith(("ppg_slip", "ppg_step_"))]
+            if ms:
+                S["strata"][k][f"click_offset_s_{tr}"] = q([abs(_mark_mid(m)) for m in ms])
+                wid = [_mark_span(m)[1] - _mark_span(m)[0] for m in ms if isinstance(m, (list, tuple))]
+                if wid:
+                    S["strata"][k][f"click_interval_width_s_{tr}"] = q(wid)
+        fl = Counter((tr, f) for d in got if isinstance(d.get("flags"), dict) for tr, fs in d["flags"].items() for f in fs)
+        if fl:
+            S["strata"][k]["flags"] = {f"{tr}:{f}": n for (tr, f), n in sorted(fl.items())}
+        fk = Counter((f.get("trace"), f.get("kind")) for d in got for f in d.get("features") or [])
+        if fk:
+            S["strata"][k]["features"] = {f"{tr}:{kd}": n for (tr, kd), n in sorted(fk.items())}
+            S["strata"][k]["events_with_features"] = sum(1 for d in got if d.get("features"))
+        both = [abs(_mark_mid(d["clicks"]["ecg_ppg"]) - _mark_mid(d["clicks"]["art_ppg"])) for d in got
+                if (d.get("clicks") or {}).get("ecg_ppg") is not None and (d.get("clicks") or {}).get("art_ppg") is not None]
+        if both:
+            S["strata"][k]["click_gap_ecg_art_s"] = q(both)
+    st = S["strata"]
+    def est(k):
+        return st[k]["est_up_in_pool"] or 0.0
+    new_pool = st["both"]["pool"] + st["new_only"]["pool"]
+    ps_pool = st["both"]["pool"] + st["physiosync_only"]["pool"]
+    real = est("both") + est("new_only") + est("physiosync_only") + est("grid_predicted")
+    S["estimate"] = {
+        "new_detector_slips": new_pool, "new_detector_real": round(est("both") + est("new_only"), 1),
+        "new_detector_precision": round((est("both") + est("new_only")) / new_pool, 3) if new_pool else None,
+        "physiosync_slips": ps_pool, "physiosync_real": round(est("both") + est("physiosync_only"), 1),
+        "physiosync_precision": round((est("both") + est("physiosync_only")) / ps_pool, 3) if ps_pool else None,
+        "real_slips_in_these_strata": round(real, 1),
+        "new_detector_recall": round((est("both") + est("new_only")) / real, 3) if real else None,
+        "physiosync_recall": round((est("both") + est("physiosync_only")) / real, 3) if real else None,
+        "note": "a real slip is ppg_slip_up, or ppg_step_up_unconfirmed where only one PPG delay can be read (an ECG-side "
+                "step cannot be ruled out there; with_art gives the arterial-line events alone); recall counts only real slips in "
+                "the sampled strata (found by either, or predicted by the grid)"}
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "label_eval.json").write_text(json.dumps(S, indent=1) + "\n")
+    (out / "label_verdicts.json").write_text(json.dumps(
+        {e: {"stratum": key["events"][e]["stratum"], **{k: d.get(k) for k in ("verdict", "ecg_ppg", "art_ppg", "ecg_art", "size", "flags", "trace_notes", "note", "clicks", "features")}}
+         for e, d in sorted(lab.items()) if e in key["events"]}, indent=1) + "\n")
+    print(json.dumps(S["estimate"], indent=1))
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -2132,7 +2437,7 @@ def main() -> None:
     p.add_argument("--of", type=int, default=1)
     p.add_argument("--time-budget", type=float, default=150)
     p = sub.add_parser("mech-agg")
-    p.add_argument("--mech", required=True)
+    p.add_argument("--mech", required=True, nargs="+", help="the mech JSON lines: one file, or every part of a run")
     p.add_argument("--recordings", required=True, help="recordings.csv from agg")
     p.add_argument("--clocks", help="clock network clocks.csv (the SNUADC against the PC per recording)")
     p.add_argument("--out", required=True)
@@ -2142,9 +2447,24 @@ def main() -> None:
     p.add_argument("--mech", required=True)
     p.add_argument("--out", required=True, help="the figure file")
     p.add_argument("--cases", type=int, nargs="*", help="the two recordings (a, b); picked from the mech run if not given")
+    p = sub.add_parser("label-sample")
+    p.add_argument("--scan", required=True)
+    p.add_argument("--slips", required=True)
+    p.add_argument("--out", required=True)
+    p.add_argument("--seed", type=int, default=20261102)
+    p = sub.add_parser("label-examples")
+    p.add_argument("--scan", required=True)
+    p.add_argument("--spec", required=True, help="examples_spec.json")
+    p.add_argument("--key", help="the labelling sample's key.json (examples from its cases are refused)")
+    p.add_argument("--out", required=True, help="examples.json")
+    p = sub.add_parser("label-eval")
+    p.add_argument("--key", required=True)
+    p.add_argument("--labels", required=True, help="the labels exported from the labelling page (JSON)")
+    p.add_argument("--out", required=True)
     a = ap.parse_args()
     {"scan": scan, "slips": slips_cmd, "agg": agg_cmd, "plot": plot_cmd, "mech": mech_cmd,
-     "mech-agg": mech_agg_cmd, "pause-plot": pause_plot_cmd}[a.cmd](a)
+     "mech-agg": mech_agg_cmd, "pause-plot": pause_plot_cmd, "label-sample": label_sample_cmd,
+     "label-examples": label_examples_cmd, "label-eval": label_eval_cmd}[a.cmd](a)
 
 
 if __name__ == "__main__":
