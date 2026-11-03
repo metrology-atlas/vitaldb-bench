@@ -5,7 +5,7 @@
         --bench $W/ppg_correction_check/cases266.json --out $W/line_access
     (then the WSL pipeline: beats_export, art_export, line_access_scan, lab_draw_labels; see the study's method)
     python tools/line_access_summary.py figure --scan '$W/line_access/scan_*.jsonl' \
-        --labels $W/line_access/art_line_labels.csv --draws $W/line_access/lab_draw_labels.csv --out $W/line_access
+        --labels $W/line_access/art_line_labels.csv --times $W/line_access/lab_time_labels.csv --out $W/line_access
 
 ``inputs`` writes the case lists: cases_art.json, the cases the first access scan labelled (from its saved
 art_line_labels.csv), and cases_bench.json, the benchmark stretches for the arterial-side steps.
@@ -17,9 +17,11 @@ art_line_labels.csv), and cases_bench.json, the benchmark stretches for the arte
   circular shifts per case);
 * right: seconds from each arterial-side timing step (ECG->ART moves by > 10 ms while ECG->PPG does not, on the
   benchmark stretches) to the nearest access, against random times in the same stretches;
-* the table: per panel (lab_draw_labels.csv: blood gas, window 15 min; central lab, window 30 min), the share of
-  sample groups matched to an access against the same share for the group times shifted circularly within the
-  case's scanned span (20 shifts, seed 0), and the share above chance = 1 - control / matched.
+* the table: per panel (every sample group of lab_time_labels.csv, matched or not: blood gas, window 15 min;
+  central lab, window 30 min), the share of sample groups with an access starting 0..window before them, against
+  the same share for the group times shifted circularly within the case's scanned span (20 shifts, seed 0), and the
+  share above chance = 1 - control / matched. The matched share is also read from the labels' own `matched` column
+  (lab_draw_labels.py) as a check.
 
 Writes summary.json and line-access-summary.png.
 """
@@ -74,12 +76,12 @@ def figure(a) -> None:
     acc = lab[lab.label == "art_line:access"]
     starts = {c: np.sort(g.start_rel_s.to_numpy(float)) for c, g in acc.groupby("case")}
     span = {r["case"]: r["span_rel_s"] for r in ok if r.get("span_rel_s")}
-    draws = pd.read_csv(a.draws)
-    groups = draws.drop_duplicates("draw_id")
+    groups = pd.read_csv(a.times).drop_duplicates("draw_id")
     rng = np.random.default_rng(0)
     table = {}
     for panel, window in (("blood_gas", 900.0), ("central", 1800.0)):
         g = groups[groups.panel == panel]
+        labelled = float(g["matched"].astype(str).str.lower().eq("true").mean()) if len(g) else np.nan
         m_real, m_ctrl, n = 0, [], 0
         for c, gg in g.groupby("case"):
             if c not in span:
@@ -98,7 +100,8 @@ def figure(a) -> None:
                 m_ctrl.append(matched_share(s_, np.sort(sh), window).mean() * t.size)
         mr = m_real / n if n else np.nan
         mc = float(np.sum(m_ctrl) / (20 * n)) if n else np.nan
-        table[panel] = {"groups": n, "matched": m_real, "matched_share": round(mr, 3), "control_share": round(mc, 3),
+        table[panel] = {"groups_all": int(len(g)), "labels_matched_share": round(labelled, 3),
+                        "groups": n, "matched": m_real, "matched_share": round(mr, 3), "control_share": round(mc, 3),
                         "above_chance": round(1 - mc / mr, 3) if mr else None, "window_s": window}
     S = {"scan_cases": len(rows), "cases_with_draws": len(ok), "draws": n_draws, "draws_matched_15min": n_match,
          "matched_share": round(n_match / n_draws, 3), "control_share": round(ctrl, 3),
@@ -143,7 +146,7 @@ def main() -> None:
     p = sub.add_parser("figure")
     p.add_argument("--scan", required=True, help="glob of the scan's jsonl parts")
     p.add_argument("--labels", required=True)
-    p.add_argument("--draws", required=True)
+    p.add_argument("--times", required=True, help="lab_time_labels.csv: every sample group, matched or not")
     p.add_argument("--out", required=True)
     a = ap.parse_args()
     {"inputs": inputs, "figure": figure}[a.cmd](a)

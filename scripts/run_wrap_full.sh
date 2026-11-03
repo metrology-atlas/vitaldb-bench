@@ -17,8 +17,15 @@ export PYTHONPATH=$B/tools:$VITALDB_PYTHONPATH
 PY=${PY:-$HOME/venv/bin/python}
 N=${N:-8}
 cd $B
-"$PY" -c "import numpy, scipy, physiosync" || { echo "Python environment not ready ($PY)"; exit 1; }
+# preflight: every tool this script runs must import (catches a package missing from this environment)
+"$PY" -c "import numpy, scipy, physiosync, monitor_lines, wrap_test" || { echo "Python environment not ready ($PY)"; exit 1; }
 mkdir -p $O
+# after a parallel step: stop if any part's log holds a traceback, or a part wrote no output
+check_parts() {  # step-name log-glob out-glob expected-parts
+  if grep -l Traceback $2 > /dev/null 2>&1; then echo "$1 failed: see $(grep -l Traceback $2 | head -1)"; exit 1; fi
+  local n=$(ls $3 2>/dev/null | wc -l)
+  if [ "$n" -lt "$4" ]; then echo "$1: $n of $4 parts wrote output; see the logs $2"; exit 1; fi
+}
 
 echo "$(date +%H:%M) 1. monitor_lines scan, $N parts"
 for p in $(seq 0 $((N - 1))); do
@@ -26,12 +33,16 @@ for p in $(seq 0 $((N - 1))); do
     --part $p --of $N --time-budget 1000000 > $O/log_lines_$p.txt 2>&1 &
 done
 wait
-cat $O/lines_*.jsonl > $O/lines.jsonl
+check_parts "monitor_lines scan" "$O/log_lines_*.txt" "$O/lines_[0-9]*.jsonl" $N
+cat $O/lines_[0-9]*.jsonl > $O/lines.jsonl
 echo "$(date +%H:%M) 2. monitor_lines agg: $(wc -l < $O/lines.jsonl) recordings"
-"$PY" tools/monitor_lines.py agg --lines $O/lines.jsonl --recordings $W/sawtooth_char/full/recordings.csv --out $O/lines_agg
+"$PY" tools/monitor_lines.py agg --lines $O/lines.jsonl --recordings $W/sawtooth_char/full/recordings.csv --out $O/lines_agg \
+  || { echo "monitor_lines agg failed"; exit 1; }
 echo "$(date +%H:%M) 3. wrap_test select"
-"$PY" tools/wrap_test.py select --lines $O/lines.jsonl --root "$VITALDB_ROOT" --out $O/files.json
+"$PY" tools/wrap_test.py select --lines $O/lines.jsonl --root "$VITALDB_ROOT" --out $O/files.json \
+  || { echo "wrap_test select failed"; exit 1; }
 echo "$(date +%H:%M) 4. wrap_test run"
 "$PY" tools/wrap_test.py run --files $O/files.json --root "$VITALDB_ROOT" --out $O/run --min-wraps 1 \
-  --first $W/wrap_test/files.json --time-budget 1000000 | tail -1
+  --first $W/wrap_test/files.json --time-budget 1000000 > $O/log_run.txt 2>&1 || { echo "wrap_test run failed: see $O/log_run.txt"; exit 1; }
+tail -1 $O/log_run.txt
 echo "$(date +%H:%M) done: $O/run/wrap_test.json"
