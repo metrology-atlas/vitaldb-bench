@@ -1,6 +1,7 @@
 #!/bin/bash
 # Wrap test on the whole release (3 Nov). Run in WSL:
-#   nohup bash /mnt/c/code/vitaldb/vitaldb-bench/scripts/run_wrap_full.sh > /mnt/c/vitalDB/work/wrap_full/run.log 2>&1 &
+#   mkdir -p /mnt/c/vitalDB/work/wrap_full && nohup bash /mnt/c/code/vitaldb/vitaldb-bench/scripts/run_wrap_full.sh > /mnt/c/vitalDB/work/wrap_full/run.log 2>&1 &
+#   (the folder must exist before the shell can open run.log)
 # Steps (all resume: rerun the same command to carry on; `pkill -f run_wrap_full` and `pkill -f monitor_lines` stop it):
 #   1. monitor_lines scan over the full-release sawtooth scan (about 2.4 s per recording on one core; 5,700
 #      recordings: about 30-40 min with N=8 parts in parallel on 8 cores, longer on fewer)
