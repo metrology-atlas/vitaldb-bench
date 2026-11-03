@@ -16,6 +16,10 @@ after midnight. Truncation (not rounding) of casestart to the minute is what put
 and opend on absolute 5-minute marks (rounding gives ~48%). The EMR clock's offset from the recorder clock
 is not known. Cases where adm is not on a minute or fewer than three events agree get no clock.
 
+Summary of the whole release (the counts quoted by the metrology-atlas study case-clock):
+
+    python -m vitaldb_bench.case_clock $R/clinical_data.csv [--out case_clock_summary.json]
+
 ``shift_s`` moves the file's anchor (2100-01-01 00:00 UTC at casestart) to 2100-01-01 00:00 local time plus
 tod_s, as UTC: ``tod_s - 3600 * tz_hours``. Relative times are unchanged. The date stays fictional.
 """
@@ -143,3 +147,25 @@ def load_shifts_ns(dataset_dir: str | Path) -> dict[int, int]:
     if not doc.get("enabled"):
         return {}
     return {int(c): int(v["shift_s"]) * 10**9 for c, v in doc["cases"].items()}
+
+
+def summary(table: dict[int, dict]) -> dict:
+    """Counts of a :func:`clock_table`: cases with a clock, how many EMR times agree, and the reasons for none."""
+    ok = [v for v in table.values() if v.get("status") == "ok"]
+    return {"cases": len(table), "with_clock": len(ok),
+            "events_agree": {str(k): v for k, v in sorted(Counter(v["events_agree"] for v in ok).items())},
+            "no_clock": dict(Counter(v["status"] for v in table.values() if v.get("status") != "ok")),
+            "no_clock_cases": sorted(c for c, v in table.items() if v.get("status") != "ok")}
+
+
+if __name__ == "__main__":
+    import argparse
+
+    ap = argparse.ArgumentParser(description="Recover every case's clock time of day; print the counts.")
+    ap.add_argument("clinical_csv")
+    ap.add_argument("--out", help="also write the counts to this JSON file")
+    a = ap.parse_args()
+    s_ = summary(clock_table(a.clinical_csv))
+    print(json.dumps(s_, indent=1))
+    if a.out:
+        Path(a.out).write_text(json.dumps(s_, indent=1) + "\n")

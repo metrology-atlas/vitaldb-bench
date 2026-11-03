@@ -118,7 +118,8 @@ def main() -> None:
                 ac = [x for x in acc if x.kind == "access"]
                 oc = [x for x in acc if x.kind == "occlusion"]
                 res.update({
-                    "hours": round(L / 3600, 2), "accesses": len(ac), "occlusions": len(oc),
+                    "hours": round(L / 3600, 2), "span_rel_s": [round(span[0], 1), round(span[1], 1)],
+                    "accesses": len(ac), "occlusions": len(oc),
                     "unavailable_min": round(sum(x.end - x.start for x in acc if x.kind == "unavailable") / 60, 1),
                     "access_kinds": {k: sum(k in x.kinds for x in ac) for k in ("high", "low", "flat")},
                     "access_s_median": round(float(np.median([x.end - x.start for x in ac])), 1) if ac else None,
