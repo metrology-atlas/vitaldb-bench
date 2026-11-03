@@ -10,7 +10,8 @@ in ART and PLETH ([[study:monitor-lines]]) is such a clock.
     python tools/wrap_test.py run --files $W/wrap_test/files.json --root $R --out $W/wrap_test
     python tools/wrap_test.py run --files $W/wrap_test/files.json --root $R --out $W/wrap_test_wide --min-wraps 1
 
-The widened form also repeats the spacing control on the recordings other than the first six (out of sample), and
+The widened form also repeats the spacing control on the recordings other than the first six (out of sample; --first
+names the files.json of the first run when --files comes from a new selection), and
 counts the recordings spanning two wraps that show a pair. It tests every selected recording whose continuous stretch spans at least --min-wraps wraps.
 ``run`` is resumable (OUT/cases.jsonl) and stops after --time-budget seconds; rerun until it writes wrap_test.json.
 
@@ -170,7 +171,8 @@ def run(a) -> None:
               "control_max": int(np.max(ctrl)), "control_share_at_least_as_many": round(float(np.mean(np.array(ctrl) >= at_wrap)), 4)}
     due = sum(r["wraps_due"] for r in res)
     # the same control on the recordings not among the six first tested (an out-of-sample check)
-    rest = [r for r in res if r["case"] not in set(sel["chosen"])]
+    first = set(json.loads(Path(a.first).read_text())["chosen"]) if a.first else set(sel["chosen"])
+    rest = [r for r in res if r["case"] not in first]
     if a.min_wraps is not None and rest:
         at_r = shared_pairs(WRAP_S, rest)
         c_r = np.array([shared_pairs(D, rest) for D in np.arange(2000, 6501, 10) if abs(D - WRAP_S) > 120])
@@ -207,6 +209,7 @@ def main() -> None:
     p.add_argument("--min-wraps", type=int, default=None,
                    help="test every selected recording whose stretch spans at least this many wraps (default: the chosen six)")
     p.add_argument("--time-budget", type=float, default=150)
+    p.add_argument("--first", help="files.json whose 'chosen' are the first six tested (default: --files' own)")
     a = ap.parse_args()
     {"select": select, "run": run}[a.cmd](a)
 

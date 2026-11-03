@@ -12,11 +12,11 @@ W=${W:-/mnt/c/vitalDB/work}
 B=${B:-/mnt/c/code/vitaldb/vitaldb-bench}
 L=$W/line_access
 . $B/scripts/local.env
-export PYTHONPATH=$B/tools:$VITALDB_PYTHONPATH
+export PYTHONPATH=$B/tools:$(dirname $(dirname $B))/lineaccess:$VITALDB_PYTHONPATH   # lineaccess: C:\code\lineaccess
 PY=${PY:-$HOME/venv/bin/python}
 N=${N:-3}
 cd $B
-"$PY" -c "import numpy, scipy, pandas, physiosync" || { echo "Python environment not ready ($PY)"; exit 1; }
+"$PY" -c "import numpy, scipy, pandas, physiosync, lineaccess" || { echo "Python environment not ready ($PY)"; exit 1; }
 mkdir -p $L/beats $L/art
 
 echo "$(date +%H:%M) 1. beats_export"
@@ -36,6 +36,7 @@ for p in $(seq 0 $((N - 1))); do
 done
 wait
 echo "$(date +%H:%M) 4. labels, draws, figure"
+ls $L/labels_*.csv > /dev/null 2>&1 || { echo "no labels written: see $L/log_scan_*.txt"; exit 1; }
 awk 'FNR == 1 && NR != 1 { next } { print }' $L/labels_*.csv > $L/art_line_labels.csv
 "$PY" tools/lab_draw_labels.py --lab "$VITALDB_ROOT/lab_data.csv" --art-labels $L/art_line_labels.csv \
   --out-draw $L/lab_draw_labels.csv --out-time $L/lab_time_labels.csv
