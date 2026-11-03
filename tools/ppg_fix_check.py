@@ -131,7 +131,8 @@ def main() -> None:
                             "minutes": round((eb - ea) / fs / 60, 1), "beats": int(raw.size),
                             "n_slips": m.qc["n_slips"], "n_inserted": m.qc["n_inserted"],
                             "rates_ppm": [round(x * 1e6, 2) for x in m.tooth_rate], "sources": m.tooth_source,
-                            "tiers": list(m.tooth_tier), "apply_min_tier": a.apply_min_tier,
+                            "tiers": list(m.tooth_tier), "tier_reasons": list(m.tooth_reason),
+                            "apply_min_tier": a.apply_min_tier,
                             "offset_ms": round(m.offset_s * 1000, 2), "pat_median_raw_ms": round(m.qc["pat_median_raw_s"] * 1000, 2),
                             "pat_median_corr_ms": round(m.qc["pat_median_corrected_s"] * 1000, 3),
                             "p2p_raw_ms": round(_p2p(tr, raw), 2), "p2p_corr_ms": round(_p2p(tr, cor), 2),
@@ -141,6 +142,7 @@ def main() -> None:
                                        np.round(np.median(raw[: 15 * n].reshape(n, 15), 1) * 1000, 2).tolist(),
                                        np.round(np.median(cor[: 15 * n].reshape(n, 15), 1) * 1000, 2).tolist()],
                             "slips_t": [round(x - t0, 1) for x in m.slips_t], "inserted_t": [round(x - t0, 1) for x in m.inserted_t],
+                            "tooth_edges_t": [round(x - t0, 1) for x in m.tooth_edges],
                         })
             except Exception as ex:  # noqa: BLE001
                 res["error"] = f"{type(ex).__name__}: {ex}"
