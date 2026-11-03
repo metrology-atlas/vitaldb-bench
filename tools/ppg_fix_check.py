@@ -5,7 +5,8 @@
 
 PAT = filtered steepest PPG upstroke minus sub-sample R-peak (as ``pat_res``), on the longest continuous
 ECG+PPG stretch (up to ``--minutes``). Fits ``fit_ecg_ppg_delay`` (frame 1/30 s) and reports slips and
-rates, then the same slip detector run on the corrected PAT (should find only false detections), and the
+rates (and each tooth's confidence tier; --apply-min-tier sets which tiers are corrected), then the same slip
+detector run on the corrected PAT (should find only false detections), and the
 5-95% spread of 1-minute medians before and after. 15-beat medians of both series are kept for plots.
 """
 
@@ -43,6 +44,9 @@ def main() -> None:
     ap.add_argument("--of", type=int, default=1)
     ap.add_argument("--time-budget", type=float, default=150)
     ap.add_argument("--priors", help="JSON {case: rate_ppm}: the creep rate known for the case's recording setup")
+    ap.add_argument("--apply-min-tier", default="B", choices=["A", "B", "C"],
+                    help="lowest tooth tier the correction is applied to (physiosync default B; C applies every "
+                         "fitted tooth, as before the tiers existed)")
     a = ap.parse_args()
     out = Path(a.out)
     done = {json.loads(x)["case"] for x in out.read_text().splitlines() if x.strip()} if out.exists() else set()
@@ -82,7 +86,7 @@ def main() -> None:
                         tr, tq = rt[i], pt[j]
                         prior = priors.get(c)
                         m = fit_ecg_ppg_delay(tr, tq, adopted_pat_s=a.adopted_pat, frame_s=1 / 30, matched=True,
-                                              rate_prior_ppm=prior)
+                                              rate_prior_ppm=prior, apply_min_tier=a.apply_min_tier)
                         raw = tq - tr
                         cor = m.correct(tq) - tr
                         again = detect_slips(tr, cor, frame_s=1 / 30)
@@ -100,7 +104,7 @@ def main() -> None:
                         for sel in (tr < mid, tr >= mid):
                             try:
                                 mh = fit_ecg_ppg_delay(tr[sel], tq[sel], adopted_pat_s=a.adopted_pat, frame_s=1 / 30,
-                                                       matched=True, rate_prior_ppm=prior)
+                                                       matched=True, rate_prior_ppm=prior, apply_min_tier=a.apply_min_tier)
                                 halves.append(mh.qc.get("grid_period_s"))
                             except ValueError:
                                 halves.append(None)
@@ -127,6 +131,7 @@ def main() -> None:
                             "minutes": round((eb - ea) / fs / 60, 1), "beats": int(raw.size),
                             "n_slips": m.qc["n_slips"], "n_inserted": m.qc["n_inserted"],
                             "rates_ppm": [round(x * 1e6, 2) for x in m.tooth_rate], "sources": m.tooth_source,
+                            "tiers": list(m.tooth_tier), "apply_min_tier": a.apply_min_tier,
                             "offset_ms": round(m.offset_s * 1000, 2), "pat_median_raw_ms": round(m.qc["pat_median_raw_s"] * 1000, 2),
                             "pat_median_corr_ms": round(m.qc["pat_median_corrected_s"] * 1000, 3),
                             "p2p_raw_ms": round(_p2p(tr, raw), 2), "p2p_corr_ms": round(_p2p(tr, cor), 2),
