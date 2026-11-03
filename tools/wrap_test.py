@@ -8,6 +8,11 @@ in ART and PLETH ([[study:monitor-lines]]) is such a clock.
 
     python tools/wrap_test.py select --lines $W/monitor_lines/lines.jsonl --root $R --out $W/wrap_test/files.json
     python tools/wrap_test.py run --files $W/wrap_test/files.json --root $R --out $W/wrap_test
+    python tools/wrap_test.py run --files $W/wrap_test/files.json --root $R --out $W/wrap_test_wide --min-wraps 1
+
+The widened form also repeats the spacing control on the recordings other than the first six (out of sample), and
+counts the recordings spanning two wraps that show a pair. It tests every selected recording whose continuous stretch spans at least --min-wraps wraps.
+``run`` is resumable (OUT/cases.jsonl) and stops after --time-budget seconds; rerun until it writes wrap_test.json.
 
 ``select`` takes the recordings where monitor_lines finds the 240 Hz line in both ART and PLETH, measures each
 one's longest continuous stretch of both, and keeps the six longest. ``run``, per recording, over that stretch:
@@ -25,6 +30,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 
 import numpy as np
@@ -108,11 +114,27 @@ def steps(tt: np.ndarray, tau: np.ndarray) -> tuple[list[dict], float]:
 
 
 def run(a) -> None:
-    files = json.loads(Path(a.files).read_text())["chosen"]
+    sel = json.loads(Path(a.files).read_text())
+    if a.min_wraps is None:
+        files = sel["chosen"]
+    else:
+        files = [c for c, length in sel["lengths_s"] if length >= a.min_wraps * WRAP_S]
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    res = []
+    part = out / "cases.jsonl"
+    done = {}
+    if part.exists():
+        for x in part.read_text().splitlines():
+            if x.strip():
+                r = json.loads(x)
+                done[r["case"]] = r
+    t_start = time.time()
+    fh = part.open("a")
     for c in files:
+        if c in done:
+            continue
+        if time.time() - t_start > a.time_budget:
+            break
         case = read_vital(Path(a.root) / "vital_files" / f"{c:04d}.vital", track_names={ART, PLETH})
         s, ps, xa, xp, t0 = stretch(case)
         ta, ua = tau_series(xa, s)
@@ -126,12 +148,19 @@ def run(a) -> None:
         r = {"case": c, "stretch_s": round(xa.size / FS, 1), "wraps_due": int(xa.size / FS // WRAP_S),
              "se_ms": {"ART": round(sea * 1e3, 3), "PLETH": round(sep * 1e3, 3)},
              "steps": {"ART": sa, "PLETH": sp}, "shared": shared, "pairs_4295s": pairs}
-        res.append(r)
+        fh.write(json.dumps(r) + "\n")
+        fh.flush()
+        done[c] = r
         print(json.dumps({k: v for k, v in r.items() if k != "steps"}))
+    fh.close()
+    if any(c not in done for c in files):
+        print(f"not finished: {sum(c in done for c in files)} of {len(files)} recordings; run again")
+        return
+    res = [done[c] for c in files]
     # control: pairs of shared steps at other spacings (2,000-6,500 s in 10 s steps, away from the wrap), same +/-30 s
-    def shared_pairs(D):
+    def shared_pairs(D, rs=None):
         n = 0
-        for r in res:
+        for r in (res if rs is None else rs):
             t = sorted(x["t_s"] for x in r["shared"])
             n += sum(1 for i, t1 in enumerate(t) for t2 in t[i + 1:] if abs(t2 - t1 - D) <= 30)
         return n
@@ -139,7 +168,20 @@ def run(a) -> None:
     ctrl = [shared_pairs(D) for D in np.arange(2000, 6501, 10) if abs(D - WRAP_S) > 120]
     S_ctrl = {"shared_pairs_at_4295s": at_wrap, "control_spacings": len(ctrl), "control_mean": round(float(np.mean(ctrl)), 3),
               "control_max": int(np.max(ctrl)), "control_share_at_least_as_many": round(float(np.mean(np.array(ctrl) >= at_wrap)), 4)}
-    S = {"control": S_ctrl, "files": len(res), "with_pair_4295s": sum(1 for r in res if r["pairs_4295s"]),
+    due = sum(r["wraps_due"] for r in res)
+    # the same control on the recordings not among the six first tested (an out-of-sample check)
+    rest = [r for r in res if r["case"] not in set(sel["chosen"])]
+    if a.min_wraps is not None and rest:
+        at_r = shared_pairs(WRAP_S, rest)
+        c_r = np.array([shared_pairs(D, rest) for D in np.arange(2000, 6501, 10) if abs(D - WRAP_S) > 120])
+        S_ctrl["not_first_six"] = {"files": len(rest), "shared_pairs_at_4295s": at_r, "control_mean": round(float(c_r.mean()), 3),
+                                   "control_max": int(c_r.max()), "control_share_at_least_as_many": round(float(np.mean(c_r >= at_r)), 4)}
+    two = [r for r in res if r["stretch_s"] >= 2 * WRAP_S]
+    S_ctrl["recordings_spanning_2_wraps"] = {"n": len(two), "with_shared_pair_4295s": sum(
+        1 for r in two if any(abs(y["t_s"] - x["t_s"] - WRAP_S) <= 30 for x in r["shared"] for y in r["shared"]))}
+    S = {"control": S_ctrl, "files": len(res), "wraps_due": due,
+         "stretch_h": round(sum(r["stretch_s"] for r in res) / 3600, 1),
+         "shared_steps_per_wrap_due": round(sum(len(r["shared"]) for r in res) / due, 2) if due else None, "with_pair_4295s": sum(1 for r in res if r["pairs_4295s"]),
          "with_shared_step": sum(1 for r in res if r["shared"]),
          "with_shared_pair_4295s": sum(1 for r in res if any(abs(y["t_s"] - x["t_s"] - WRAP_S) <= 30 for x in r["shared"] for y in r["shared"])),
          "shared_steps": sum(len(r["shared"]) for r in res),
@@ -162,6 +204,9 @@ def main() -> None:
     p.add_argument("--files", required=True)
     p.add_argument("--root", required=True)
     p.add_argument("--out", required=True)
+    p.add_argument("--min-wraps", type=int, default=None,
+                   help="test every selected recording whose stretch spans at least this many wraps (default: the chosen six)")
+    p.add_argument("--time-budget", type=float, default=150)
     a = ap.parse_args()
     {"select": select, "run": run}[a.cmd](a)
 
