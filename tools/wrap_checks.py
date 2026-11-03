@@ -15,6 +15,12 @@ From the shared ART+PLETH steps of every tested recording:
    which covers more recordings than units.csv) and correction mode: recordings that span two wraps, and the share of them with a
    pair; and the pairs per wrap due.
 
+4. **Phase.** Where the run recorded where each stretch starts (stretch_start_index, stretch_start_after_art_s):
+   the time of each paired step since the ART track's first sample (sample count / 500 Hz), modulo 4,295 s. A
+   counter that starts with the stream (a board reset when recording starts) puts every pair at one phase; a board
+   that runs on between recordings spreads them evenly. Rayleigh test of uniformity, with the unpaired shared steps
+   as a comparison, and the phases in ten bins.
+
 Writes summary.json.
 """
 from __future__ import annotations
@@ -109,6 +115,29 @@ def main() -> None:
                       by_mode[m][3] + v["two_wraps"]]
     S["by_mode"] = {m: {"recordings": r_, "wraps_due": w_, "pairs": p_, "pairs_per_wrap_due": round(p_ / w_, 3) if w_ else None}
                     for m, (r_, w_, p_, _) in by_mode.items()}
+    ph_p, ph_u, first_u = [], [], []
+    for r in cases:
+        if "stretch_start_index" not in r:
+            continue
+        base = r["stretch_start_index"] / 500.0
+        ts = [x["t_s"] for x in r["shared"]]
+        pp = pairs_at(ts, WRAP_S)
+        inp = {t for p_ in pp for t in p_}
+        for t in ts:
+            (ph_p if t in inp else ph_u).append((base + t) % WRAP_S)
+        if pp:
+            first_u.append(base + min(p_[0] for p_ in pp))
+    if ph_p:
+        def rayleigh(ph):
+            z = np.exp(2j * np.pi * np.asarray(ph) / WRAP_S)
+            R = abs(z.mean())
+            n = z.size
+            return {"n": n, "R": round(float(R), 3), "p": float(np.exp(-n * R * R)),
+                    "mean_phase_s": round(float((np.angle(z.mean()) % (2 * np.pi)) / (2 * np.pi) * WRAP_S), 1)}
+        S["phase"] = {"paired": rayleigh(ph_p), "unpaired": rayleigh(ph_u),
+                      "paired_bins": np.histogram(ph_p, np.linspace(0, WRAP_S, 11))[0].tolist(),
+                      "unpaired_bins": np.histogram(ph_u, np.linspace(0, WRAP_S, 11))[0].tolist(),
+                      "first_pair_since_art_start_s": q(first_u)}
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     (out / "summary.json").write_text(json.dumps(S, indent=1) + "\n")

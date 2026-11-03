@@ -146,7 +146,10 @@ def run(a) -> None:
                   if abs(x["t_s"] - y["t_s"]) <= 20 and np.sign(x["step_ms"]) == np.sign(y["step_ms"])]
         allt = sorted({x["t_s"] for x in sa + sp})
         pairs = [(t1, t2) for i, t1 in enumerate(allt) for t2 in allt[i + 1:] if abs(t2 - t1 - WRAP_S) <= 30]
+        art_first = float(case.tracks[ART].record_times[0])
         r = {"case": c, "stretch_s": round(xa.size / FS, 1), "wraps_due": int(xa.size / FS // WRAP_S),
+             # where the stretch starts: ART samples since the track's first sample, and seconds since its first stamp
+             "stretch_start_index": int(s), "stretch_start_after_art_s": round(t0 - art_first, 3),
              "se_ms": {"ART": round(sea * 1e3, 3), "PLETH": round(sep * 1e3, 3)},
              "steps": {"ART": sa, "PLETH": sp}, "shared": shared, "pairs_4295s": pairs}
         fh.write(json.dumps(r) + "\n")
