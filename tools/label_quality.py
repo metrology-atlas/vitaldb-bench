@@ -20,8 +20,14 @@ Per event, the beats from --guard to --half seconds before the event ("before") 
   0.9), the share of irregular R-R intervals (more than 20% from the side's median), the share of beats without a
   PPG foot, and the share of samples at the channel's lowest or highest value (clipping).
 
+A rule, fitted on half the events and scored on the other half (events alternately assigned by id): "can't
+judge" when the share of unlike beats on either side exceeds Q or irregular R-R exceeds I; otherwise a slip when the
+pulse shifts by 20-45 ms with a match of at least C after the shift and the fiducial steps spread by at most F.
+Q, I, C and F are chosen on the first half to maximise slips called right minus five times the false ones (no-step
+events called slips); the held-out half gives the scores.
+
 Writes events.csv (one row per labelled event, with its stratum and verdict) and summary.json (each measure's
-quartiles by verdict group: real slip, no step, can't tell).
+quartiles by verdict group: real slip, no step, can't tell; and the rule's fit and held-out scores).
 """
 from __future__ import annotations
 
@@ -181,10 +187,49 @@ def main() -> None:
         for m in measures:
             vals = np.array([abs(r[m]) if m in ("ppg_shift_ms", "fid_step_ms", "ecg_shift_ms") else r[m]
                              for r in sel if r.get(m) is not None], float)
+            vals = vals[np.isfinite(vals)]
             if vals.size:
                 S["groups"][g][m] = [round(float(x), 3) for x in np.percentile(vals, [25, 50, 75])]
+    S["rule"] = fit_rule(rows)
     (out / "summary.json").write_text(json.dumps(S, indent=1) + "\n")
     print(json.dumps(S, indent=1))
+
+
+def call(r: dict, Q: float, I: float, C: float, F: float) -> str:
+    g = lambda k: r.get(k) if r.get(k) is not None and np.isfinite(r.get(k)) else None
+    wb, ri = g("worst_bad"), g("worst_rr_irregular")
+    if wb is None or wb > Q or (ri is not None and ri > I):
+        return "cannot judge"
+    sh, cb, sp = g("ppg_shift_ms"), g("ppg_corr_best"), g("fid_spread_ms")
+    if sh is not None and 20 <= abs(sh) <= 45 and cb is not None and cb >= C and (sp is None or sp <= F):
+        return "slip"
+    return "no slip"
+
+
+def table(rows, p):
+    from collections import Counter
+    c = Counter((r["group"], call(r, *p)) for r in rows)
+    return {g: {k: c.get((g, k), 0) for k in ("slip", "no slip", "cannot judge")} for g in ("real", "none", "unclear")}
+
+
+def fit_rule(rows) -> dict:
+    ids = sorted(r["event"] for r in rows)
+    first = {e for i, e in enumerate(ids) if i % 2 == 0}
+    fit = [r for r in rows if r["event"] in first]
+    held = [r for r in rows if r["event"] not in first]
+    best, score = None, -1e9
+    for Q in (0.2, 0.3, 0.4, 0.5):
+        for I in (0.1, 0.15, 0.2, 0.3):
+            for C in (0.95, 0.97, 0.98, 0.99):
+                for F in (5.0, 8.0, 15.0, 1e9):
+                    t = table(fit, (Q, I, C, F))
+                    sc = t["real"]["slip"] - 5 * t["none"]["slip"]
+                    if sc > score:
+                        best, score = (Q, I, C, F), sc
+    Q, I, C, F = best
+    return {"params": {"bad_beats_max": Q, "rr_irregular_max": I, "match_min": C, "fiducial_spread_max_ms": F if F < 1e8 else None},
+            "fit_half": {"events": len(fit), **table(fit, best)}, "held_out_half": {"events": len(held), **table(held, best)},
+            "all": table(rows, best)}
 
 
 if __name__ == "__main__":
