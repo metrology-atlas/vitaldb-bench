@@ -14,7 +14,8 @@ Tiers of a tooth:
 
 * **A**: both edges confirmed slips.
 * **B**: both edges confirmed slips or steps, at least one a step.
-* **C**: an edge is an uncertain slip (corrected as a ramp across its interval, weighted by p).
+* **C**: an edge is an uncertain slip (not corrected by default; with --correct-uncertain, as a ramp across its
+  interval weighted by p).
 * **U**: unresolved: the tooth holds a predicted slip with p < 0.5 (a slip may or may not be there), a step the
   other way, or is longer than 1.5 teeth (a missed slip or a pause; at the ends too: the sawtooth stopped).
 * **I**: isolated slips in a recording without a sawtooth (each corrected as a step, no creep).
@@ -94,13 +95,14 @@ def teeth(R: dict) -> list[dict]:
     return out
 
 
-def correction(t: np.ndarray, R: dict) -> np.ndarray:
-    """D(t), the modelled sawtooth delay (s)."""
+def correction(t: np.ndarray, R: dict, uncertain: bool = False) -> np.ndarray:
+    """D(t), the modelled sawtooth delay (s). Slips placed only within an interval (tier C) are left out unless
+    ``uncertain`` (the review of the corrections: 3 right, 1 wrong, 5 can't tell)."""
     sign = R.get("sign", 1)
     N = np.zeros(t.size)
     for e in events(R):
         if e["kind"] == "uncertain":
-            if e["p"] < 0.5:
+            if e["p"] < 0.5 or not uncertain:
                 continue
             ramp = np.clip((t - e["q05"]) / max(e["q95"] - e["q05"], 1e-6), 0, 1)
             N += e["p"] * ramp
@@ -135,6 +137,7 @@ def main() -> None:
     ap.add_argument("--out", required=True)
     ap.add_argument("--per-tier", type=int, default=8)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--correct-uncertain", action="store_true", help="also correct tier C slips (as ramps)")
     a = ap.parse_args()
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -188,7 +191,7 @@ def main() -> None:
             z = np.load(Path(a.scan) / f"{x['case']:04d}.npz")
             tt, yy = series(z)
             g0 = R["start"]
-            D = correction(tt, R)
+            D = correction(tt, R, a.correct_uncertain)
             cor = yy - D
             L = x["t1"] - x["t0"]
             pad = max(0.25 * L, 300.0)

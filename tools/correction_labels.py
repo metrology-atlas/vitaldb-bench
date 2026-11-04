@@ -24,6 +24,13 @@ off the grid and their shape call, transients).
     python tools/correction_labels.py check --key ... --answers ... --fit $W/slip_rebuild/fit_v19.jsonl \
         --scan $W/sawtooth_char/scan_full --quality $W/slip_rebuild/quality --out $W/correction_labels/check
 
+**rescore**: a newer fit against the finished review: each correction the reviewer judged (right / wrong / can't
+tell) and each step the reviewer drew as missed, and whether the newer fit has a slip within 30 s of it; with the
+arterial verdict of each drawn step from a check run.
+
+    python tools/correction_labels.py rescore --key ... --answers ... --items $W/correction_labels/items.json \
+        --fit NEW_FIT.jsonl --check $W/correction_labels/check_final/missed.csv --out DIR
+
 **eval**: the answers against the key. The first form: item -> yes / no / unsure (agreement per tier and per reason, the
 share of yes among the decided). The second: a verdict per correction found (right / wrong / can't tell, by tier),
 and the steps the reviewer drew as missed (time, size, by tier; with the absolute time for checking against the fit).
@@ -234,6 +241,50 @@ def check_cmd(a) -> None:
               "|", x["fit_offgrid"], "| transient" if x["fit_transient"] else "")
 
 
+def rescore_cmd(a) -> None:
+    K = json.loads(Path(a.key).read_text())["items"]
+    A = json.loads(Path(a.answers).read_text())
+    items = {it["id"]: it for it in json.loads(Path(a.items).read_text())}
+    want = {K[i]["case"] for i in A}
+    fits = {}
+    for line in open(a.fit):
+        r = json.loads(line)
+        if r["case"] in want and "real" in r:
+            fits[r["case"]] = r["real"]
+    art = {}
+    if a.check:
+        for row in csv.DictReader(open(a.check)):
+            art[(row["item"], round(float(row["t_min"]), 3))] = row["art_verdict"]
+    judged, drawn = [], []
+    for iid, v in A.items():
+        k = K[iid]
+        R = fits.get(k["case"])
+        if R is None:
+            continue
+        g = k["window_start"]
+        sl = [s["t"] for s in R.get("slips", [])]
+        for idx, fv in (v.get("found") or {}).items():
+            st = items[iid]["steps"][int(idx)]
+            t = g + 60 * (st["t"] if "t" in st else 0.5 * (st["lo"] + st["hi"]))
+            judged.append({"item": iid, "tier": k["tier"], "verdict": fv, "kept": any(abs(x - t) <= 30 for x in sl)})
+        for s in v.get("missed") or []:
+            t = g + 60 * s["t"]
+            drawn.append({"item": iid, "tier": k["tier"], "size_ms": round(s["y1"] - s["y0"], 1),
+                          "arterial": art.get((iid, round(s["t"], 3)), "not checked"),
+                          "found_now": any(abs(x - t) <= 30 for x in sl)})
+    S = {"fit": a.fit,
+         "judged_corrections": {f"{v} -> {'kept' if k else 'dropped'}": n
+                                for (v, k), n in sorted(Counter((j["verdict"], j["kept"]) for j in judged).items())},
+         "drawn_missed": {f"{v} -> {'found' if k else 'not found'}": n
+                          for (v, k), n in sorted(Counter((d["arterial"], d["found_now"]) for d in drawn).items())},
+         "drawn_missed_frame_sized_found": sum(1 for d in drawn if d["found_now"] and 20 <= abs(d["size_ms"]) <= 45),
+         "drawn_missed_smaller_found": sum(1 for d in drawn if d["found_now"] and abs(d["size_ms"]) < 20)}
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "summary.json").write_text(json.dumps({**S, "judged": judged, "drawn": drawn}, indent=1) + "\n")
+    print(json.dumps(S, indent=1))
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -244,11 +295,15 @@ def main() -> None:
     s = sub.add_parser("check")
     for k in ("key", "answers", "fit", "scan", "quality", "out"):
         s.add_argument("--" + k, required=True)
+    s = sub.add_parser("rescore")
+    for k in ("key", "answers", "items", "fit", "out"):
+        s.add_argument("--" + k, required=True)
+    s.add_argument("--check", default="")
     s = sub.add_parser("eval")
     for k in ("key", "answers", "out"):
         s.add_argument("--" + k, required=True)
     a = ap.parse_args()
-    {"sample": sample_cmd, "eval": eval_cmd, "check": check_cmd}[a.cmd](a)
+    {"sample": sample_cmd, "eval": eval_cmd, "check": check_cmd, "rescore": rescore_cmd}[a.cmd](a)
 
 
 if __name__ == "__main__":

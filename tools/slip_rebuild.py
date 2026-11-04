@@ -59,6 +59,13 @@ checked against the scan's truth) and the injected pulses measured too.
 
 Writes one JSON row per recording.
 
+**Beat evidence** (--evidence on, the default; from the review of the corrections): at each step the shape test has
+judged, the arterial check (ART-PPG steps a frame with ECG-ART flat: a slip; ECG-ART steps 0.3 frame or more: the
+circulation) and the heart-rate change. A circulation change vetoes a step the shape did not confirm; an arterial slip stands where the shape could not
+judge (unless the pulse clearly did not move); without arterial confirmation, a heart-rate change of 20 /min or more
+at the step vetoes it. The circulation needs ECG-ART to step with ECG-PPG (same sign) and ART-PPG to stay within 0.6
+frame: an ECG-ART step against ECG-PPG is the arterial upstroke found elsewhere in the pulse (damping, a flush).
+
 **eval**: against the manual labels (the odd-numbered events are held out from the rule's fit; both halves
 reported), the old detectors at the same events (physiosync's slips moved to PPG time, and sawtooth_char's), and the
 waveform injections (found, false, placement error, period error).
@@ -411,6 +418,71 @@ def shape_measures(r: np.ndarray, Sp: np.ndarray, Se: np.ndarray, F: dict, tau: 
     return out
 
 
+ART_SLIP = (0.6, 1.4)     # frames: ART-PPG step of a slip
+ART_CIRC = 0.3            # frames: an ECG-ART step this large is the circulation, not the PPG
+HR_VETO = 20.0            # beats/min: a heart-rate change this large at the step (10 dropped slips the reviewer agreed with)
+
+
+def beat_evidence(tau: float, sign: int, ctx: dict) -> dict:
+    """At a step: the arterial check and the heart-rate change (medians 3-30 s after minus before, good beats where
+    there are 10 or more each side). arterial: "slip" (ART-PPG steps 0.6-1.4 frames the sawtooth's way, ECG-ART under
+    0.3 frame), "circulation" (ECG-ART steps 0.3 frame or more), "neither", or None without a clean arterial line."""
+    r, art, up, good = ctx["r"], ctx.get("art"), ctx["F"]["up"], ctx["good"]
+    bef = (r >= tau - 30) & (r <= tau - 3)
+    aft = (r >= tau + 3) & (r <= tau + 30)
+
+    def step(y):
+        for ok in (good, np.ones(r.size, bool)):
+            b_, a_ = y[bef & ok & np.isfinite(y)], y[aft & ok & np.isfinite(y)]
+            if b_.size >= 10 and a_.size >= 10:
+                return float(np.median(a_) - np.median(b_))
+        return None
+    hr = 60.0 / np.diff(r, prepend=np.nan)
+    hr = np.where((hr > 20) & (hr < 250), hr, np.nan)
+    ep = step(up - r)
+    out = {"hr_step": step(hr), "arterial": None, "ep_ms": round(ep * 1000, 1) if ep is not None else None}
+    if art is not None:
+        ea, ap = step(art - r), step(up - art)
+        if ea is not None and ap is not None and ep is not None:
+            out.update(ea_ms=round(ea * 1000, 1), ap_ms=round(ap * 1000, 1))
+            # the circulation: ECG-ART carries the step (same sign as ECG-PPG) and ART-PPG stays within 0.6 frame.
+            # An ECG-ART step against ECG-PPG, or with ART-PPG moving more than a frame, is the arterial upstroke
+            # being found elsewhere in the pulse (damping, a flush), not the circulation
+            if abs(ea) >= ART_CIRC * FRAME and np.sign(ea) == np.sign(ep) and abs(ap) < ART_SLIP[0] * FRAME:
+                out["arterial"] = "circulation"
+            elif ART_SLIP[0] * FRAME <= sign * ap <= ART_SLIP[1] * FRAME and abs(ea) < ART_CIRC * FRAME:
+                out["arterial"] = "slip"
+            else:
+                out["arterial"] = "neither"
+    if out["hr_step"] is not None:
+        out["hr_step"] = round(out["hr_step"], 1)
+    return out
+
+
+def adjudicate(c: str, m: dict, ev: dict, step_like: bool) -> tuple[str, str | None]:
+    """The beats' evidence over the shape call. The arterial line decides where it can: a circulation change vetoes;
+    a confirmed slip stands for a step the shape could not judge (or found unclear), unless the pulse clearly did not
+    move. Without arterial confirmation, a heart-rate change of 10 /min or more at the step vetoes it."""
+    # the circulation vetoes only a step the shape did not confirm: at shape-confirmed slips of a fitted sawtooth,
+    # ECG-ART carried the step in 3 % of slips (v19, recordings with an arterial line), mostly in one recording whose
+    # arterial upstroke moves with every slip: there the arterial timing, not the slip, is in doubt
+    if ev.get("arterial") == "circulation" and c not in ("no slip", "slip"):
+        return "no slip", "arterial: the circulation (ECG-ART moves)"
+    if ev.get("arterial") == "slip":
+        sh_, cb_ = m.get("ppg_shift_ms"), m.get("ppg_corr_best")
+        clear_no = sh_ is not None and abs(sh_) < 10 and cb_ is not None and cb_ >= 0.95
+        ep = ev.get("ep_ms")
+        frame_sized = ep is not None and 0.5 * FRAME * 1000 <= abs(ep) <= 1.5 * FRAME * 1000
+        if c in ("cannot judge", "shape only", "step, shape unclear", "unresolved") and (step_like or frame_sized) \
+                and not clear_no:
+            return "slip", "arterial confirms (shape could not)"
+        return c, None
+    hs = ev.get("hr_step")
+    if hs is not None and abs(hs) >= HR_VETO and c != "no slip":
+        return "no slip", f"heart rate changed {hs:+.0f} /min"
+    return c, None
+
+
 def shape_call(m: dict, sign: int, P: dict) -> str:
     """label_quality.call (the rule fitted on the even-numbered labels), and the shift must go the sawtooth's way."""
     c = call(m, P["bad_beats_max"], P["rr_irregular_max"], P["match_min"], P["fiducial_spread_max_ms"] or 1e9)
@@ -618,10 +690,17 @@ def judge_at(p: float, w: float, sign: int, ctx: dict, gap: bool = False) -> dic
     if row["prob"]:
         row["p_slip"] = row["prob"][str(TEMPER)][0]
         row["q05"], row["q50"], row["q95"] = row["prob"][str(TEMPER_TIMES)][1:]
+    if ctx.get("evidence") == "on":
+        ev = beat_evidence(tau, sign, ctx)
+        row["evidence"] = ev
+        c, why = adjudicate(c, m, ev, step or (row.get("bp") is not None) or
+                            bool(sel.size and np.nanmax(sc["llr"][sel]) > stc.LLR_GRID))
+        if why:
+            row["evidence_note"] = why
     row["call"] = c
     # --grid-veto clear: a one-frame step at a predicted slip stands unless the pulse clearly did not move (best shift
     # under 10 ms with the shape matching); --grid-veto rule: the shape rule must confirm it
-    if step and c == "no slip" and ctx.get("grid_veto") == "clear":
+    if step and c == "no slip" and ctx.get("grid_veto") == "clear" and not row.get("evidence_note"):
         sh_, cb_ = m.get("ppg_shift_ms"), m.get("ppg_corr_best")
         if not (sh_ is not None and abs(sh_) < 10 and cb_ is not None and cb_ >= ctx["rule"]["match_min"]):
             c = "step, shape unclear"
@@ -799,7 +878,7 @@ def fit_direction(sign: int, ctx: dict, prior: tuple | None, g0: float, g1: floa
     return best
 
 
-def find_slips(r_scan: np.ndarray, F: dict, Q: dict, pref: str, opts) -> dict:
+def find_slips(r_scan: np.ndarray, F: dict, Q: dict, pref: str, opts, art: np.ndarray | None = None) -> dict:
     """Everything for one set of beats (real or injected); Q holds that set's quality arrays (no prefix)."""
     r = Q["r_ref"] if opts.r == "template" else r_scan
     good = np.ones(r.size, bool)
@@ -820,7 +899,9 @@ def find_slips(r_scan: np.ndarray, F: dict, Q: dict, pref: str, opts) -> dict:
     y = stc.clean(y, sd)
     phi = resp_phase(t_pt, y) if opts.resp == "on" else None
     ctx = {"t": t_pt, "y": y, "beat_pt": beat_pt, "r": r_scan, "F": F, "Sp": Q["ppg_snip"], "Se": Q["ecg_snip"],
-           "rule": opts.rule_params, "sd": {j: noise_sd(F[j] - r) for j in FIDS}, "grid_veto": opts.grid_veto}
+           "rule": opts.rule_params, "sd": {j: noise_sd(F[j] - r) for j in FIDS}, "grid_veto": opts.grid_veto,
+           "good": good, "art": art if (opts.evidence == "on" and art is not None and np.isfinite(art).mean() > 0.3) else None}
+    ctx["evidence"] = opts.evidence
     ctx["sc_by_sign"] = {s: step_scores(t_pt, y, sd, s, phi) for s in (1, -1)}
     ctx["strong"] = {s: strong_steps(t_pt, y, sd, s, ctx["sc_by_sign"][s]) for s in (1, -1)}
     g0, g1 = float(t_pt[0]), float(t_pt[-1])
@@ -859,8 +940,12 @@ def find_slips(r_scan: np.ndarray, F: dict, Q: dict, pref: str, opts) -> dict:
             if any(abs(x["t"] - tb_) < 30 and x["sign"] == s_ for x in extra):
                 continue
             m = shape_measures(r_scan, Q["ppg_snip"], Q["ecg_snip"], F, tb_)
+            ev, why, cl = None, None, shape_call(m, s_, opts.rule_params)
+            if ctx.get("evidence") == "on":
+                ev = beat_evidence(tb_, s_, ctx)
+                cl, why = adjudicate(cl, m, ev, bool(bp is not None and sc_s["llr"][bp] > stc.LLR_GRID))
             o = {"t": round(tb_, 3), "sign": s_, "bp": bp, "llr": round(float(sc_s["llr"][bp]), 1) if bp else None,
-                 "call": shape_call(m, s_, opts.rule_params),
+                 "call": cl, "evidence": ev, "evidence_note": why,
                  "shape": {k: (round(vv, 3) if isinstance(vv, float) else vv) for k, vv in m.items()
                            if k in ("ppg_shift_ms", "ppg_corr_best", "worst_bad", "worst_rr_irregular")}}
             if o["call"] == "slip":
@@ -954,10 +1039,10 @@ def fit_cmd(a) -> None:
                    "opts": {"r": a.r, "resp": a.resp, "gate": a.gate, "prior": a.prior, "grid_veto": a.grid_veto}}
             try:
                 Q = {k: Qz[k] for k in Qz.files if not k.startswith("inj_")}
-                row["real"] = find_slips(z["r_t"], {j: z[j] for j in FIDS}, Q, "", a)
+                row["real"] = find_slips(z["r_t"], {j: z[j] for j in FIDS}, Q, "", a, z["art_t"])
                 if "inj_truth" in z.files and "inj_r_ref" in Qz.files:
                     Qi = {k[4:]: Qz[k] for k in Qz.files if k.startswith("inj_")}
-                    row["inj"] = find_slips(z["inj_r_t"], {j: z["inj_" + j] for j in FIDS}, Qi, "inj_", a)
+                    row["inj"] = find_slips(z["inj_r_t"], {j: z["inj_" + j] for j in FIDS}, Qi, "inj_", a, z["inj_art_t"])
                     row["inj_truth"] = json.loads(str(z["inj_truth"]))
             except Exception as ex:  # noqa: BLE001
                 import traceback
@@ -1190,6 +1275,8 @@ def main() -> None:
     s.add_argument("--prior", choices=("setup", "none"), default="setup")
     s.add_argument("--grid-veto", choices=("rule", "clear"), default="clear")
     s.add_argument("--cases", help="JSON with a 'cases' list: fit only these")
+    s.add_argument("--evidence", choices=("on", "off"), default="on",
+                   help="the arterial check and the heart-rate veto over the shape call (off: v19 behaviour)")
     s.add_argument("--part", type=int, default=0)
     s.add_argument("--of", type=int, default=1)
     s.add_argument("--time-budget", type=float, default=1e9)
