@@ -36,19 +36,24 @@ checked against the scan's truth) and the injected pulses measured too.
 4. **Setup prior.** The tooth length range of the recording's SNUADC port, correction mode and direction (5th-95th
    centile of the other recordings' rates, from sawtooth_stats; at least 10 recordings), else 100-4,000 s. The prior
    only sets where the fit looks first: a fit over the broad range replaces it when that confirms more slips.
-5. **Phase-locked fit** over the whole stretch: the tooth length and phase whose predicted slips collect the most
-   evidence (the one-frame log likelihood ratio within +/- max(10 s, 2% of a tooth) of each prediction, capped at 30,
-   at least -15, and 0 where no good beats; minus half a point per prediction, so a fraction of the true tooth, whose
-   extra predictions fall where there is clearly no step, loses). The score of half and twice the tooth is reported.
+5. **Phase-locked fit** over the whole stretch: the tooth length whose best chain of slips collects the most
+   evidence. Each slip follows the previous one a whole number of teeth later, the predictions in between scored on
+   their evidence (the one-frame log likelihood ratio within +/- max(10 s, 2% of a tooth), capped at 30 for slip-like
+   steps and 8 otherwise, at least -15), half a point per tooth; or after a phase jump, at a cost of 20. The search
+   at twice each fitted tooth is tried too: it replaces the fit only if the predictions it leaves out (every other
+   one) confirm no slip and the shape clearly rejects at least two of them. Between the prior and the broad search,
+   the fit with the most shape-confirmed slips, then the fewest predictions the shape clearly rejects.
 6. **Search at each predicted time**: the best one-frame boundary within the window, then the shape test there.
 7. **Shape test** (label_quality.py's measures and its rule, fitted on the even-numbered labels only): the median
    pulse 3-45 s after against 3-45 s before; a slip moves it 20-45 ms the sawtooth's way with the shape kept (match at
    the best shift at least the rule's); the fiducials step alike. "Cannot judge" where too many beats are unlike the
    median beat or R-R is irregular.
 8. **Outcome per predicted slip**: slip (step and shape agree), step without judgement (one-frame step, shape cannot
-   be judged), no slip (the shape says no step: physiology, the slip is not there), unresolved (no step, cannot judge:
-   a slip is inserted at the prediction for the correction). Strong steps off the grid are kept only when the shape
-   confirms them; runs on a shifted grid (phase jumps) are fitted run by run.
+   be judged), step with the shape unclear (--grid-veto clear: kept unless the pulse clearly did not move), shape
+   only (the pulse moved but no one-frame step: not kept), no slip, unresolved (no step, cannot judge). Each also
+   gets the fallback: the probability that one slip lies in the window and its 5-50-95% times. Steps off the grid or
+   the other way are kept only when the shape confirms them and no accepted slip is within 120 s; runs on a shifted
+   grid (phase jumps) are fitted run by run, with both phases tried across the gap.
 
 Writes one JSON row per recording.
 
@@ -444,6 +449,8 @@ def win_for(L: float) -> int:
 
 
 JUMP = 20.0          # cost of a phase jump between two slips
+BROAD = (300.0, 4000.0)   # s; the search without a setup prior (fastest sawtooth in the release: ~88 ppm, 6.3 min teeth)
+NEAR_SLIP_S = 120.0  # an off-grid or opposite step this close to an accepted slip is not kept (one frame per tooth)
 M_MAX = 8            # teeth one grid step may span (missed slips in between)
 
 
@@ -557,7 +564,7 @@ def judge_at(p: float, w: float, sign: int, ctx: dict) -> dict:
     can still be where the pulse moved)."""
     t, sc, y = ctx["t"], ctx["sc"], ctx["y"]
     sel = np.flatnonzero((np.abs(t - p) <= w) & np.isfinite(sc["llr"]))
-    row = {"t_pred": round(p, 2)}
+    row = {"t_pred": round(p, 2), "w": round(float(w), 1)}
     tau = p
     step = False
     bp = None
@@ -577,8 +584,11 @@ def judge_at(p: float, w: float, sign: int, ctx: dict) -> dict:
         m = shape_measures(ctx["r"], ctx["Sp"], ctx["Se"], ctx["F"], tau_)
         return m, shape_call(m, sign, ctx["rule"])
     m, c = judged(tau)
+    if c == "slip" and not step and not (bp is not None and sc["llr"][bp] > stc.LLR_GRID):
+        c = "shape only"
     row["bp"] = bp if step else None
-    if c != "slip" and sel.size:
+    if c not in ("slip",) and sel.size:
+        first_m, first_c = m, c
         ff = sc["fhat"][sel] * sign
         cand = sel[(ff > 0.4 * FRAME) & (ff < 1.7 * FRAME)]
         cand = cand[np.argsort(-sc["llr_free"][cand])]
@@ -589,6 +599,10 @@ def judge_at(p: float, w: float, sign: int, ctx: dict) -> dict:
                 continue
             tried.append(tb)
             m2, c2 = judged(tb)
+            # a boundary the shape prefers must still show a one-frame step more likely than none (llr above the grid
+            # threshold): the shape test alone, tried at several places, finds a pulse that moved by chance
+            if c2 == "slip" and (b_ is None or not sc["llr"][b_] > stc.LLR_GRID):
+                c2 = "shape only"
             if c2 == "slip":
                 m, c, tau, row["bp"] = m2, c2, tb, b_
                 row["moved_s"] = round(tb - (float(0.5 * (t[bp - 1] + t[bp])) if bp is not None else p), 1)
@@ -597,12 +611,54 @@ def judge_at(p: float, w: float, sign: int, ctx: dict) -> dict:
                 break
     row["shape"] = {k: (round(v, 3) if isinstance(v, float) else v) for k, v in m.items()
                     if k in ("ppg_shift_ms", "ppg_corr_best", "fid_step_ms", "fid_spread_ms", "worst_bad", "worst_rr_irregular")}
+    row["prob"] = slip_probability(p, w, sel, ctx)
+    if row["prob"]:
+        row["p_slip"], row["q05"], row["q50"], row["q95"] = row["prob"][str(TEMPER)]
     row["call"] = c
+    # --grid-veto clear: a one-frame step at a predicted slip stands unless the pulse clearly did not move (best shift
+    # under 10 ms with the shape matching); --grid-veto rule: the shape rule must confirm it
+    if step and c == "no slip" and ctx.get("grid_veto") == "clear":
+        sh_, cb_ = m.get("ppg_shift_ms"), m.get("ppg_corr_best")
+        if not (sh_ is not None and abs(sh_) < 10 and cb_ is not None and cb_ >= ctx["rule"]["match_min"]):
+            c = "step, shape unclear"
     row["outcome"] = ("slip" if c == "slip" else
                       "step, cannot judge" if step and c == "cannot judge" else
+                      "step, shape unclear" if c == "step, shape unclear" else
+                      "shape only" if c == "shape only" else
                       "no slip" if c == "no slip" else "unresolved")
     row["t"] = round(tau, 3)
     return row
+
+
+TEMPERS = (0.02, 0.05, 0.1, 0.2, 0.5, 1.0)
+TEMPER = 0.05        # chosen on the injections (v13: Brier 0.031; 90% intervals cover 94% of slips, 85% at weak outcomes)
+P_NONE = 0.2         # prior probability that the sawtooth has no slip at a predicted time (pauses, phase jumps)
+
+
+def slip_probability(p: float, w: float, sel: np.ndarray, ctx: dict) -> dict:
+    """The fallback where the slip cannot be placed or confirmed: the probability that one slip lies within the window
+    about the prediction, and where. Over the window's boundaries, the prior is Gaussian about the prediction (sd half
+    the window) with P_NONE for no slip at all; each boundary's evidence is its one-frame log likelihood ratio,
+    tempered (multiplied by tau) because neighbouring boundaries share their beats; the posterior gives P(slip in the
+    window) and its 5th, 50th and 95th centiles in time. One row per tau, for calibration on the injections."""
+    t, sc = ctx["t"], ctx["sc"]
+    if not sel.size:
+        return {}
+    tb = 0.5 * (t[sel - 1] + t[sel])
+    lp = -0.5 * ((tb - p) / (0.5 * w)) ** 2
+    lp -= np.log(np.exp(lp - lp.max()).sum()) + lp.max()
+    llr = np.clip(sc["llr"][sel], -50, 200)
+    out = {}
+    for tau in TEMPERS:
+        a_ = np.log(1 - P_NONE) + lp + tau * llr
+        z0 = np.log(P_NONE)
+        mx = max(a_.max(), z0)
+        wts = np.exp(a_ - mx)
+        p_slip = float(wts.sum() / (wts.sum() + np.exp(z0 - mx)))
+        cdf = np.cumsum(wts) / wts.sum()
+        q = [float(tb[min(np.searchsorted(cdf, x), tb.size - 1)]) for x in (0.05, 0.5, 0.95)]
+        out[str(tau)] = [round(p_slip, 4)] + [round(x, 2) for x in q]
+    return out
 
 
 def place_row(row: dict, sign: int, ctx: dict) -> None:
@@ -628,8 +684,8 @@ def runs_of(chain_t: list[float], links: list[str]) -> list[list[float]]:
 
 
 def run_slots(runs: list[list[float]], L: float, g0: float, g1: float) -> list[tuple[int, float]]:
-    """Predicted slips of every run of two or more slips, over its own stretch: out to halfway to the neighbouring
-    runs' slips (or the ends of the stretch). Each run's phase and tooth by least squares on its slips."""
+    """Predicted slips of every run of two or more slips, over its own stretch and on across the gaps to the
+    neighbouring runs' slips (or the ends of the stretch), so in a gap both phases are tried. Each run's phase and tooth by least squares on its slips."""
     out = []
     for k, ref in enumerate(runs):
         if len(ref) < 2:
@@ -642,8 +698,9 @@ def run_slots(runs: list[list[float]], L: float, g0: float, g1: float) -> list[t
             t0_, L_ = float(np.median(ref - n_ * L)), L
         before = [x for j, r_ in enumerate(runs) if j < k for x in r_]
         after = [x for j, r_ in enumerate(runs) if j > k for x in r_]
-        lo_ = 0.5 * (max(before) + ref[0]) if before else g0
-        hi_ = 0.5 * (min(after) + ref[-1]) if after else g1
+        # across the whole gap to the neighbouring runs: where the phase jumped is then found, not assumed halfway
+        lo_ = max(before) + 0.25 * L if before else g0
+        hi_ = min(after) - 0.25 * L if after else g1
         out += [(k, float(p)) for p in predicted(L_, t0_, lo_, hi_)]
     return out
 
@@ -653,24 +710,50 @@ def fit_direction(sign: int, ctx: dict, prior: tuple | None, g0: float, g1: floa
     ctx = {**ctx, "sc": sc}
     e = evidence(t, sc, ctx["y"], sign, g0, g1)
     best = None
-    for name, rng_ in ((("prior", prior[:2]),) if prior else ()) + (("broad", (100.0, 4000.0)),):
+    span = g1 - g0
+    tried = []
+    for name, rng_ in ((("prior", prior[:2]),) if prior else ()) + (("broad", (BROAD[0], BROAD[1])),):
         pf = period_fit(e, *rng_)
         if not pf:
             continue
+        tried.append((name, pf))
+        if 2 * pf["L"] < 0.9 * span:            # half-period check: the same chain search at twice the tooth
+            pd = period_fit(e, 1.95 * pf["L"], 2.05 * pf["L"])
+            if pd:
+                tried.append((name + " x2", pd))
+    for name, pf in tried:
         chain_abs = [g0 + x for x in pf["chain_t"]]
         runs = runs_of(chain_abs, pf["links"])
         rows = [{**judge_at(p, win_for(pf["L"]), sign, ctx), "run": k} for k, p in run_slots(runs, pf["L"], g0, g1)]
         pf.update(source=name, runs=sum(len(r_) >= 2 for r_ in runs), rows=rows,
-                  confirmed=sum(r_["outcome"] == "slip" for r_ in rows), chain_abs=chain_abs, runs_t=runs)
-        if best is None or pf["confirmed"] > best["confirmed"]:
+                  confirmed=sum(r_["outcome"] == "slip" for r_ in rows), chain_abs=chain_abs, runs_t=runs,
+                  clear_no=sum(r_["outcome"] == "no slip" for r_ in rows))
+    # prior against broad: the most confirmed slips, then the fewest predictions the shape clearly rejects
+    base = [pf for name, pf in tried if not name.endswith("x2") and "rows" in pf]
+    for pf in base:
+        if best is None or (pf["confirmed"], -pf["clear_no"]) > (best["confirmed"], -best["clear_no"]):
             best = pf
+    # half-period check: twice the tooth replaces it only if the predictions the doubled grid leaves out (every other
+    # one) confirm no slip and the shape clearly rejects at least two of them
+    if best is not None:
+        for name, pf in tried:
+            if name != best["source"] + " x2" or "rows" not in pf:
+                continue
+            t2 = np.array([r_["t_pred"] for r_ in pf["rows"]])
+            w2 = win_for(best["L"])
+            left = [r_ for r_ in best["rows"] if not t2.size or np.min(np.abs(t2 - r_["t_pred"])) > w2]
+            best["half_check"] = {"left_out": len(left), "confirmed": sum(r_["outcome"] == "slip" for r_ in left),
+                                  "clear_no": sum(r_["outcome"] == "no slip" for r_ in left)}
+            if left and best["half_check"]["confirmed"] == 0 and best["half_check"]["clear_no"] >= 2 and pf["confirmed"] >= 2:
+                pf["half_check"] = best["half_check"]
+                best = pf
     if best is None:
         return {"sign": sign, "confirmed": 0, "rows": [], "e": e}
     # again from the accepted slips: each run's phase and tooth from where its slips were found
     for _ in range(2):
         runs = []
         for k in sorted({r_["run"] for r_ in best["rows"]}):
-            acc = [r_["t"] for r_ in best["rows"] if r_["run"] == k and r_["outcome"] in ("slip", "step, cannot judge")]
+            acc = [r_["t"] for r_ in best["rows"] if r_["run"] == k and r_["outcome"] in ("slip", "step, cannot judge", "step, shape unclear")]
             if len(acc) >= 2:
                 runs.append(acc)
         if not runs:
@@ -678,7 +761,7 @@ def fit_direction(sign: int, ctx: dict, prior: tuple | None, g0: float, g1: floa
         rows = [{**judge_at(p, win_for(best["L"]), sign, ctx), "run": k} for k, p in run_slots(runs, best["L"], g0, g1)]
         best["rows"], best["confirmed"] = rows, sum(r_["outcome"] == "slip" for r_ in rows)
     for r_ in best["rows"]:
-        if r_["outcome"] in ("slip", "step, cannot judge"):
+        if r_["outcome"] in ("slip", "step, cannot judge", "step, shape unclear"):
             place_row(r_, sign, ctx)
     # the tooth: from the accepted slips of each run (whole numbers of teeth apart), pooled
     num, den = 0.0, 0.0
@@ -705,31 +788,37 @@ def find_slips(r_scan: np.ndarray, F: dict, Q: dict, pref: str, opts) -> dict:
             (np.nan_to_num(Q["ppg_clip"]) < 0.02) & (np.nan_to_num(Q["ecg_clip"]) < 0.02)
     Fg = {j: np.where(good, F[j], np.nan) for j in FIDS}
     t_pt, y, beat_pt = stc.point_series(Fg, r)
+    gating = opts.gate
     if t_pt.size < 600:
-        raise ValueError(f"too few good beats ({int(good.sum())} of {good.size})")
+        # too few good beats to fit at all: fit them all, and say so (the shape test still judges each slip)
+        good = np.ones(r.size, bool)
+        t_pt, y, beat_pt = stc.point_series(F, r)
+        gating = "off: too few good beats"
+    if t_pt.size < 600:
+        raise ValueError(f"too few beats ({r.size})")
     sd = noise_sd(y)
     y = stc.clean(y, sd)
     phi = resp_phase(t_pt, y) if opts.resp == "on" else None
     ctx = {"t": t_pt, "y": y, "beat_pt": beat_pt, "r": r_scan, "F": F, "Sp": Q["ppg_snip"], "Se": Q["ecg_snip"],
-           "rule": opts.rule_params, "sd": {j: noise_sd(F[j] - r) for j in FIDS}}
+           "rule": opts.rule_params, "sd": {j: noise_sd(F[j] - r) for j in FIDS}, "grid_veto": opts.grid_veto}
     ctx["sc_by_sign"] = {s: step_scores(t_pt, y, sd, s, phi) for s in (1, -1)}
     ctx["strong"] = {s: strong_steps(t_pt, y, sd, s, ctx["sc_by_sign"][s]) for s in (1, -1)}
     g0, g1 = float(t_pt[0]), float(t_pt[-1])
-    out = {"beats": int(r.size), "good_share": round(float(good.mean()), 3), "noise_ms": round(sd * 1000, 2),
+    out = {"beats": int(r.size), "gating": gating, "good_share": round(float(good.mean()), 3), "noise_ms": round(sd * 1000, 2),
            "resp_share": round(float(np.isfinite(phi).mean()), 3) if phi is not None else None,
            "strong_up": len(ctx["strong"][1]), "strong_down": len(ctx["strong"][-1]), "start": g0, "end": g1}
     fits = {s: fit_direction(s, ctx, opts.prior_by_sign.get(s) if opts.prior == "setup" else None, g0, g1) for s in (1, -1)}
     best = max(fits.values(), key=lambda f: (f.get("confirmed", 0), f["sign"]))
     other = fits[-best["sign"]]
     out["direction"] = "up" if best["sign"] > 0 else "down"
-    out["fit"] = {k: best.get(k) for k in ("L", "L_search", "rate_ppm", "score", "score_half", "score_double", "source", "confirmed",
+    out["fit"] = {k: best.get(k) for k in ("L", "L_search", "rate_ppm", "clear_no", "half_check", "score", "score_half", "score_double", "source", "confirmed",
                                          "runs", "chain_abs", "links")}
     out["other_direction_confirmed"] = other.get("confirmed", 0)
     rows = best.get("rows", [])
     out["predicted"] = rows
     # a sawtooth: two predicted slips confirmed by the shape, or one and two more one-frame steps on the grid whose
     # shape cannot be judged
-    unj = sum(r_["outcome"] == "step, cannot judge" for r_ in rows)
+    unj = sum(r_["outcome"] in ("step, cannot judge", "step, shape unclear") for r_ in rows)
     out["sawtooth"] = bool(best.get("confirmed", 0) >= 2 or (best.get("confirmed", 0) >= 1 and unj >= 2))
     # every other place with slip-like evidence, either way (strong steps, and the seconds whose one-frame step passes
     # the slip tests), not at a predicted slip of the fit: kept when the shape test confirms it
@@ -762,12 +851,29 @@ def find_slips(r_scan: np.ndarray, F: dict, Q: dict, pref: str, opts) -> dict:
     # and shape-confirmed steps elsewhere (off the grid, or the other way)
     sl = [{"t": r_["t"], "lo": r_.get("lo"), "hi": r_.get("hi"), "kind": r_["outcome"], "t_pred": r_["t_pred"],
            "sign": best["sign"]} for r_ in rows
-          if r_["outcome"] == "slip" or (out["sawtooth"] and r_["outcome"] == "step, cannot judge")]
+          if r_["outcome"] == "slip" or (out["sawtooth"] and r_["outcome"] in ("step, cannot judge", "step, shape unclear"))]
+    merged = []
+    for x in sorted(sl, key=lambda x: x["t"]):
+        if merged and x["t"] - merged[-1]["t"] < 30:
+            continue
+        merged.append(x)
+    sl = merged
+    grid_t = [x["t"] for x in sl]
     for o in extra:
-        if o["call"] != "slip" or any(abs(x["t"] - o["t"]) < 30 for x in sl):
+        if o["call"] != "slip":
+            continue
+        if any(abs(x - o["t"]) < NEAR_SLIP_S for x in grid_t):
+            o["call"] = "slip, near an accepted slip (not kept)"
+            continue
+        if any(abs(x["t"] - o["t"]) < 30 for x in sl):
             continue
         sl.append({"t": o["t"], "lo": o.get("lo"), "hi": o.get("hi"), "sign": o["sign"],
                    "kind": "off grid" if o["sign"] == best["sign"] else "other way"})
+    # the fallback for predicted slips that could not be placed: one slip in [q05, q95] with probability p_slip;
+    # only where the period is trusted (three or more confirmed slips)
+    out["uncertain"] = [{k: r_.get(k) for k in ("t_pred", "outcome", "p_slip", "q05", "q50", "q95")} for r_ in rows
+                        if r_["outcome"] in ("unresolved", "step, cannot judge", "step, shape unclear", "shape only")
+                        and r_.get("p_slip") is not None] if out["sawtooth"] and best.get("confirmed", 0) >= 3 else []
     out["inserted"] = [r_["t_pred"] for r_ in rows if r_["outcome"] == "unresolved"] if out["sawtooth"] else []
     out["slips"] = sorted(sl, key=lambda x: x["t"])
     out["sign"] = best["sign"]
@@ -786,7 +892,11 @@ def fit_cmd(a) -> None:
     a.rule_params = S["rule"]["params"]
     modes = json.loads(Path(a.modes).read_text())
     rates = load_rates(a.rates, modes)
-    files = [f for i, f in enumerate(sorted(Path(a.quality).glob("*.npz"))) if i % a.of == a.part]
+    files = sorted(Path(a.quality).glob("*.npz"))
+    if a.cases:
+        keep = set(json.loads(Path(a.cases).read_text())["cases"])
+        files = [f for f in files if int(f.stem) in keep]
+    files = [f for i, f in enumerate(files) if i % a.of == a.part]
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     done = {json.loads(x)["case"] for x in out.read_text().splitlines() if x.strip()} if out.exists() else set()
@@ -805,7 +915,7 @@ def fit_cmd(a) -> None:
             a.prior_by_sign = prior_range(rates, port, mode, c)
             row = {"case": c, "port": port, "mode": mode,
                    "prior": {("up" if k > 0 else "down"): [round(v[0], 1), round(v[1], 1), v[2]] for k, v in a.prior_by_sign.items()},
-                   "opts": {"r": a.r, "resp": a.resp, "gate": a.gate, "prior": a.prior}}
+                   "opts": {"r": a.r, "resp": a.resp, "gate": a.gate, "prior": a.prior, "grid_veto": a.grid_veto}}
             try:
                 Q = {k: Qz[k] for k in Qz.files if not k.startswith("inj_")}
                 row["real"] = find_slips(z["r_t"], {j: z[j] for j in FIDS}, Q, "", a)
@@ -924,7 +1034,12 @@ def eval_cmd(a) -> None:
     for c, r in fits.items():
         if "inj" not in r:
             continue
-        ts = np.array(r["inj_truth"]["slips_t"])
+        ts_all = np.array(r["inj_truth"]["slips_t"])
+        # scorable: at least 30 injected beats either side (nearer the ends no step test can be made)
+        rb = np.load(Path(a.scan) / f"{c:04d}.npz")["inj_r_t"]
+        inner = np.array([min(np.sum(rb < x), np.sum(rb > x)) >= 30 for x in ts_all], bool)
+        ts = ts_all[inner]
+        inj["edge_skipped"] = inj.get("edge_skipped", 0) + int((~inner).sum())
         own = np.array([s["t"] for s in (r.get("real") or {}).get("slips", [])])
         found = []
         for s in r["inj"]["slips"]:
@@ -941,21 +1056,54 @@ def eval_cmd(a) -> None:
             if d:
                 inj["found"] += 1
                 inj["err_s"].append(min(d, key=abs))
-        inj["false"] += sum(1 for f in found if not ts.size or np.min(np.abs(ts - f)) >= 60)
+        inj["false"] += sum(1 for f in found if not ts_all.size or np.min(np.abs(ts_all - f)) >= 60)
         if r["inj"].get("sawtooth") and r["inj"]["fit"].get("L") and r["inj"].get("sign", 1) > 0:
             inj["L_err_s"].append(r["inj"]["fit"]["L"] - r["inj_truth"]["period_s"])
         o = old.get(c, {}).get("inj_score")
         if o:
-            inj["old_found"] += o["found"]
+            inj["old_found"] += sum(1 for x, k in zip(o["rows"], inner) if x and k)
             inj["old_false"] += o["false"]
-            inj["old_err_s"] += [x["err_s"] for x in o["rows"] if x]
-            inj["physiosync_err_s"] += [x for x in o.get("physiosync_err_s", []) if x is not None]
+            inj["old_err_s"] += [x["err_s"] for x, k in zip(o["rows"], inner) if x and k]
+            inj["physiosync_err_s"] += [x for x, k in zip(o.get("physiosync_err_s", []), inner) if x is not None and k]
+
+    # calibration of the fallback probability, on the injections: every predicted slip of the injected beats (not
+    # within 60 s of the host's own slips); truth = an injected slip within the window
+    cal = {}
+    for c, r in fits.items():
+        if "inj" not in r:
+            continue
+        ts = np.array(r["inj_truth"]["slips_t"])
+        own = np.array([s["t"] for s in (r.get("real") or {}).get("slips", [])])
+        for p in r["inj"].get("predicted", []):
+            if not p.get("prob") or (own.size and np.min(np.abs(own - p["t_pred"])) < 60):
+                continue
+            hit = ts[np.abs(ts - p["t_pred"]) <= p.get("w", 30)]
+            weak = p["outcome"] in ("unresolved", "step, cannot judge", "shape only", "step, shape unclear")
+            for tau, (ps, q05, q50, q95) in p["prob"].items():
+                cal.setdefault(tau, []).append((ps, int(hit.size > 0), bool(hit.size and q05 <= hit[0] <= q95),
+                                                float(abs(q50 - hit[0])) if hit.size else None, weak))
+    S["fallback_calibration"] = {}
+    for tau, v in sorted(cal.items(), key=lambda kv: float(kv[0])):
+        res = {}
+        for name, sel in (("all", v), ("weak_outcomes", [x for x in v if x[4]])):
+            if not sel:
+                continue
+            ps = np.array([x[0] for x in sel])
+            y = np.array([x[1] for x in sel])
+            bins = np.clip((ps * 5).astype(int), 0, 4)
+            res[name] = {"slots": len(sel), "brier": round(float(np.mean((ps - y) ** 2)), 4),
+                         "reliability": [[round(b / 5, 1), int((bins == b).sum()),
+                                          round(float(ps[bins == b].mean()), 3) if (bins == b).any() else None,
+                                          round(float(y[bins == b].mean()), 3) if (bins == b).any() else None] for b in range(5)],
+                         "interval90_coverage": round(float(np.mean([x[2] for x in sel if x[1]])), 3) if y.any() else None,
+                         "median_err_s": round(float(np.median([x[3] for x in sel if x[1]])), 2) if y.any() else None}
+        S["fallback_calibration"][tau] = res
 
     def qe(v):
         v = np.abs(np.array(v, float))
         return {"n": int(v.size), **({"median_s": round(float(np.median(v)), 2), "p95_s": round(float(np.percentile(v, 95)), 2)}
                                      if v.size else {})}
-    S["injections"] = {"hosts": inj["hosts"], "true": inj["true"],
+    S["injections"] = {"hosts": inj["hosts"], "true_scorable": inj["true"], "true_near_ends": inj.get("edge_skipped", 0),
                        "new": {"found": inj["found"], "false": inj["false"], "down_found": inj["down_found"],
                                "own_slips_skipped": inj["own_skipped"], "placement": qe(inj["err_s"]),
                                "period_err": qe(inj["L_err_s"])},
@@ -1000,11 +1148,13 @@ def main() -> None:
     s.add_argument("--resp", choices=("on", "off"), default="on")
     s.add_argument("--gate", choices=("on", "off"), default="on")
     s.add_argument("--prior", choices=("setup", "none"), default="setup")
+    s.add_argument("--grid-veto", choices=("rule", "clear"), default="clear")
+    s.add_argument("--cases", help="JSON with a 'cases' list: fit only these")
     s.add_argument("--part", type=int, default=0)
     s.add_argument("--of", type=int, default=1)
     s.add_argument("--time-budget", type=float, default=1e9)
     s = sub.add_parser("eval")
-    for k in ("fit", "key", "verdicts", "slips", "out"):
+    for k in ("fit", "key", "verdicts", "slips", "scan", "out"):
         s.add_argument("--" + k, required=True)
     a = ap.parse_args()
     {"select": select_cmd, "quality": quality_cmd, "fit": fit_cmd, "eval": eval_cmd}[a.cmd](a)
