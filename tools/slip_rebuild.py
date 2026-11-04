@@ -1122,10 +1122,11 @@ def eval_cmd(a) -> None:
                      "err_physiosync_s": err_ps})
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    with open(out / "labels.csv", "w", newline="") as fh:
-        w = csv.DictWriter(fh, fieldnames=list(rows[0]))
-        w.writeheader()
-        w.writerows(rows)
+    if rows:
+        with open(out / "labels.csv", "w", newline="") as fh:
+            w = csv.DictWriter(fh, fieldnames=list(rows[0]))
+            w.writeheader()
+            w.writerows(rows)
 
     def table(sel, key):
         c = Counter((r["group"], r[key]) for r in sel)
@@ -1142,7 +1143,7 @@ def eval_cmd(a) -> None:
         return {"n": int(v.size), **({"median_s": round(float(np.median(v)), 2), "p90_s": round(float(np.percentile(v, 90)), 2)}
                                      if v.size else {})}
     S = {"fit": a.fit, "opts": next(iter(fits.values())).get("opts"), "labels": {}}
-    for name, sel in (("held_out", [r for r in rows if r["held_out"]]), ("all", rows)):
+    for name, sel in ((("held_out", [r for r in rows if r["held_out"]]), ("all", rows)) if rows else ()):
         S["labels"][name] = {"events": len(sel), "by_method": {k: table(sel, k) for k in ("new", "sawtooth_char", "physiosync")},
                              "counts": {k: prec_rec(sel, k) for k in ("new", "sawtooth_char", "physiosync")},
                              "placement_vs_mark": {k: errs(sel, f"err_{k}_s") for k in ("new", "old", "physiosync")},
