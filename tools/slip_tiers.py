@@ -18,7 +18,9 @@ Tiers of a tooth:
   interval weighted by p).
 * **U**: unresolved: the tooth holds a predicted slip with p < 0.5 (a slip may or may not be there), a step the
   other way, or is longer than 1.5 teeth (a missed slip or a pause; at the ends too: the sawtooth stopped).
-* **I**: isolated slips in a recording without a sawtooth (each corrected as a step, no creep).
+* **I**: isolated slips in a recording without a sawtooth (each corrected as a step, no creep). The drift slip_rebuild
+  reports for the recording (the delay's slope with a free step at each slip) is given in the reason and summarised,
+  not corrected.
 * **N**: no slip at all.
 
 A partial tooth at either end takes the tier of its inner edge. The correction: D(t) = sign x frame x (N(t) - (t -
@@ -74,7 +76,9 @@ def teeth(R: dict) -> list[dict]:
     for a_, b_ in zip(edges[:-1], edges[1:]):
         kinds = [e["kind"] for e in (a_, b_) if e["kind"] != "end"]
         if not saw:
-            tier, reason = "I", "isolated slips, no sawtooth"
+            dr = R.get("drift") or {}
+            tier, reason = "I", ("isolated slips, no sawtooth" if dr.get("ppm") is None else
+                                 "isolated slips, no sawtooth; drift %+.1f ppm (sd %.1f), not corrected" % (dr["ppm"], dr["sd_ppm"]))
         elif "uncertain" in kinds:
             tier, reason = "C", "edge uncertain (p %.2f)" % min(e.get("p", 1) for e in (a_, b_) if e["kind"] == "uncertain")
         elif "step" in kinds:
@@ -163,6 +167,7 @@ def main() -> None:
     S = {"fit": a.fit, "recordings": len(fits), "teeth": dict(Counter(x["tier"] for x in rows)),
          "minutes": {t: round(sum(x["minutes"] for x in rows if x["tier"] == t), 1) for t in TIERS},
          "reasons": {t: dict(Counter(_generic(x["reason"]) for x in rows if x["tier"] == t).most_common()) for t in TIERS},
+         "tier_i_drift_ppm": _drift_summary(fits),
          "recordings_by_worst_tier": dict(Counter(max((x["tier"] for x in rows if x["case"] == c),
                                                      key=lambda t: "AIBCNU".index(t)) for c in fits)),
          "examples": {}}
@@ -238,9 +243,17 @@ def main() -> None:
     print(json.dumps({k: S[k] for k in ("recordings", "teeth", "minutes", "reasons", "recordings_by_worst_tier")}, indent=1))
 
 
+def _drift_summary(fits: dict) -> dict | None:
+    v = [r["real"]["drift"]["ppm"] for r in fits.values() if (r["real"].get("drift") or {}).get("ppm") is not None]
+    if not v:
+        return None
+    return {"recordings": len(v), "quartiles": [round(float(x), 1) for x in np.percentile(v, [25, 50, 75])],
+            "over_2sd": sum(1 for x in v if abs(x) > 13.0)}
+
+
 def _generic(reason: str) -> str:
     import re
-    return re.sub(r"\s*\(?[-+]?\d+(\.\d+)?\)?", "", reason).replace("  ", " ").strip()
+    return re.sub(r"\s*\(?(sd )?[-+]?\d+(\.\d+)?( ppm)?\)?", "", reason).replace("  ", " ").strip()
 
 
 if __name__ == "__main__":

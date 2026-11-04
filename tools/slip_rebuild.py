@@ -621,8 +621,8 @@ def prior_range(rates: dict, port: str, mode: str, case: int) -> tuple[tuple[flo
     for d, key in ((1, "up"), (-1, "down")):
         v = [abs(x) for c, x in rates.get((port, mode, key), []) if c != case]
         if len(v) >= 10:
-            lo, hi = np.percentile(v, [5, 95])
-            out[d] = (FRAME / (hi * 1e-6) / 1.03, FRAME / (lo * 1e-6) * 1.03, len(v))
+            lo, med, hi = np.percentile(v, [5, 50, 95])
+            out[d] = (FRAME / (hi * 1e-6) / 1.03, FRAME / (lo * 1e-6) * 1.03, len(v), FRAME / (med * 1e-6))
     return out
 
 
@@ -878,6 +878,107 @@ def fit_direction(sign: int, ctx: dict, prior: tuple | None, g0: float, g1: floa
     return best
 
 
+ANCHOR_SPREAD = 0.06     # the setup's tooth varies by about this share between recordings (+/- 5% for 90-100%)
+
+
+DRIFT_SD_PPM = 6.5       # spread of the delay slope in slip-free recordings (IQR -3.9 to 4.9 ppm, whole release)
+
+
+def drift_ppm(t: np.ndarray, y: np.ndarray, slips: list[dict], sign: int) -> float | None:
+    """The delay's slope with a free step at each slip (least squares on 15-point medians), as ppm the sawtooth's way
+    (positive: the delay shrinks between up slips, grows between down ones)."""
+    ok = np.isfinite(t) & np.isfinite(y)
+    t, y = t[ok], y[ok]
+    m = t.size // 15
+    if m < 40:
+        return None
+    tt = np.median(t[: m * 15].reshape(m, 15), 1)
+    yy = np.median(y[: m * 15].reshape(m, 15), 1)
+    cols = [np.ones_like(tt), tt - tt.mean()] + [(tt >= s["t"]).astype(float) for s in slips if tt[0] < s["t"] < tt[-1]]
+    beta = np.linalg.lstsq(np.column_stack(cols), yy, rcond=None)[0]
+    return float(-sign * beta[1] * 1e6)
+
+
+def recording_tooth(anchors: list[float], creep: float | None, prior: tuple | None, span: float) -> tuple[float, str] | None:
+    """The tooth to search with: from two or more same-way slips, the spacing (gap / k, k chosen to match the
+    measured drift where there is one); else from the drift (frame / rate) when the recording creeps at 3 ppm or more;
+    else the setup's median tooth."""
+    if len(anchors) >= 2:
+        # the spacing itself (one tooth): choosing a fraction by the drift halved the tooth of slow injected
+        # sawteeth (the drift is too noisy, sd 6.5 ppm, to tell one tooth from two)
+        g = float(np.min(np.diff(sorted(anchors))))
+        if g >= 300:
+            return g, "slip spacing"
+    if creep is not None and creep >= 3.0:
+        return float(np.clip(FRAME / (creep * 1e-6), 300.0, 4 * span)), "drift"
+    if prior and len(prior) >= 4:
+        return float(prior[3]), "setup"
+    return None
+
+
+def anchored_fit(sign: int, anchors: list[float], ctx: dict, prior: tuple, g0: float, g1: float) -> dict | None:
+    """A sawtooth from confirmed slips that the period fit could not join (tier I): start from the setup's median
+    tooth and each confirmed slip, step a tooth at a time outward (both ways) and judge the next slip where it should
+    fall (window: the usual one, widened by the setup's spread for every tooth since the last confirmed slip); every
+    confirmed slip re-anchors the phase, and once two are confirmed the tooth is their spacing. Returns a fit like
+    fit_direction's when two or more slips end up confirmed on one period, else None."""
+    L0, L_how = prior[3], prior[4] if len(prior) > 4 else "setup"
+    lo_ok, hi_ok = (prior[0], prior[1]) if L_how == "setup" else (0.6 * L0, 1.6 * L0)
+    spread = ANCHOR_SPREAD if L_how != "drift" else 0.15
+    ctx = {**ctx, "sc": ctx["sc_by_sign"][sign]}
+    anchors = sorted(anchors)
+    conf = list(anchors)
+    rows = {}
+
+    def L_now():
+        if len(conf) >= 2:
+            c = np.array(sorted(conf))
+            n = np.round(np.diff(c) / L0)
+            n = n[n >= 1]
+            Ls = np.diff(c)[np.round(np.diff(c) / L0) >= 1] / n if n.size else []
+            Lm = float(np.median(Ls)) if len(Ls) else L0
+            return Lm if lo_ok <= Lm <= hi_ok else L0
+        return L0
+    for direction in (1, -1):
+        last = anchors[-1] if direction > 0 else anchors[0]
+        k_since = 1
+        while True:
+            L = L_now()
+            p = last + direction * k_since * L
+            if not (g0 + 0.25 * L <= p <= g1 - 0.25 * L):
+                break
+            w = max(win_for(L), spread * k_since * L)
+            w = min(w, 0.3 * L)
+            if any(abs(p - a) < 0.5 * L for a in conf if a != last):
+                k_since += 1
+                continue
+            r_ = judge_at(p, w, sign, ctx)
+            r_["run"] = 0
+            r_["anchored"] = True
+            rows[round(p, 1)] = r_
+            if r_["outcome"] == "slip":
+                conf.append(r_["t"])
+                last, k_since = r_["t"], 1
+            else:
+                k_since += 1
+    for a in anchors:
+        rows[round(a, 1)] = {"t_pred": round(a, 2), "t": round(a, 3), "outcome": "slip", "call": "slip", "run": 0,
+                             "anchored": True, "anchor": True, "w": 0.0, "shape": {}}
+    out_rows = sorted(rows.values(), key=lambda r_: r_["t_pred"])
+    n_conf = sum(r_["outcome"] == "slip" for r_ in out_rows)
+    # two confirmed slips the same way whose spacing matches the recording's own drift already make a period
+    spacing_ok = L_how == "slip spacing" and len(anchors) >= 2
+    if n_conf < 2 or (n_conf - len(anchors) < 1 and not spacing_ok):
+        return None
+    for r_ in out_rows:
+        if r_["outcome"] in ("slip", "step, cannot judge", "step, shape unclear") and not r_.get("anchor"):
+            place_row(r_, sign, ctx)
+    L = L_now()
+    return {"sign": sign, "L": L, "L_search": L0, "rate_ppm": FRAME / L * 1e6, "confirmed": n_conf, "rows": out_rows,
+            "source": f"anchored ({L_how})", "runs": 1, "clear_no": sum(r_["outcome"] == "no slip" for r_ in out_rows),
+            "e": None}
+
+
 def find_slips(r_scan: np.ndarray, F: dict, Q: dict, pref: str, opts, art: np.ndarray | None = None) -> dict:
     """Everything for one set of beats (real or injected); Q holds that set's quality arrays (no prefix)."""
     r = Q["r_ref"] if opts.r == "template" else r_scan
@@ -920,7 +1021,12 @@ def find_slips(r_scan: np.ndarray, F: dict, Q: dict, pref: str, opts, art: np.nd
     # a sawtooth: two predicted slips confirmed by the shape, or one and two more one-frame steps on the grid whose
     # shape cannot be judged
     unj = sum(r_["outcome"] in ("step, cannot judge", "step, shape unclear") for r_ in rows)
-    out["sawtooth"] = bool(best.get("confirmed", 0) >= 2 or (best.get("confirmed", 0) >= 1 and unj >= 2))
+    if opts.saw_rule == "two confirmed":
+        # two slips confirmed (shape or arterial line): one confirmed and two unjudged steps made false sawteeth with
+        # short teeth in recordings carrying one slow injected slip
+        out["sawtooth"] = bool(best.get("confirmed", 0) >= 2)
+    else:
+        out["sawtooth"] = bool(best.get("confirmed", 0) >= 2 or (best.get("confirmed", 0) >= 1 and unj >= 2))
     # every other place with slip-like evidence, either way (strong steps, and the seconds whose one-frame step passes
     # the slip tests), not at a predicted slip of the fit: kept when the shape test confirms it
     w = win_for(best["L"]) if best.get("L") else 10
@@ -951,6 +1057,33 @@ def find_slips(r_scan: np.ndarray, F: dict, Q: dict, pref: str, opts, art: np.nd
             if o["call"] == "slip":
                 place_row(o, s_, {**ctx, "sc": sc_s})
             extra.append(o)
+    # tier I: confirmed slips but no sawtooth fitted; with the setup's tooth known, search from them for the rest
+    out["anchored"] = None
+    if not out["sawtooth"] and opts.anchored == "on":
+        for s_ in (best["sign"], -best["sign"]):
+            pr = opts.prior_by_sign.get(s_) if opts.prior == "setup" else None
+            anc = [o["t"] for o in extra if o["call"] == "slip" and o["sign"] == s_]
+            if not anc:
+                continue
+            cr = drift_ppm(ctx["F"]["up"], ctx["F"]["up"] - ctx["r"], [{"t": o["t"]} for o in extra if o["call"] == "slip"], s_)
+            tooth = recording_tooth(anc, cr, pr, g1 - g0)
+            if tooth is None:
+                continue
+            L_rec, how = tooth
+            pr2 = ((pr[0], pr[1]) if pr else (0.6 * L_rec, 1.6 * L_rec)) + ((pr[2],) if pr else (0,)) + (L_rec, how)
+            af = anchored_fit(s_, anc, ctx, pr2, g0, g1)
+            if af:
+                best = af
+                rows = af["rows"]
+                out["predicted"] = rows
+                out["sawtooth"] = True
+                out["anchored"] = {"sign": s_, "anchors": len(anc), "confirmed": af["confirmed"], "L": af["L"], "tooth_from": how,
+                                   "drift_ppm": round(cr, 1) if cr is not None else None}
+                out["direction"] = "up" if s_ > 0 else "down"
+                out["fit"] = {k: af.get(k) for k in ("L", "L_search", "rate_ppm", "confirmed", "source", "runs", "clear_no")}
+                anc_t = {round(a, 3) for a in anc}
+                extra = [o for o in extra if not (o["sign"] == s_ and round(o["t"], 3) in anc_t)]
+                break
     out["off_grid"] = extra
     # the slips: confirmed at a prediction, or one-frame steps there whose shape cannot be judged (sawtooth only),
     # and shape-confirmed steps elsewhere (off the grid, or the other way)
@@ -998,6 +1131,18 @@ def find_slips(r_scan: np.ndarray, F: dict, Q: dict, pref: str, opts, art: np.nd
     out["inserted"] = [r_["t_pred"] for r_ in rows if r_["outcome"] == "unresolved"] if out["sawtooth"] else []
     out["slips"] = sorted(sl, key=lambda x: x["t"])
     out["sign"] = best["sign"]
+    # the drift, reported and not corrected where no sawtooth is fitted: the delay's slope with a free step at each
+    # slip, the sawtooth's way, with the spread of slip-free recordings as its uncertainty
+    if not out["sawtooth"] and out["slips"]:
+        sg = [x.get("sign", 1) for x in out["slips"]]
+        s0 = 1 if sg.count(1) >= sg.count(-1) else -1
+        cr = drift_ppm(F["up"], F["up"] - r_scan, out["slips"], s0)
+        if cr is not None:
+            hrs = (g1 - g0) / 3600
+            out["drift"] = {"ppm": round(cr, 1), "sd_ppm": DRIFT_SD_PPM, "sign": s0,
+                            "over_recording_ms": round(cr * 1e-6 * (g1 - g0) * 1000, 1), "hours": round(hrs, 2),
+                            "implied_tooth_min": round(FRAME / (cr * 1e-6) / 60, 1) if cr > 0.5 else None,
+                            "corrected": False}
     return out
 
 
@@ -1250,6 +1395,121 @@ def eval_cmd(a) -> None:
 
 # ------------------------------------------------------------------------------------------------ main
 
+SLOW_PPM = (4.0, 12.0)
+
+
+def inject_rate(raw: np.ndarray, t0: float, rng: np.random.Generator, ppm: float) -> tuple[np.ndarray, dict]:
+    """sawtooth_char.inject at a given rate: the content delayed by D(t), one frame more at each slip, creeping back
+    at ``ppm``; the first slip at a random phase."""
+    r = ppm * 1e-6
+    L = FRAME / r
+    tt = np.arange(raw.size) / FS
+    first = float(rng.uniform(0, L))
+    slips = first + L * np.arange(int(np.ceil((tt[-1] - first) / L)) + 1)
+    slips = slips[slips < tt[-1]]
+    k = np.searchsorted(slips, tt, side="right")
+    D = FRAME * k - r * tt
+    D -= D.min()
+    x = np.interp(tt - D, tt, np.asarray(raw, dtype=np.float64))
+    return x, {"slips_t": (t0 + slips).tolist(), "rate_ppm": ppm, "period_s": L, "first_s": first}
+
+
+def inject_slow_cmd(a) -> None:
+    """Slow sawteeth (4-12 ppm: teeth of 46-139 min) written into the PLETH waveform of recordings without a slip of
+    their own; fiducials, beats and quality measured again, written as a scan and a quality folder the fit reads."""
+    fits = {}
+    for line in open(a.fit):
+        r = json.loads(line)
+        if "real" in r:
+            fits[r["case"]] = r["real"]
+    hosts = sorted(c for c, R in fits.items() if not R["slips"] and not R.get("sawtooth"))
+    rng0 = np.random.default_rng(a.seed)
+    hosts = sorted(rng0.choice(hosts, size=min(a.hosts, len(hosts)), replace=False).tolist())
+    hosts = [c for i, c in enumerate(hosts) if i % a.of == a.part]
+    out = Path(a.out)
+    (out / "scan").mkdir(parents=True, exist_ok=True)
+    (out / "quality").mkdir(parents=True, exist_ok=True)
+    (out / "truth").mkdir(parents=True, exist_ok=True)
+    t_start, n = time.time(), 0
+    for c in hosts:
+        f = out / "scan" / f"{c:04d}.npz"
+        if f.exists() or (out / "truth" / f"{c:04d}.skip").exists():
+            continue
+        if time.time() - t_start > a.time_budget:
+            break
+        try:
+            z = np.load(Path(a.scan) / f"{c:04d}.npz")
+            case = read_vital(Path(a.root) / "vital_files" / f"{c:04d}.vital", track_names={ECG, PPG})
+            e, p = case.tracks[ECG], case.tracks[PPG]
+            te, tp, ea, eb, pa, pb = stretch(e, p)
+            raw = np.asarray(p.values[pa:pb], dtype=np.float64)
+            rng = np.random.default_rng(50_000 + c)
+            ppm = float(rng.uniform(*SLOW_PPM))
+            xw, truth = inject_rate(raw, tp[pa], rng, ppm)
+            fid = stc.ppg_fiducials(xw)
+            bt = stc.beat_table(z["r_t"], fid, tp[pa], pa)
+            r_m = z["r_t"][bt["r_i"]]
+            res = {"r_t": r_m, "art_t": z["art_t"][bt["r_i"]], "rawmax": bt["rawmax"], "ppg_t0": z["ppg_t0"],
+                   "ppg_first_index": z["ppg_first_index"], "port": z["port"], "frame_clock": z["frame_clock"],
+                   "fit": np.array("{}"), "delay_mode_s": bt["delay_mode_s"]}
+            for k_ in FIDS:
+                res[k_] = bt[k_]
+            xe_raw = e.physical()[ea:eb].astype(np.float64)
+            sos = signal.butter(2, (1.0, 40.0), btype="bandpass", fs=FS, output="sos")
+            q = beat_quality(r_m, te[ea], signal.sosfiltfilt(sos, xe_raw), xe_raw, tp[pa], band(xw), xw)
+            np.savez_compressed(out / "quality" / f"{c:04d}.npz", **q)
+            np.savez_compressed(f, **res)
+            (out / "truth" / f"{c:04d}.json").write_text(json.dumps(truth) + "\n")
+        except Exception as ex:  # noqa: BLE001
+            (out / "truth" / f"{c:04d}.skip").write_text(f"{type(ex).__name__}: {ex}"[:300])
+        n += 1
+    print(json.dumps({"part": a.part, "new": n, "seconds": round(time.time() - t_start, 1),
+                      "done": len(list((out / "scan").glob("*.npz")))}))
+
+
+def eval_slow_cmd(a) -> None:
+    """The slow injections: slips found (within 60 s) and false, whether a sawtooth was fitted and its tooth against
+    the truth, and the drift reported against the true rate where no sawtooth was fitted."""
+    rows = []
+    for line in open(a.fit):
+        r = json.loads(line)
+        tf = Path(a.truth) / f"{r['case']:04d}.json"
+        if "real" not in r or not tf.exists():
+            continue
+        T = json.loads(tf.read_text())
+        R = r["real"]
+        ts = np.array(T["slips_t"])
+        g0, g1 = R["start"], R["end"]
+        inner = ts[(ts > g0 + 60) & (ts < g1 - 60)]
+        found = [s["t"] for s in R["slips"] if s.get("sign", 1) > 0]
+        rows.append({"case": r["case"], "rate_ppm": round(T["rate_ppm"], 2), "true": int(inner.size),
+                     "found": int(sum(any(abs(f - x) < 60 for f in found) for x in inner)),
+                     "false": int(sum(1 for f in found if not ts.size or np.min(np.abs(ts - f)) >= 60)),
+                     "sawtooth": bool(R.get("sawtooth")), "anchored": R.get("anchored"),
+                     "L_fit": (R.get("fit") or {}).get("L") if R.get("sawtooth") else None, "L_true": T["period_s"],
+                     "drift_ppm": (R.get("drift") or {}).get("ppm")})
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    with open(out / "slow.csv", "w", newline="") as fh:
+        w = csv.DictWriter(fh, fieldnames=[k for k in rows[0] if k != "anchored"], extrasaction="ignore")
+        w.writeheader()
+        w.writerows(rows)
+    sw = [x for x in rows if x["sawtooth"] and x["L_fit"]]
+    dr = [x for x in rows if x["drift_ppm"] is not None]
+    S = {"hosts": len(rows), "true_slips": sum(x["true"] for x in rows), "found": sum(x["found"] for x in rows),
+         "false": sum(x["false"] for x in rows), "by_true_slips": {},
+         "sawtooth_fitted": len(sw), "anchored": sum(1 for x in rows if x["anchored"]),
+         "tooth_rel_err": [round(float(v), 3) for v in np.percentile([abs(x["L_fit"] / x["L_true"] - 1) for x in sw], [50, 90])] if sw else None,
+         "drift_reported": len(dr),
+         "drift_err_ppm": [round(float(v), 1) for v in np.percentile([x["drift_ppm"] - x["rate_ppm"] for x in dr], [10, 50, 90])] if dr else None}
+    for k in sorted({x["true"] for x in rows}):
+        sel = [x for x in rows if x["true"] == k]
+        S["by_true_slips"][str(k)] = {"hosts": len(sel), "found": sum(x["found"] for x in sel), "false": sum(x["false"] for x in sel),
+                                      "sawtooth": sum(x["sawtooth"] for x in sel)}
+    (out / "summary.json").write_text(json.dumps(S, indent=1) + "\n")
+    print(json.dumps(S, indent=1))
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -1276,17 +1536,32 @@ def main() -> None:
     s.add_argument("--prior", choices=("setup", "none"), default="setup")
     s.add_argument("--grid-veto", choices=("rule", "clear"), default="clear")
     s.add_argument("--cases", help="JSON with a 'cases' list: fit only these")
+    s.add_argument("--saw-rule", choices=("two confirmed", "one and two steps"), default="two confirmed")
+    s.add_argument("--anchored", choices=("on", "off"), default="on",
+                   help="tier I: search from confirmed slips at the setup's tooth for a sawtooth the fit missed")
     s.add_argument("--evidence", choices=("on", "off"), default="on",
                    help="the arterial check and the heart-rate veto over the shape call (off: v19 behaviour)")
     s.add_argument("--part", type=int, default=0)
     s.add_argument("--of", type=int, default=1)
     s.add_argument("--time-budget", type=float, default=1e9)
+    s = sub.add_parser("inject-slow")
+    for k in ("root", "scan", "fit", "out"):
+        s.add_argument("--" + k, required=True)
+    s.add_argument("--hosts", type=int, default=120)
+    s.add_argument("--seed", type=int, default=3)
+    s.add_argument("--part", type=int, default=0)
+    s.add_argument("--of", type=int, default=1)
+    s.add_argument("--time-budget", type=float, default=1e9)
+    s = sub.add_parser("eval-slow")
+    for k in ("fit", "truth", "out"):
+        s.add_argument("--" + k, required=True)
     s = sub.add_parser("eval")
     for k in ("fit", "key", "verdicts", "slips", "scan", "out"):
         s.add_argument("--" + k, required=True)
     s.add_argument("--clean-hosts", action="store_true", help="score injections only on hosts without a sawtooth")
     a = ap.parse_args()
-    {"select": select_cmd, "quality": quality_cmd, "fit": fit_cmd, "eval": eval_cmd}[a.cmd](a)
+    {"select": select_cmd, "quality": quality_cmd, "fit": fit_cmd, "eval": eval_cmd, "inject-slow": inject_slow_cmd,
+     "eval-slow": eval_slow_cmd}[a.cmd](a)
 
 
 if __name__ == "__main__":
