@@ -25,10 +25,69 @@ from pathlib import Path
 import numpy as np
 
 
+def creep_of(z, slips: list[dict], sign: int) -> float | None:
+    r = z["r_t"]
+    d = np.nanmedian(np.vstack([z[j] - r for j in ("foot", "up", "peak")]), axis=0)
+    m = d.size // 15
+    if m < 40:
+        return None
+    t = np.nanmedian(z["up"][: m * 15].reshape(m, 15), 1)
+    y = np.nanmedian(d[: m * 15].reshape(m, 15), 1)
+    ok = np.isfinite(t) & np.isfinite(y)
+    t, y = t[ok], y[ok]
+    t0 = t.mean()
+    cols = [np.ones_like(t), t - t0] + [(t >= s["t"]).astype(float) for s in slips if t[0] < s["t"] < t[-1]]
+    X = np.column_stack(cols)
+    beta = np.linalg.lstsq(X, y, rcond=None)[0]
+    return float(-sign * beta[1] * 1e6)
+
+
+def creep_test(a, by: dict) -> dict:
+    groups = defaultdict(lambda: {"tier_i": [], "sawtooth": [], "no_slip": []})
+    tiers = defaultdict(set)
+    for row in csv.DictReader(open(a.teeth)):
+        tiers[int(row["case"])].add(row["tier"])
+    for line in open(a.fit):
+        r = json.loads(line)
+        R = r.get("real")
+        if not R:
+            continue
+        key = (r.get("port") or "?", r.get("mode") or "?")
+        tset = tiers.get(r["case"], set())
+        kind = "tier_i" if tset == {"I"} else "no_slip" if tset == {"N"} else "sawtooth" if R.get("sawtooth") else None
+        if kind is None:
+            continue
+        sign = R.get("sign", 1) if kind != "no_slip" else 1
+        if kind == "tier_i":
+            ss = [s.get("sign", 1) for s in R["slips"]]
+            sign = 1 if ss.count(1) >= ss.count(-1) else -1
+        z = np.load(Path(a.creep) / f"{r['case']:04d}.npz")
+        c = creep_of(z, R["slips"], sign)
+        if c is not None:
+            groups[key][kind].append((c, sign))
+    out = {}
+    allg = {"tier_i": [], "sawtooth": [], "no_slip": []}
+    for key, g in sorted(groups.items(), key=lambda kv: -len(kv[1]["tier_i"])):
+        for k in allg:
+            allg[k] += [c for c, s in g[k] if s > 0]
+        if len(g["tier_i"]) < 10:
+            continue
+        def med(v):
+            v = [c for c, s in v if s > 0]          # up direction only, comparable signs
+            return {"n": len(v), "median_ppm": round(float(np.median(v)), 1) if v else None,
+                    "iqr_ppm": [round(float(x), 1) for x in np.percentile(v, [25, 75])] if len(v) >= 4 else None}
+        out[f"{key[0]} {key[1]}"] = {k: med(g[k]) for k in ("tier_i", "sawtooth", "no_slip")}
+    out["all (up)"] = {k: {"n": len(v), "median_ppm": round(float(np.median(v)), 1) if v else None,
+                           "iqr_ppm": [round(float(x), 1) for x in np.percentile(v, [25, 75])] if len(v) >= 4 else None}
+                       for k, v in allg.items()}
+    return out
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     for k in ("fit", "teeth", "rates", "out"):
         ap.add_argument("--" + k, required=True)
+    ap.add_argument("--creep", default="", help="the scan folder: add the creep test")
     a = ap.parse_args()
     teeth = defaultdict(list)
     for row in csv.DictReader(open(a.teeth)):
@@ -113,11 +172,15 @@ def main() -> None:
     gq = np.array(GAPS.pop("gap_in_teeth"))
     GAPS["gap_in_teeth_quartiles"] = [round(float(v), 2) for v in np.percentile(gq, [25, 50, 75])] if gq.size else None
     S["gaps_against_setup_tooth"] = GAPS
+    if a.creep:
+        S["creep"] = creep_test(a, by)
     (out / "summary.json").write_text(json.dumps(S, indent=1) + "\n")
     print(json.dumps({k: S[k] for k in ("tier_i_recordings", "kind", "slips", "slips_per_recording", "arterial_at_slips", "direction",
                                          "gaps_against_setup_tooth")}, indent=1))
     for k, v in S["by_setup"].items():
         print(k, v)
+    for k, v in (S.get("creep") or {}).items():
+        print("creep", k, v)
 
 
 if __name__ == "__main__":
