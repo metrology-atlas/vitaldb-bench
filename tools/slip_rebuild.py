@@ -66,6 +66,14 @@ judge (unless the pulse clearly did not move); without arterial confirmation, a 
 at the step vetoes it. The circulation needs ECG-ART to step with ECG-PPG (same sign) and ART-PPG to stay within 0.6
 frame: an ECG-ART step against ECG-PPG is the arterial upstroke found elsewhere in the pulse (damping, a flush).
 
+**Anchored search** (--anchored on): where no sawtooth is fitted but confirmed slips exist, a search from them at the
+recording's own tooth (the spacing of two same-way slips; else the drift; else the setup's median). With
+--anchor-check on (the default, v26) a sawtooth found this way corrects its creep only when three or more slips are
+confirmed; on two, the steps are corrected and the tooth and its creep reported (fit.creep "reported"): a tooth from
+two slips was wrong in 9 of 22 injected whole-release recordings (a missed slip between them, or a slip of another
+process). The midpoint of the two closest slips is judged and reported (fit.half_check), not used: it judged the
+missed slip "no slip" again and could not be judged at gaps.
+
 **eval**: against the manual labels (the odd-numbered events are held out from the rule's fit; both halves
 reported), the old detectors at the same events (physiosync's slips moved to PPG time, and sawtooth_char's), and the
 waveform injections (found, false, placement error, period error).
@@ -927,6 +935,15 @@ def anchored_fit(sign: int, anchors: list[float], ctx: dict, prior: tuple, g0: f
     spread = ANCHOR_SPREAD if L_how != "drift" else 0.15
     ctx = {**ctx, "sc": ctx["sc_by_sign"][sign]}
     anchors = sorted(anchors)
+    half = None
+    if L_how == "slip spacing" and ctx.get("anchor_check", "on") == "on" and len(anchors) >= 2:
+        # the midpoint of the two closest slips, judged and reported only: on injected sawteeth it judged a missed
+        # slip "no slip" again and could not be judged at gaps, so it neither rejects nor halves the tooth
+        i = int(np.argmin(np.diff(anchors)))
+        a0, a1 = anchors[i], anchors[i + 1]
+        mid = 0.5 * (a0 + a1)
+        hr = judge_at(mid, min(win_for(0.5 * L0), 0.15 * L0), sign, ctx)
+        half = {"t_pred": round(mid, 2), "outcome": hr["outcome"], "spacing_s": round(a1 - a0, 1)}
     conf = list(anchors)
     rows = {}
 
@@ -974,9 +991,12 @@ def anchored_fit(sign: int, anchors: list[float], ctx: dict, prior: tuple, g0: f
         if r_["outcome"] in ("slip", "step, cannot judge", "step, shape unclear") and not r_.get("anchor"):
             place_row(r_, sign, ctx)
     L = L_now()
+    # two confirmed slips give a tooth but not enough to correct the creep: the steps are corrected, the tooth and
+    # its creep reported (a tooth from two slips was wrong in 9 of 22 injected recordings, v25)
+    creep = "corrected" if n_conf >= 3 or ctx.get("anchor_check", "on") != "on" else "reported"
     return {"sign": sign, "L": L, "L_search": L0, "rate_ppm": FRAME / L * 1e6, "confirmed": n_conf, "rows": out_rows,
             "source": f"anchored ({L_how})", "runs": 1, "clear_no": sum(r_["outcome"] == "no slip" for r_ in out_rows),
-            "e": None}
+            "e": None, "creep": creep, "half_check": half}
 
 
 def find_slips(r_scan: np.ndarray, F: dict, Q: dict, pref: str, opts, art: np.ndarray | None = None) -> dict:
@@ -1003,6 +1023,7 @@ def find_slips(r_scan: np.ndarray, F: dict, Q: dict, pref: str, opts, art: np.nd
            "rule": opts.rule_params, "sd": {j: noise_sd(F[j] - r) for j in FIDS}, "grid_veto": opts.grid_veto,
            "good": good, "art": art if (opts.evidence == "on" and art is not None and np.isfinite(art).mean() > 0.3) else None}
     ctx["evidence"] = opts.evidence
+    ctx["anchor_check"] = getattr(opts, "anchor_check", "on")
     ctx["sc_by_sign"] = {s: step_scores(t_pt, y, sd, s, phi) for s in (1, -1)}
     ctx["strong"] = {s: strong_steps(t_pt, y, sd, s, ctx["sc_by_sign"][s]) for s in (1, -1)}
     g0, g1 = float(t_pt[0]), float(t_pt[-1])
@@ -1080,7 +1101,8 @@ def find_slips(r_scan: np.ndarray, F: dict, Q: dict, pref: str, opts, art: np.nd
                 out["anchored"] = {"sign": s_, "anchors": len(anc), "confirmed": af["confirmed"], "L": af["L"], "tooth_from": how,
                                    "drift_ppm": round(cr, 1) if cr is not None else None}
                 out["direction"] = "up" if s_ > 0 else "down"
-                out["fit"] = {k: af.get(k) for k in ("L", "L_search", "rate_ppm", "confirmed", "source", "runs", "clear_no")}
+                out["fit"] = {k: af.get(k) for k in ("L", "L_search", "rate_ppm", "confirmed", "source", "runs", "clear_no",
+                                                     "creep", "half_check")}
                 anc_t = {round(a, 3) for a in anc}
                 extra = [o for o in extra if not (o["sign"] == s_ and round(o["t"], 3) in anc_t)]
                 break
@@ -1181,7 +1203,8 @@ def fit_cmd(a) -> None:
             a.prior_by_sign = prior_range(rates, port, mode, c)
             row = {"case": c, "port": port, "mode": mode,
                    "prior": {("up" if k > 0 else "down"): [round(v[0], 1), round(v[1], 1), v[2]] for k, v in a.prior_by_sign.items()},
-                   "opts": {"r": a.r, "resp": a.resp, "gate": a.gate, "prior": a.prior, "grid_veto": a.grid_veto}}
+                   "opts": {"r": a.r, "resp": a.resp, "gate": a.gate, "prior": a.prior, "grid_veto": a.grid_veto,
+                            "anchored": a.anchored, "saw_rule": a.saw_rule, "anchor_check": a.anchor_check}}
             try:
                 Q = {k: Qz[k] for k in Qz.files if not k.startswith("inj_")}
                 row["real"] = find_slips(z["r_t"], {j: z[j] for j in FIDS}, Q, "", a, z["art_t"])
@@ -1328,6 +1351,9 @@ def eval_cmd(a) -> None:
         inj["false"] += sum(1 for f in found if not ts_all.size or np.min(np.abs(ts_all - f)) >= 60)
         if r["inj"].get("sawtooth") and r["inj"]["fit"].get("L") and r["inj"].get("sign", 1) > 0:
             inj["L_err_s"].append(r["inj"]["fit"]["L"] - r["inj_truth"]["period_s"])
+            inj.setdefault("L_rel", []).append(r["inj"]["fit"]["L"] / r["inj_truth"]["period_s"] - 1)
+            inj.setdefault("L_creep", []).append((r["inj"]["fit"].get("creep") or "corrected",
+                                                  abs(r["inj"]["fit"]["L"] / r["inj_truth"]["period_s"] - 1) <= 0.02))
         o = old.get(c, {}).get("inj_score")
         if o:
             inj["old_found"] += sum(1 for x, k in zip(o["rows"], inner) if x and k)
@@ -1377,7 +1403,12 @@ def eval_cmd(a) -> None:
     S["injections"] = {"clean_hosts_only": bool(a.clean_hosts), "hosts": inj["hosts"], "true_scorable": inj["true"], "true_near_ends": inj.get("edge_skipped", 0),
                        "new": {"found": inj["found"], "false": inj["false"], "down_found": inj["down_found"],
                                "own_slips_skipped": inj["own_skipped"], "placement": qe(inj["err_s"]),
-                               "period_err": qe(inj["L_err_s"])},
+                               "period_err": {**qe(inj["L_err_s"]),
+                                              "within_2pct": round(float(np.mean(np.abs(inj.get("L_rel", [])) <= 0.02)), 3)
+                                              if inj.get("L_rel") else None,
+                                              "by_creep": {k: {"n": sum(1 for c_, _ in inj.get("L_creep", []) if c_ == k),
+                                                               "within_2pct": sum(1 for c_, ok in inj.get("L_creep", []) if c_ == k and ok)}
+                                                           for k in ("corrected", "reported")}}},
                        "sawtooth_char": {"found": inj["old_found"], "false": inj["old_false"], "placement": qe(inj["old_err_s"])},
                        "physiosync": {"found": len(inj["physiosync_err_s"]), "placement": qe(inj["physiosync_err_s"])}}
     # per recording, real beats: direction, rate, how the predicted slips came out
@@ -1388,6 +1419,8 @@ def eval_cmd(a) -> None:
     S["recordings"] = {"fitted": len(fits), "errors": sum(1 for r in fits.values() if "error" in r),
                        "sawtooth": sum(1 for r in fits.values() if (r.get("real") or {}).get("sawtooth")),
                        "down": sum(1 for r in fits.values() if (r.get("real") or {}).get("sawtooth") and r["real"]["sign"] < 0),
+                       "creep_reported": sum(1 for r in fits.values() if (r.get("real") or {}).get("sawtooth")
+                                             and ((r["real"].get("fit") or {}).get("creep") == "reported")),
                        "predicted_outcomes": dict(oc)}
     (out / "summary.json").write_text(json.dumps(S, indent=1) + "\n")
     print(json.dumps(S, indent=1))
@@ -1537,6 +1570,9 @@ def main() -> None:
     s.add_argument("--grid-veto", choices=("rule", "clear"), default="clear")
     s.add_argument("--cases", help="JSON with a 'cases' list: fit only these")
     s.add_argument("--saw-rule", choices=("two confirmed", "one and two steps"), default="two confirmed")
+    s.add_argument("--anchor-check", choices=("on", "off"), default="on",
+                   help="anchored sawteeth: creep reported (not corrected) unless three slips are confirmed, and the "
+                        "midpoint of the two closest slips judged and reported; off = v25")
     s.add_argument("--anchored", choices=("on", "off"), default="on",
                    help="tier I: search from confirmed slips at the setup's tooth for a sawtooth the fit missed")
     s.add_argument("--evidence", choices=("on", "off"), default="on",

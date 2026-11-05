@@ -18,7 +18,9 @@ Tiers of a tooth:
   interval weighted by p).
 * **U**: unresolved: the tooth holds a predicted slip with p < 0.5 (a slip may or may not be there), a step the
   other way, or is longer than 1.5 teeth (a missed slip or a pause; at the ends too: the sawtooth stopped).
-* **I**: isolated slips in a recording without a sawtooth (each corrected as a step, no creep). The drift slip_rebuild
+* **I**: steps only: isolated slips in a recording without a sawtooth, or a sawtooth whose tooth rests on two
+  confirmed slips (the tooth and its creep reported, not corrected; slip_rebuild --anchor-check). Each slip is
+  corrected as a step, with no creep. The drift slip_rebuild
   reports for the recording (the delay's slope with a free step at each slip) is given in the reason and summarised,
   not corrected.
 * **N**: no slip at all.
@@ -64,6 +66,7 @@ def events(R: dict) -> list[dict]:
 def teeth(R: dict) -> list[dict]:
     g0, g1 = R["start"], R["end"]
     saw = bool(R.get("sawtooth"))
+    reported = saw and (R.get("fit") or {}).get("creep") == "reported"
     ev = events(R)
     L = (R.get("fit") or {}).get("L")
     sign = R.get("sign", 1)
@@ -75,7 +78,10 @@ def teeth(R: dict) -> list[dict]:
     out = []
     for a_, b_ in zip(edges[:-1], edges[1:]):
         kinds = [e["kind"] for e in (a_, b_) if e["kind"] != "end"]
-        if not saw:
+        if reported:
+            tier, reason = "I", "two confirmed slips: tooth %.1f min (%.1f ppm) reported, creep not corrected" % (
+                L / 60, FRAME / L * 1e6)
+        elif not saw:
             dr = R.get("drift") or {}
             tier, reason = "I", ("isolated slips, no sawtooth" if dr.get("ppm") is None else
                                  "isolated slips, no sawtooth; drift %+.1f ppm (sd %.1f), not corrected" % (dr["ppm"], dr["sd_ppm"]))
@@ -87,7 +93,9 @@ def teeth(R: dict) -> list[dict]:
             tier, reason = "A", "edges confirmed" if len(kinds) == 2 else "edge confirmed (end of stretch)"
         inside_weak = [e for e in weak if a_["t"] < e["t"] < b_["t"]]
         other = [e for e in (a_, b_) if e["kind"] != "end" and e.get("sign", sign) != sign]
-        if saw and inside_weak:
+        if reported:
+            pass
+        elif saw and inside_weak:
             tier, reason = "U", "a slip with p %.2f inside" % max(e["p"] for e in inside_weak)
         elif saw and other:
             tier, reason = "U", "edge a step the other way"
@@ -115,7 +123,7 @@ def correction(t: np.ndarray, R: dict, uncertain: bool = False) -> np.ndarray:
     D = sign * FRAME * N
     L = (R.get("fit") or {}).get("L")
     ev = [e for e in events(R) if e["kind"] != "uncertain" or e["p"] >= 0.5]
-    if R.get("sawtooth") and L and ev:
+    if R.get("sawtooth") and L and ev and (R.get("fit") or {}).get("creep") != "reported":
         # the creep only where the sawtooth runs: from a tooth before the first slip to a tooth after the last
         lo, hi = ev[0]["t"] - L, ev[-1]["t"] + L
         D -= sign * FRAME * (np.clip(t, lo, hi) - lo) / L
