@@ -230,6 +230,16 @@ def scan_case(root, c, minutes, R=None):
                            "sbp_given_hr": wcorr(wy, W["sbp"], W["hr"])}
         res["slope_ms_per_mmhg"][k] = slope(np.array([wy[q] for q in sorted(set(wy) & set(W["sbp"]))]),
                                             np.array([W["sbp"][q] for q in sorted(set(wy) & set(W["sbp"]))]))
+    # how well each finger PAT follows the arterial PAT over 30 s windows: the spread (robust SD, IQR / 1.349) of the
+    # window medians of finger minus arterial PAT. The sawtooth adds to it; physiology between the two sites too, but
+    # equally under every timing of the same beats. Compared on the beats every timing has.
+    both = np.isfinite(pat["own"]) & np.isfinite(pat["art"]) & np.isfinite(pat["saw"]) & np.isfinite(pat["reb"])
+    res["art_diff_win30_ms"] = {}
+    if both.sum() >= 300:
+        for k in ("own", "saw", "reb"):
+            wd = np.array(list(windows(r, np.where(both, pat[k] - pat["art"], np.nan), t0).values()))
+            res["art_diff_win30_ms"][k] = round(float(np.subtract(*np.percentile(wd, [75, 25])) / 1.349 * 1000), 2) \
+                if wd.size >= 20 else None
     if num is not None:
         res["beat_numeric"] = {s: corr(pat["saw"], x) for s, x in num.items()}
         res["beat_numeric_vs_wave_sbp"] = {s: corr(sbp, x) for s, x in num.items()}
@@ -310,6 +320,13 @@ def agg(a) -> None:
     if nb:
         summ["beat_numeric_sbp"] = {s: q([r["beat_numeric"][s] for r in nb]) for s in ("as_stamped", "moved_2_1s")}
         summ["beat_numeric_vs_wave_sbp"] = {s: q([r["beat_numeric_vs_wave_sbp"][s] for r in nb]) for s in ("as_stamped", "moved_2_1s")}
+    ad = [r for r in ok if all((r.get("art_diff_win30_ms") or {}).get(k) is not None for k in ("own", "saw", "reb"))]
+    summ["art_diff_win30_ms"] = {
+        "n": len(ad), **{k: q([r["art_diff_win30_ms"][k] for r in ad]) for k in ("own", "saw", "reb")},
+        "reb_minus_saw": q([r["art_diff_win30_ms"]["reb"] - r["art_diff_win30_ms"]["saw"] for r in ad]),
+        "reb_minus_own": q([r["art_diff_win30_ms"]["reb"] - r["art_diff_win30_ms"]["own"] for r in ad]),
+        "sawtooth_recordings": {k: q([r["art_diff_win30_ms"][k] for r in ad if r.get("reb_sawtooth")]) for k in ("own", "saw", "reb")},
+        "reb_better_share": round(float(np.mean([r["art_diff_win30_ms"]["reb"] < r["art_diff_win30_ms"]["saw"] for r in ad])), 3) if ad else None}
     summ["rebuilt"] = {"with_fit": sum(1 for r in ok if r.get("reb_fit")), "coverage": q([r.get("reb_coverage") for r in ok]),
                        "sawtooth": sum(1 for r in ok if r.get("reb_sawtooth")),
                        "creep_reported": sum(1 for r in ok if r.get("reb_creep") == "reported"),

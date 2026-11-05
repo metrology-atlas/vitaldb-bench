@@ -30,9 +30,9 @@ h.   the rate per setup (median and IQR, setups with 2 or more such cases);
 i.   the measured median PAT per case against the adopted PAT, and the combined offset removed.
 
 With a --method rebuilt run of tools/ppg_fix_check.py (physiosync 0.3.1) the same panels show the rebuilt model:
-the titles give the steps corrected and the slips placed only within an interval (not corrected); in f, orange is a
-sawtooth whose tooth rests on two slips (steps corrected, creep reported) and grey a recording without a sawtooth
-(steps only, if any).
+the titles give the steps corrected and the slips placed only within an interval (corrected as ramps since physiosync
+0.3.2); in f, orange is a sawtooth whose tooth rests on two slips and grey a recording without a sawtooth (neither
+corrected since 0.3.2).
 
 ``timeseries`` reads each case: PAT from each R peak (ECG II, tools/pat.py r_peaks, sub-sample) to the matched PPG
 foot (intersecting tangent, as tools/pat_offset_census.py), 30 s medians; the SNUADC clock corrections are the
@@ -137,7 +137,7 @@ def check(a) -> None:
     S["method"] = "rebuilt" if rebuilt else "detect"
     if rebuilt:
         S["rate_source"] = {k: sum(1 for r in ok if r.get("rate_source") == k) for k in ("teeth", "reported", "none")}
-        S["uncertain_not_corrected"] = sum(r.get("n_uncertain") or 0 for r in ok)
+        S["uncertain_slips"] = sum(r.get("n_uncertain") or 0 for r in ok)
         S["slips_after_old_detector"] = sum(r.get("slips_after") or 0 for r in ok)
         # each corrected step by how it was found: how many leave more than 15 ms (a third of a frame or more)
         from collections import Counter
@@ -187,7 +187,7 @@ def check(a) -> None:
             for x in r.get("uncertain_t", []):
                 axx.axvline(x / 60, color="C1", lw=0.8, ls="--")
             axx.set_title(f"{'abc'[k]}. Case {c}: {e['kept']} steps corrected, {e['uncertain']} placed only within an "
-                          f"interval (orange dashed, not corrected); creep {e['rate_ppm_median']} ppm; tiers {tl}; "
+                          f"interval (orange dashed, corrected as ramps); creep {e['rate_ppm_median']} ppm; tiers {tl}; "
                           "grey = slips", fontsize=10)
         else:
             axx.set_title(f"{'abc'[k]}. Case {c}: {e['kept']} slips kept, {e['rejected']} rejected, {e['inserted']} inserted; "
@@ -224,7 +224,7 @@ def check(a) -> None:
     ax.set_ylim(0, 170)
     ax.set_xlabel("wander of 1-min PAT medians, measured (5-95%, ms)")
     ax.set_ylabel("after correction (ms)")
-    ax.set_title("f. Slow wander (includes physiology): red creep corrected,\norange tooth from two slips (steps only), grey no sawtooth"
+    ax.set_title("f. Slow wander (includes physiology): red creep corrected,\norange tooth from two slips, grey no sawtooth (both not corrected)"
                  if rebuilt else
                  "f. Slow wander (includes physiology): red full teeth,\norange setup prior, grey untouched (no slips / no rate)")
     ax = fig.add_subplot(gs[3, 0])

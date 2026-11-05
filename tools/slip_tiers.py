@@ -14,20 +14,23 @@ Tiers of a tooth:
 
 * **A**: both edges confirmed slips.
 * **B**: both edges confirmed slips or steps, at least one a step.
-* **C**: an edge is an uncertain slip (not corrected by default; with --correct-uncertain, as a ramp across its
-  interval weighted by p).
+* **C**: an edge is an uncertain slip (corrected as a ramp across its interval, weighted by p).
 * **U**: unresolved: the tooth holds a predicted slip with p < 0.5 (a slip may or may not be there), a step the
-  other way, or is longer than 1.5 teeth (a missed slip or a pause; at the ends too: the sawtooth stopped).
-* **I**: steps only: isolated slips in a recording without a sawtooth, or a sawtooth whose tooth rests on two
-  confirmed slips (the tooth and its creep reported, not corrected; slip_rebuild --anchor-check). Each slip is
-  corrected as a step, with no creep. The drift slip_rebuild
-  reports for the recording (the delay's slope with a free step at each slip) is given in the reason and summarised,
-  not corrected.
+  other way, or is longer than 1.5 teeth (a missed slip or a pause; at the ends too: the sawtooth stopped). Not
+  corrected.
+* **I**: isolated slips in a recording without a sawtooth, or a sawtooth whose tooth rests on two confirmed slips
+  (slip_rebuild --anchor-check): reported, not corrected (steps without their creep turn a sawtooth into a ramp:
+  tools/correction_vs_art.py). The drift slip_rebuild reports for the recording is given in the reason and
+  summarised.
 * **N**: no slip at all.
 
-A partial tooth at either end takes the tier of its inner edge. The correction: D(t) = sign x frame x (N(t) - (t -
-t_ref) / L) in a sawtooth recording (the expected slip count N, ramps for uncertain slips; the creep at the fitted
-tooth L, from a tooth before the first slip to a tooth after the last), sign x frame x N(t) for isolated slips; the corrected delay is the measured one minus D.
+A partial tooth at either end takes the tier of its inner edge. Tiers and the correction come from physiosync
+(physiosync.slips.tooth_tiers and delay_at, 0.3.2): in a sawtooth whose creep is corrected, each slip steps the delay a
+frame (an uncertain one by p, as a ramp), each stretch between two slips the sawtooth's way creeps exactly a frame over
+its length, the ends at frame / the fitted tooth for one tooth, and tier U teeth are held at the median; nothing
+elsewhere. The corrected delay is the measured one minus D. (Before v6 of this tool, one creep rate per recording,
+steps corrected in tier I and creep through unresolved teeth: worse than no correction in a third of the recordings
+with an arterial line, tools/correction_vs_art.py.)
 
 Writes teeth.csv, summary.json and tier-<X>.png (--per-tier teeth from different recordings, at random).
 """
@@ -40,6 +43,7 @@ from collections import Counter
 from pathlib import Path
 
 import numpy as np
+from physiosync.slips import delay_at, tooth_tiers
 
 FRAME = 1 / 30
 TIERS = ("A", "B", "C", "U", "I", "N")
@@ -64,70 +68,14 @@ def events(R: dict) -> list[dict]:
 
 
 def teeth(R: dict) -> list[dict]:
-    g0, g1 = R["start"], R["end"]
-    saw = bool(R.get("sawtooth"))
-    reported = saw and (R.get("fit") or {}).get("creep") == "reported"
-    ev = events(R)
-    L = (R.get("fit") or {}).get("L")
-    sign = R.get("sign", 1)
-    if not ev:
-        return [{"t0": g0, "t1": g1, "tier": "N", "edges": "", "reason": "no slip"}]
-    real = [e for e in ev if e["kind"] != "uncertain" or e["p"] >= 0.5]
-    weak = [e for e in ev if e["kind"] == "uncertain" and e["p"] < 0.5]
-    edges = [{"t": g0, "kind": "end"}] + real + [{"t": g1, "kind": "end"}]
-    out = []
-    for a_, b_ in zip(edges[:-1], edges[1:]):
-        kinds = [e["kind"] for e in (a_, b_) if e["kind"] != "end"]
-        if reported:
-            tier, reason = "I", "two confirmed slips: tooth %.1f min (%.1f ppm) reported, creep not corrected" % (
-                L / 60, FRAME / L * 1e6)
-        elif not saw:
-            dr = R.get("drift") or {}
-            tier, reason = "I", ("isolated slips, no sawtooth" if dr.get("ppm") is None else
-                                 "isolated slips, no sawtooth; drift %+.1f ppm (sd %.1f), not corrected" % (dr["ppm"], dr["sd_ppm"]))
-        elif "uncertain" in kinds:
-            tier, reason = "C", "edge uncertain (p %.2f)" % min(e.get("p", 1) for e in (a_, b_) if e["kind"] == "uncertain")
-        elif "step" in kinds:
-            tier, reason = "B", "edge a step the shape cannot judge"
-        else:
-            tier, reason = "A", "edges confirmed" if len(kinds) == 2 else "edge confirmed (end of stretch)"
-        inside_weak = [e for e in weak if a_["t"] < e["t"] < b_["t"]]
-        other = [e for e in (a_, b_) if e["kind"] != "end" and e.get("sign", sign) != sign]
-        if reported:
-            pass
-        elif saw and inside_weak:
-            tier, reason = "U", "a slip with p %.2f inside" % max(e["p"] for e in inside_weak)
-        elif saw and other:
-            tier, reason = "U", "edge a step the other way"
-        elif saw and L and b_["t"] - a_["t"] > 1.5 * L:
-            tier, reason = "U", ("%.1f teeth long" if len(kinds) == 2 else "%.1f teeth without a slip at the end") % (
-                (b_["t"] - a_["t"]) / L)
-        out.append({"t0": a_["t"], "t1": b_["t"], "tier": tier, "reason": reason,
-                    "edges": "-".join(e.get("what", "end") for e in (a_, b_))})
-    return out
+    """The recording's teeth with their tiers (physiosync.slips.tooth_tiers)."""
+    return tooth_tiers(R)
 
 
-def correction(t: np.ndarray, R: dict, uncertain: bool = False) -> np.ndarray:
-    """D(t), the modelled sawtooth delay (s). Slips placed only within an interval (tier C) are left out unless
-    ``uncertain`` (the review of the corrections: 3 right, 1 wrong, 5 can't tell)."""
-    sign = R.get("sign", 1)
-    N = np.zeros(t.size)
-    for e in events(R):
-        if e["kind"] == "uncertain":
-            if e["p"] < 0.5 or not uncertain:
-                continue
-            ramp = np.clip((t - e["q05"]) / max(e["q95"] - e["q05"], 1e-6), 0, 1)
-            N += e["p"] * ramp
-        else:
-            N += (t >= e["t"]) * (e["sign"] * sign)
-    D = sign * FRAME * N
-    L = (R.get("fit") or {}).get("L")
-    ev = [e for e in events(R) if e["kind"] != "uncertain" or e["p"] >= 0.5]
-    if R.get("sawtooth") and L and ev and (R.get("fit") or {}).get("creep") != "reported":
-        # the creep only where the sawtooth runs: from a tooth before the first slip to a tooth after the last
-        lo, hi = ev[0]["t"] - L, ev[-1]["t"] + L
-        D -= sign * FRAME * (np.clip(t, lo, hi) - lo) / L
-    return D
+def correction(t: np.ndarray, R: dict, uncertain: bool = True) -> np.ndarray:
+    """D(t), the delay to remove (s): physiosync.slips.delay_at. ``uncertain`` is kept for old callers and ignored
+    (uncertain slips are always ramps since v6)."""
+    return delay_at(np.asarray(t, dtype=np.float64), R, FRAME)
 
 
 def series(z, block: int = 15) -> tuple[np.ndarray, np.ndarray]:
@@ -149,7 +97,6 @@ def main() -> None:
     ap.add_argument("--out", required=True)
     ap.add_argument("--per-tier", type=int, default=8)
     ap.add_argument("--seed", type=int, default=0)
-    ap.add_argument("--correct-uncertain", action="store_true", help="also correct tier C slips (as ramps)")
     a = ap.parse_args()
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -204,7 +151,7 @@ def main() -> None:
             z = np.load(Path(a.scan) / f"{x['case']:04d}.npz")
             tt, yy = series(z)
             g0 = R["start"]
-            D = correction(tt, R, a.correct_uncertain)
+            D = correction(tt, R)
             cor = yy - D
             L = x["t1"] - x["t0"]
             pad = max(0.25 * L, 300.0)

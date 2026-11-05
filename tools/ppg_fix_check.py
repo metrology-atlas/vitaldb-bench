@@ -17,7 +17,7 @@ detector run on the corrected PAT (should find only false detections), and the
 upstrokes and beat quality of the full-release scan (tools/sawtooth_char.py, tools/slip_rebuild.py quality), the
 setup's tooth as the prior, and reports the same measures: PAT is the scan's steepest upstroke minus its R peak on the
 scan's stretch (the longest, up to 90 minutes); the steps are those the model corrects (confirmed slips and one-frame
-steps the shape cannot judge, never slips placed only within an interval); the creep is corrected only where the model
+steps the shape cannot judge; slips placed only within an interval are ramps since physiosync 0.3.2); the creep is corrected only where the model
 corrects it (rate_source "teeth"; "reported" for a tooth from two slips, "none" without a sawtooth). --root is not
 read.
 """
@@ -90,7 +90,9 @@ def rebuilt_case(c: int, a, ctx: dict) -> dict:
     cor = m.correct(tq) - tr
     again = detect_slips(tr, cor, frame_s=1 / 30)
     before = detect_slips(tr, raw, frame_s=1 / 30)
-    steps_t = [e for e, s in zip(m.tooth_edges, m.tooth_steps) if s]
+    # the corrected slips: whole-frame steps of the model (physiosync 0.3.2 also steps by a fraction of a frame where
+    # an unresolved tooth is held at the median; those are not slips)
+    steps_t = [e for e, s in zip(m.tooth_edges, m.tooth_steps) if abs(abs(s) - 1) < 1e-3]
     s_raw, s_cor = _local_steps(tr, raw, 15), _local_steps(tr, cor, 15)
     bnd = np.r_[tr[0], 0.5 * (tr[1:] + tr[:-1])]
     idx = [int(np.argmin(np.abs(bnd - x))) for x in steps_t]
