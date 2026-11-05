@@ -8,8 +8,9 @@ both run on the same recordings' beats and quality; their slips, outcomes, tooth
         --out $W/slip_rebuild/port_regress.jsonl [--part 0 --of 2 --time-budget 150]
 
 Per recording (real beats, and injected ones where present): equal when the sawtooth flag, direction, the slips (same
-count, times within 1 ms, same kinds and signs), the predicted outcomes in order, the tooth (within 1e-6 s) and the
-reported drift agree. Writes one row per recording; the summary is printed by --summary.
+count, times within 1 ms, same kinds and signs), the predicted outcomes in order, the tooth (within 1e-6 s), the
+reported drift, and (slip_rebuild v26, physiosync 0.3.1) whether the creep is corrected or reported and the midpoint
+judgement agree. Writes one row per recording; the summary is printed by --summary.
 """
 from __future__ import annotations
 
@@ -33,6 +34,9 @@ def compare(a: dict, b: dict) -> list[str]:
     d = []
     if a.get("sawtooth") != b.get("sawtooth"):
         d.append("sawtooth")
+    fa, fb = a.get("fit") or {}, b.get("fit") or {}
+    if fa.get("creep") != fb.get("creep") or (fa.get("half_check") or {}).get("outcome") != (fb.get("half_check") or {}).get("outcome"):
+        d.append("creep")
     if a.get("direction") != b.get("direction"):
         d.append("direction")
     sa, sb = a.get("slips", []), b.get("slips", [])
@@ -88,7 +92,7 @@ def main() -> None:
                 pr = proto.prior_range(rates, str(z["port"]) or "?", modes.get(str(c), "?"), c)
                 po = types.SimpleNamespace(r="template", resp="on", gate="on", prior="setup", rule_params=rule,
                                            grid_veto="clear", evidence="on", anchored="on", saw_rule="two confirmed",
-                                           prior_by_sign=pr)
+                                           anchor_check="on", prior_by_sign=pr)
                 so = SlipOptions(rule_params=rule, prior_by_sign=pr)
                 for key, pre in (("real", ""), ("inj", "inj_")):
                     if pre and ("inj_truth" not in z.files or "inj_r_ref" not in Qz.files):
