@@ -13,6 +13,10 @@ of teeth is "on the setup's period". A recording with three or more slips the sa
 setup's period is a sawtooth the fit missed; one whose slips are spread off the period, or that has one or two, is
 isolated slips. By setup: recordings, the share of the setup's recordings in tier I, and these measures. Writes
 recordings.csv and summary.json.
+
+From slip_rebuild v26 tier I holds two groups, reported apart (column ``group``): "no sawtooth" (as above) and
+"two-slip tooth" (a sawtooth found from two confirmed slips, its creep reported, not corrected). The by-setup table,
+the gaps and the kinds are for "no sawtooth"; the creep test (--creep) gives both groups.
 """
 from __future__ import annotations
 
@@ -43,7 +47,7 @@ def creep_of(z, slips: list[dict], sign: int) -> float | None:
 
 
 def creep_test(a, by: dict) -> dict:
-    groups = defaultdict(lambda: {"tier_i": [], "sawtooth": [], "no_slip": []})
+    groups = defaultdict(lambda: {"tier_i": [], "two_slip": [], "sawtooth": [], "no_slip": []})
     tiers = defaultdict(set)
     for row in csv.DictReader(open(a.teeth)):
         tiers[int(row["case"])].add(row["tier"])
@@ -54,11 +58,13 @@ def creep_test(a, by: dict) -> dict:
             continue
         key = (r.get("port") or "?", r.get("mode") or "?")
         tset = tiers.get(r["case"], set())
-        kind = "tier_i" if tset == {"I"} else "no_slip" if tset == {"N"} else "sawtooth" if R.get("sawtooth") else None
+        two = bool(R.get("sawtooth")) and (R.get("fit") or {}).get("creep") == "reported"
+        kind = ("two_slip" if two else "tier_i" if tset == {"I"} else "no_slip" if tset == {"N"} else
+                "sawtooth" if R.get("sawtooth") else None)
         if kind is None:
             continue
         sign = R.get("sign", 1) if kind != "no_slip" else 1
-        if kind == "tier_i":
+        if kind in ("tier_i", "two_slip"):
             ss = [s.get("sign", 1) for s in R["slips"]]
             sign = 1 if ss.count(1) >= ss.count(-1) else -1
         z = np.load(Path(a.creep) / f"{r['case']:04d}.npz")
@@ -66,7 +72,7 @@ def creep_test(a, by: dict) -> dict:
         if c is not None:
             groups[key][kind].append((c, sign))
     out = {}
-    allg = {"tier_i": [], "sawtooth": [], "no_slip": []}
+    allg = {"tier_i": [], "two_slip": [], "sawtooth": [], "no_slip": []}
     for key, g in sorted(groups.items(), key=lambda kv: -len(kv[1]["tier_i"])):
         for k in allg:
             allg[k] += [c for c, s in g[k] if s > 0]
@@ -76,7 +82,7 @@ def creep_test(a, by: dict) -> dict:
             v = [c for c, s in v if s > 0]          # up direction only, comparable signs
             return {"n": len(v), "median_ppm": round(float(np.median(v)), 1) if v else None,
                     "iqr_ppm": [round(float(x), 1) for x in np.percentile(v, [25, 75])] if len(v) >= 4 else None}
-        out[f"{key[0]} {key[1]}"] = {k: med(g[k]) for k in ("tier_i", "sawtooth", "no_slip")}
+        out[f"{key[0]} {key[1]}"] = {k: med(g[k]) for k in ("tier_i", "two_slip", "sawtooth", "no_slip")}
     out["all (up)"] = {k: {"n": len(v), "median_ppm": round(float(np.median(v)), 1) if v else None,
                            "iqr_ppm": [round(float(x), 1) for x in np.percentile(v, [25, 75])] if len(v) >= 4 else None}
                        for k, v in allg.items()}
@@ -97,7 +103,7 @@ def main() -> None:
         if row["direction"] == "up" and row["L_s"]:
             L_setup[(row["port"], row["mode"])].append(float(row["L_s"]))
     L_med = {k: float(np.median(v)) for k, v in L_setup.items() if len(v) >= 10}
-    rows, all_by_setup = [], Counter()
+    rows, all_by_setup, two_rows = [], Counter(), []
     GAPS = {"gaps": 0, "on_whole_teeth": 0, "on_half_teeth_control": 0, "gap_in_teeth": []}
     for line in open(a.fit):
         r = json.loads(line)
@@ -107,6 +113,19 @@ def main() -> None:
         setup = (r.get("port") or "?", r.get("mode") or "?")
         all_by_setup[setup] += 1
         if set(teeth.get(r["case"], [])) != {"I"}:
+            continue
+        if R.get("sawtooth"):
+            # a sawtooth from two confirmed slips, creep reported (slip_rebuild v26)
+            sl2 = sorted(R["slips"], key=lambda s: s["t"])
+            ev2 = {round(src["t"], 1): src["evidence"].get("arterial")
+                   for src in R.get("predicted", []) + R.get("off_grid", []) if src.get("evidence") is not None}
+            art2 = [ev2.get(round(s_["t"], 1)) for s_ in sl2]
+            f2 = R.get("fit") or {}
+            two_rows.append({"case": r["case"], "port": setup[0], "mode": setup[1], "slips": len(sl2),
+                             "tooth_min": round(f2["L"] / 60, 1) if f2.get("L") else None, "rate_ppm": f2.get("rate_ppm"),
+                             "setup_tooth_min": round(L_med[setup] / 60, 1) if setup in L_med else None,
+                             "source": f2.get("source"), "art_slip": art2.count("slip"), "art_neither": art2.count("neither"),
+                             "midpoint": (f2.get("half_check") or {}).get("outcome")})
             continue
         hours = (R["end"] - R["start"]) / 3600
         sl = sorted(R["slips"], key=lambda s: s["t"])
@@ -158,6 +177,20 @@ def main() -> None:
          "direction": {"all up": sum(1 for x in rows if x["down"] == 0), "all down": sum(1 for x in rows if x["up"] == 0),
                        "mixed": sum(1 for x in rows if x["up"] and x["down"])},
          "by_setup": {}}
+    if two_rows:
+        L2 = np.array([x["tooth_min"] for x in two_rows if x["tooth_min"]])
+        rel = np.array([x["tooth_min"] / x["setup_tooth_min"] for x in two_rows if x["tooth_min"] and x["setup_tooth_min"]])
+        S["two_slip_tooth"] = {
+            "recordings": len(two_rows), "slips": sum(x["slips"] for x in two_rows),
+            "source": dict(Counter(x["source"] for x in two_rows)),
+            "tooth_min_quartiles": [round(float(v), 1) for v in np.percentile(L2, [25, 50, 75])] if L2.size else None,
+            "tooth_over_setup_tooth_quartiles": [round(float(v), 2) for v in np.percentile(rel, [25, 50, 75])] if rel.size else None,
+            "arterial_at_slips": {"slip": sum(x["art_slip"] for x in two_rows), "neither": sum(x["art_neither"] for x in two_rows)},
+            "midpoint": dict(Counter(x["midpoint"] for x in two_rows))}
+        with open(out / "two_slip.csv", "w", newline="") as fh:
+            w = csv.DictWriter(fh, fieldnames=list(two_rows[0]))
+            w.writeheader()
+            w.writerows(two_rows)
     for k, v in sorted(by.items(), key=lambda kv: -len(kv[1])):
         if len(v) < 10:
             continue
@@ -177,6 +210,7 @@ def main() -> None:
     (out / "summary.json").write_text(json.dumps(S, indent=1) + "\n")
     print(json.dumps({k: S[k] for k in ("tier_i_recordings", "kind", "slips", "slips_per_recording", "arterial_at_slips", "direction",
                                          "gaps_against_setup_tooth")}, indent=1))
+    print("two-slip tooth", json.dumps(S.get("two_slip_tooth")))
     for k, v in S["by_setup"].items():
         print(k, v)
     for k, v in (S.get("creep") or {}).items():

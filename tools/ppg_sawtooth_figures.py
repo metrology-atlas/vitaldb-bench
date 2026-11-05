@@ -29,6 +29,11 @@ g.   each case's sawtooth rate (median of its teeth's rates, cases with 3 or mor
 h.   the rate per setup (median and IQR, setups with 2 or more such cases);
 i.   the measured median PAT per case against the adopted PAT, and the combined offset removed.
 
+With a --method rebuilt run of tools/ppg_fix_check.py (physiosync 0.3.1) the same panels show the rebuilt model:
+the titles give the steps corrected and the slips placed only within an interval (not corrected); in f, orange is a
+sawtooth whose tooth rests on two slips (steps corrected, creep reported) and grey a recording without a sawtooth
+(steps only, if any).
+
 ``timeseries`` reads each case: PAT from each R peak (ECG II, tools/pat.py r_peaks, sub-sample) to the matched PPG
 foot (intersecting tangent, as tools/pat_offset_census.py), 30 s medians; the SNUADC clock corrections are the
 record-stamp steps of the ECG track (30 ms to 2 s against the sample count, as tools/shared_bursts_slopes.py;
@@ -80,9 +85,12 @@ def check(a) -> None:
     full = [r for r in ok if r["tooth_slope_raw_ppm"] and r.get("rate_source") == "teeth"]   # rates from its own full teeth
     sl_raw = np.array([np.median(r["tooth_slope_raw_ppm"]) for r in full])
     sl_cor = np.array([np.median(r["tooth_slope_corr_ppm"]) for r in full])
+    rebuilt = ok[0].get("method") == "rebuilt"
     grp = []
     for r in ok:
-        if not r["n_slips"] or r["p2p_raw_ms"] == r["p2p_corr_ms"]:
+        if rebuilt:
+            grp.append({"teeth": "teeth", "reported": "prior"}.get(r.get("rate_source"), "none"))
+        elif not r["n_slips"] or r["p2p_raw_ms"] == r["p2p_corr_ms"]:
             grp.append("none")
         elif r.get("rate_source") == "teeth":
             grp.append("teeth")
@@ -123,8 +131,30 @@ def check(a) -> None:
         r = next(x for x in ok if x["case"] == c)
         rt = rate_of(r)
         ex[str(c)] = {"kept": r["n_kept"], "rejected": r["n_rejected"], "inserted": r["n_inserted"],
-                      "rate_ppm_median": round(rt, 1) if rt else None, "tiers": r.get("tiers")}
+                      "uncertain": r.get("n_uncertain"), "rate_ppm_median": round(rt, 1) if rt else None,
+                      "tiers": r.get("tiers")}
     S["examples"] = ex
+    S["method"] = "rebuilt" if rebuilt else "detect"
+    if rebuilt:
+        S["rate_source"] = {k: sum(1 for r in ok if r.get("rate_source") == k) for k in ("teeth", "reported", "none")}
+        S["uncertain_not_corrected"] = sum(r.get("n_uncertain") or 0 for r in ok)
+        S["slips_after_old_detector"] = sum(r.get("slips_after") or 0 for r in ok)
+        # each corrected step by how it was found: how many leave more than 15 ms (a third of a frame or more)
+        from collections import Counter
+        allk, bad, badc = Counter(), Counter(), []
+        for r in ok:
+            for k_, sr, sc in zip(r.get("step_kinds", []), r["step_at_slips_raw_ms"], r["step_at_slips_corr_ms"]):
+                allk[k_] += 1
+                if abs(sc) > 15:
+                    bad[k_] += 1
+                    badc.append((r["case"], k_, sr, sc))
+        S["corrected_steps_by_kind"] = {k_: {"steps": v, "left_over_15ms": bad[k_]} for k_, v in allk.most_common()}
+        S["left_over_15ms_cases"] = Counter(c_ for c_, *_ in badc).most_common(10)
+        mid = np.array([x for r in ok for x in r.get("step_mid_corr_ms", [])])
+        S["control_mid_tooth"] = {"places": int(mid.size), "over_15ms": int(np.sum(np.abs(mid) > 15)),
+                                  "abs_ms_median": round(float(np.median(np.abs(mid))), 1) if mid.size else None}
+        sc_all = np.array([x for r in ok for x in r["step_at_slips_corr_ms"]])
+        S["corrected_abs_ms_median"] = round(float(np.median(np.abs(sc_all))), 1)
     (out / "summary.json").write_text(json.dumps(S, indent=1) + "\n")
     print(json.dumps(S, indent=1))
 
@@ -144,8 +174,15 @@ def check(a) -> None:
             axx.axvline(x / 60, color="0.75", lw=0.8)
         e = ex[str(c)]
         tl = "".join(sorted(set(e["tiers"] or [])))
-        axx.set_title(f"{'abc'[k]}. Case {c}: {e['kept']} slips kept, {e['rejected']} rejected, {e['inserted']} inserted; "
-                      f"tooth rates {e['rate_ppm_median']} ppm (median); tiers {tl}; grey = detected slips", fontsize=10)
+        if rebuilt:
+            for x in r.get("uncertain_t", []):
+                axx.axvline(x / 60, color="C1", lw=0.8, ls="--")
+            axx.set_title(f"{'abc'[k]}. Case {c}: {e['kept']} steps corrected, {e['uncertain']} placed only within an "
+                          f"interval (orange dashed, not corrected); creep {e['rate_ppm_median']} ppm; tiers {tl}; "
+                          "grey = slips", fontsize=10)
+        else:
+            axx.set_title(f"{'abc'[k]}. Case {c}: {e['kept']} slips kept, {e['rejected']} rejected, {e['inserted']} inserted; "
+                          f"tooth rates {e['rate_ppm_median']} ppm (median); tiers {tl}; grey = detected slips", fontsize=10)
         axx.set_ylabel("PAT (ms)")
         if k == 0:
             axx.legend(fontsize=8, loc="lower left")
@@ -178,7 +215,9 @@ def check(a) -> None:
     ax.set_ylim(0, 170)
     ax.set_xlabel("wander of 1-min PAT medians, measured (5-95%, ms)")
     ax.set_ylabel("after correction (ms)")
-    ax.set_title("f. Slow wander (includes physiology): red full teeth,\norange setup prior, grey untouched (no slips / no rate)")
+    ax.set_title("f. Slow wander (includes physiology): red creep corrected,\norange tooth from two slips (steps only), grey no sawtooth"
+                 if rebuilt else
+                 "f. Slow wander (includes physiology): red full teeth,\norange setup prior, grey untouched (no slips / no rate)")
     ax = fig.add_subplot(gs[3, 0])
     names = list(by_setup)[:10]
     for j, s_ in enumerate(names):
