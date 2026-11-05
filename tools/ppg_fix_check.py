@@ -67,7 +67,7 @@ def tooth_slopes(tr, y, edges):
 
 
 def rebuilt_case(c: int, a, ctx: dict) -> dict:
-    from physiosync import SlipOptions
+    from physiosync import SlipOptions, find_slips
     from physiosync.ecg_ppg import _local_steps
     zp, qp = Path(a.scan) / f"{c:04d}.npz", Path(a.quality) / f"{c:04d}.npz"
     if not zp.exists() or not qp.exists():
@@ -77,8 +77,13 @@ def rebuilt_case(c: int, a, ctx: dict) -> dict:
     F = {j: z[j] for j in ("foot", "up", "peak", "down50")}
     port = str(z["port"]) or "?"
     pr = ctx["proto"].prior_range(ctx["rates"], port, ctx["modes"].get(str(c), "?"), c)
+    so = SlipOptions(rule_params=ctx["rule"], prior_by_sign=pr)
     m = fit_ecg_ppg_delay(z["r_t"], z["up"], adopted_pat_s=a.adopted_pat, matched=True, method="rebuilt", fiducials=F,
-                          beat_quality=Q, ref_t=z["art_t"], slip_options=SlipOptions(rule_params=ctx["rule"], prior_by_sign=pr))
+                          beat_quality=Q, ref_t=z["art_t"], slip_options=so)
+    # the same result again, for the arterial verdict at each step (the model keeps the slips, not their evidence)
+    R = find_slips(z["r_t"], F, Q, art_t=z["art_t"], opts=so)
+    ev = {round(x["t"], 1): (x.get("evidence") or {}).get("arterial", "no check")
+          for x in R.get("predicted", []) + R.get("off_grid", []) if x.get("t") is not None}
     ok = np.isfinite(z["up"])
     tr, tq = z["r_t"][ok], z["up"][ok]
     raw = tq - tr
@@ -94,12 +99,14 @@ def rebuilt_case(c: int, a, ctx: dict) -> dict:
     st_raw = [round(sg * float(s_raw[k]) * 1000, 2) for k in idx if np.isfinite(s_raw[k])]
     st_cor = [round(sg * float(s_cor[k]) * 1000, 2) for k in idx if np.isfinite(s_cor[k])]
     # how each corrected step was found (the slip's kind and the arterial verdict), in the same order
-    kinds = []
+    kinds, arts = [], []
     for x, k in zip(steps_t, idx):
         if not np.isfinite(s_raw[k]):
             continue
         sl = min(m.slips, key=lambda q: abs(q["t"] - x)) if m.slips else {}
         kinds.append(sl.get("kind", "?") if abs(sl.get("t", 1e18) - x) < 1 else "?")
+        a_ = ev.get(round(x, 1), "not found")
+        arts.append("no line" if a_ is None else a_)
     # control: the same 15-beat step half way between consecutive corrected steps (no slip there), corrected series
     mids = [0.5 * (x + y) for x, y in zip(steps_t[:-1], steps_t[1:])]
     st_mid = [round(sg * float(s_cor[int(np.argmin(np.abs(bnd - x)))]) * 1000, 2) for x in mids]
@@ -113,7 +120,7 @@ def rebuilt_case(c: int, a, ctx: dict) -> dict:
         "method": "rebuilt", "port": port, "prior_ppm": None,
         "tooth_slope_raw_ppm": [sg * x for x in tooth_slopes(tr, raw, slip_edges)] if corrected else [],
         "tooth_slope_corr_ppm": [sg * x for x in tooth_slopes(tr, cor, slip_edges)] if corrected else [],
-        "step_at_slips_raw_ms": st_raw, "step_at_slips_corr_ms": st_cor, "step_kinds": kinds, "step_mid_corr_ms": st_mid,
+        "step_at_slips_raw_ms": st_raw, "step_at_slips_corr_ms": st_cor, "step_kinds": kinds, "step_arterial": arts, "step_mid_corr_ms": st_mid,
         "rate_source": "teeth" if corrected else ("reported" if m.qc.get("sawtooth_fitted") else "none"),
         "direction": m.direction, "tooth_s": m.qc.get("tooth_s"), "drift": m.drift,
         "n_kept": len(steps_t), "n_rejected": 0, "n_inserted": 0, "n_uncertain": len(m.uncertain),

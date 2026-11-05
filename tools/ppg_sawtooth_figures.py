@@ -150,6 +150,15 @@ def check(a) -> None:
                     badc.append((r["case"], k_, sr, sc))
         S["corrected_steps_by_kind"] = {k_: {"steps": v, "left_over_15ms": bad[k_]} for k_, v in allk.most_common()}
         S["left_over_15ms_cases"] = Counter(c_ for c_, *_ in badc).most_common(10)
+        # and by the arterial verdict at the step (slip, neither, circulation, no line)
+        ka, kb = Counter(), Counter()
+        for r in ok:
+            for k_, a_, sc in zip(r.get("step_kinds", []), r.get("step_arterial", []), r["step_at_slips_corr_ms"]):
+                ka[(k_, a_)] += 1
+                kb[(k_, a_)] += int(abs(sc) > 15)
+        if ka:
+            S["corrected_steps_by_kind_and_arterial"] = {f"{k_} / {a_}": {"steps": v, "left_over_15ms": kb[(k_, a_)]}
+                                                         for (k_, a_), v in sorted(ka.items())}
         mid = np.array([x for r in ok for x in r.get("step_mid_corr_ms", [])])
         S["control_mid_tooth"] = {"places": int(mid.size), "over_15ms": int(np.sum(np.abs(mid) > 15)),
                                   "abs_ms_median": round(float(np.median(np.abs(mid))), 1) if mid.size else None}

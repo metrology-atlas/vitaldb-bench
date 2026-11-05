@@ -14,6 +14,11 @@ PAT, ECG R peak to the steepest PLETH upstroke, under five timings:
             delay (the mode of all upstrokes 0.1-1.3 s after an R peak);
   saw       own, with the PLETH sawtooth removed (physiosync.fit_ecg_ppg_delay, step 1 of the PAT example);
   cor       saw, less the global device delay (step 2); a constant, so every correlation must equal saw's;
+  reb       own, with the rebuilt sawtooth correction removed (metrology-atlas study ppg-sawtooth-correction): the
+            whole-release fit of tools/slip_rebuild.py v26 (= physiosync 0.3.1, method "rebuilt"), its delay model
+            (tools/slip_tiers.py correction: corrected steps, creep where it is corrected) evaluated at each upstroke;
+            only where the fit's stretch covers the beat. The fit is read from $PAT_BP_FIT, else
+            $W/slip_rebuild/full3/fit.jsonl;
   art       ECG R peak to the arterial upstroke: no PLETH delay and no sawtooth, the reference.
 Blood pressure per beat from the arterial waveform: systolic (peak after the arterial upstroke) and mean (foot to
 foot); heart rate from the RR interval. The monitor's ART_SBP numeric at each beat, as stamped and moved 2.1 s
@@ -28,6 +33,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 import time
 import warnings
@@ -39,9 +45,12 @@ from scipy import signal
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import pulse_arrival_time as P  # noqa: E402
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
+from slip_tiers import correction  # noqa: E402
+
 warnings.filterwarnings("ignore")
 FS, WIN = P.FS, 30.0
-CONDS = ("naive", "own", "saw", "cor", "art")
+CONDS = ("naive", "own", "saw", "cor", "reb", "art")
 NUM = "Solar8000/ART_SBP"
 
 
@@ -133,7 +142,24 @@ def slope(x, y):
     return float(np.polyfit(y[m], x[m], 1)[0] * 1000) if m.sum() >= 20 and np.std(y[m]) > 0 else None   # ms per mmHg
 
 
-def scan_case(root, c, minutes):
+def load_fits(cases: list[int]) -> dict:
+    """The rebuilt fit's real-beat result for each case, from $PAT_BP_FIT or $W/slip_rebuild/full3/fit.jsonl."""
+    path = os.environ.get("PAT_BP_FIT") or (os.path.join(os.environ["W"], "slip_rebuild", "full3", "fit.jsonl")
+                                             if os.environ.get("W") else "")
+    if not path or not Path(path).exists():
+        return {}
+    want, out = set(cases), {}
+    with open(path) as fh:
+        for line in fh:
+            c = int(line[9:line.index(",")]) if line.startswith('{"case": ') else None
+            if c in want:
+                r = json.loads(line)
+                if r.get("real"):
+                    out[c] = r["real"]
+    return out
+
+
+def scan_case(root, c, minutes, R=None):
     from vitaldb_reader.vital_file import read_vital
     v = read_vital(Path(root) / "vital_files" / f"{c:04d}.vital", track_names={P.ECG, P.PPG, P.ART, NUM})
     tr = {k: v.tracks.get(k) for k in (P.ECG, P.PPG, P.ART)}
@@ -165,9 +191,17 @@ def scan_case(root, c, minutes):
     m = P.fit_ecg_ppg_delay(r[ok], own[ok], adopted_pat_s=P.ADOPTED, frame_s=1 / 30, matched=True, ref_t=a_t[ok])
     saw = np.full(r.size, np.nan)
     saw[ok] = m.shift(own[ok]) - m.offset_s
-    pat = {"naive": naive - r, "own": own - r, "saw": own - saw - r, "cor": own - saw - r - P.GLOBAL_DELAY, "art": a_t - r}
+    reb = np.full(r.size, np.nan)
+    cover = np.zeros(r.size, bool)
+    if R is not None:
+        cover = ok & (own >= R["start"]) & (own <= R["end"])
+        if cover.any():
+            Dr = correction(own[cover], R)
+            reb[cover] = Dr - np.median(Dr)
+    pat = {"naive": naive - r, "own": own - r, "saw": own - saw - r, "cor": own - saw - r - P.GLOBAL_DELAY,
+           "reb": own - reb - r, "art": a_t - r}
     good = (sbp > 40) & (sbp < 250) & (hr > 30) & (hr < 180)
-    for k in ("naive", "own", "saw", "art"):
+    for k in ("naive", "own", "saw", "reb", "art"):
         pat[k] = np.where(good & (pat[k] > 0.05) & (pat[k] < 1.5), pat[k], np.nan)
     pat["cor"] = pat["saw"] - P.GLOBAL_DELAY            # the same beats as saw, one constant less
     num = None
@@ -180,7 +214,11 @@ def scan_case(root, c, minutes):
     res = {"case": c, "minutes": round((t1 - t0) / 60, 1), "beats": int(r.size), "typical_delay_s": round(D, 3),
            "naive_one_beat_out": round(float(np.nanmean(np.abs(pat["naive"] - pat["own"]) > 0.15)), 4),
            "hr_median": round(float(np.nanmedian(hr)), 1), "slips": len(m.slips_t),
-           "sbp_sd": round(float(np.nanstd(sbp[good])), 2), "medians": {}, "beat": {}, "win30": {}, "slope_ms_per_mmhg": {}}
+           "sbp_sd": round(float(np.nanstd(sbp[good])), 2), "medians": {}, "beat": {}, "win30": {}, "slope_ms_per_mmhg": {},
+           "reb_fit": R is not None, "reb_coverage": round(float(cover[ok & good].mean()), 3) if (ok & good).any() else 0.0,
+           "reb_sawtooth": bool(R.get("sawtooth")) if R else None,
+           "reb_creep": (R.get("fit") or {}).get("creep", "corrected") if R and R.get("sawtooth") else None,
+           "reb_slips_in_window": sum(1 for x in (R or {}).get("slips", []) if t0 <= x["t"] <= t1)}
     W = {"sbp": windows(r, np.where(good, sbp, np.nan), t0), "mbp": windows(r, np.where(good, mbp, np.nan), t0),
          "hr": windows(r, np.where(good, hr, np.nan), t0)}
     dens = None
@@ -204,15 +242,17 @@ def scan(a) -> None:
     out = Path(a.out)
     done = {json.loads(l)["case"] for l in out.read_text().splitlines() if l.strip()} if out.exists() else set()
     t0 = time.time()
+    cases = [int(x) for x in a.cases.split(",") if x]
+    fits = load_fits(cases)
     with open(out, "a") as fh:
-        for c in [int(x) for x in a.cases.split(",") if x]:
+        for c in cases:
             if c in done:
                 continue
             if a.time_budget and time.time() - t0 > a.time_budget:
                 break
             t1 = time.time()
             try:
-                r = scan_case(a.root, c, a.minutes)
+                r = scan_case(a.root, c, a.minutes, fits.get(c))
             except Exception as err:  # noqa: BLE001
                 r = {"case": c, "error": f"{type(err).__name__}: {err}"[:300]}
             r["secs"] = round(time.time() - t1, 1)
@@ -242,7 +282,7 @@ def agg(a) -> None:
     summ["slope_ms_per_mmhg"] = {k: q([r["slope_ms_per_mmhg"][k] for r in ok]) for k in CONDS}
     # change per recording, saw against own and against naive
     for scale in ("beat", "win30"):
-        for a_, b_ in (("own", "naive"), ("saw", "own")):
+        for a_, b_ in (("own", "naive"), ("saw", "own"), ("reb", "own"), ("reb", "saw")):
             summ[f"{scale}_change_{a_}_minus_{b_}_sbp"] = q([(r[scale][a_]["sbp"] - r[scale][b_]["sbp"]) for r in ok
                                                            if r[scale][a_]["sbp"] is not None and r[scale][b_]["sbp"] is not None])
             summ[f"{scale}_change_{a_}_minus_{b_}_hr"] = q([(r[scale][a_]["hr"] - r[scale][b_]["hr"]) for r in ok
@@ -270,6 +310,22 @@ def agg(a) -> None:
     if nb:
         summ["beat_numeric_sbp"] = {s: q([r["beat_numeric"][s] for r in nb]) for s in ("as_stamped", "moved_2_1s")}
         summ["beat_numeric_vs_wave_sbp"] = {s: q([r["beat_numeric_vs_wave_sbp"][s] for r in nb]) for s in ("as_stamped", "moved_2_1s")}
+    summ["rebuilt"] = {"with_fit": sum(1 for r in ok if r.get("reb_fit")), "coverage": q([r.get("reb_coverage") for r in ok]),
+                       "sawtooth": sum(1 for r in ok if r.get("reb_sawtooth")),
+                       "creep_reported": sum(1 for r in ok if r.get("reb_creep") == "reported"),
+                       "slips_in_window": q([r.get("reb_slips_in_window") for r in ok])}
+    # like for like: the recordings whose window the rebuilt fit covers almost entirely (90% of beats or more)
+    full = [r for r in ok if (r.get("reb_coverage") or 0) >= 0.9]
+    summ["rebuilt"]["covered_90"] = {
+        "n": len(full),
+        "within_scale": {sc: {k: {m: q([r[sc][k][m] for r in full]) for m in ("sbp", "hr", "sbp_given_hr")}
+                              for k in ("own", "saw", "reb", "art")} for sc in ("beat", "win30")},
+        "ruffolo": {k: {"mean_r": round(float(np.mean(x)), 3), "share_negative": round(float(np.mean(np.array(x) < 0)), 3)}
+                    for k in ("own", "saw", "reb", "art")
+                    if (x := [r["beat"][k]["sbp"] for r in full if r["beat"][k]["sbp"] is not None])},
+        "sawtooth_recordings": {"n": sum(1 for r in full if r.get("reb_sawtooth")),
+                                "win30_sbp": {k: q([r["win30"][k]["sbp"] for r in full if r.get("reb_sawtooth")])
+                                              for k in ("own", "saw", "reb", "art")}}}
     summ["secs_per_recording_median"] = float(np.median([r.get("secs", 0) for r in rows]))
     (out / "summary.json").write_text(json.dumps(summ, indent=1))
     print(json.dumps(summ, indent=1))
@@ -280,15 +336,16 @@ def figure(ok, summ, out: Path) -> None:
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    lab = {"naive": "naive pairing", "own": "own beat", "saw": "+ sawtooth removed", "cor": "+ global delay", "art": "arterial PAT (reference)"}
-    col = {"naive": "#9e9e9e", "own": "#7986cb", "saw": "#3f51b5", "cor": "#e65100", "art": "#2e7d32"}
+    lab = {"naive": "naive pairing", "own": "own beat", "saw": "+ sawtooth removed (detect)", "cor": "+ global delay",
+           "reb": "own beat + rebuilt correction", "art": "arterial PAT (reference)"}
+    col = {"naive": "#9e9e9e", "own": "#7986cb", "saw": "#3f51b5", "cor": "#e65100", "reb": "#ad1457", "art": "#2e7d32"}
     fig, ax = plt.subplots(1, 2, figsize=(11, 3.8))
     for i, (scale, title) in enumerate((("beat", "A. Beat to beat, within patients"), ("win30", "B. 30 s windows, within patients"))):
         for j, mname in enumerate(("sbp", "hr", "sbp_given_hr")):
             for k_i, k in enumerate(CONDS):
                 s = summ["within_scale"][scale][k][mname]
                 if s:
-                    x = j + (k_i - 2) * 0.15
+                    x = j + (k_i - (len(CONDS) - 1) / 2) * 0.13
                     ax[i].plot([x, x], s["iqr"], color=col[k], lw=1.2)
                     ax[i].plot(x, s["median"], "o", color=col[k], ms=4, label=lab[k] if j == 0 else None)
         ax[i].axhline(0, color="0.6", lw=0.8)
@@ -298,7 +355,7 @@ def figure(ok, summ, out: Path) -> None:
     ax[1].legend(fontsize=7, frameon=False, loc="upper left", bbox_to_anchor=(1.0, 1.0))
     for a_ in ax:
         a_.spines[["top", "right"]].set_visible(False)
-    fig.suptitle(f"PAT against blood pressure within patients, five timings: {summ['used']:,} recordings", fontsize=9, x=0.01, ha="left")
+    fig.suptitle(f"PAT against blood pressure within patients, {len(CONDS)} timings: {summ['used']:,} recordings", fontsize=9, x=0.01, ha="left")
     fig.tight_layout()
     fig.savefig(out / "pat_vs_bp.png", dpi=140)
     plt.close(fig)
