@@ -7,6 +7,13 @@
 With --saw-labels, also one row per tooth: sawtooth phase, slope, duration, the fiducials' resolution
 (ECG one sample; PPG per recording: frame rounding if it locks to the 30 Hz grid, else jitter) and the confidence (physiosync.sawtooth_labels).
 
+With --rebuilt-fit FIT.jsonl (a whole-release fit of tools/slip_rebuild.py), the correction is physiosync's rebuilt one
+(fit_ecg_ppg_delay(method="rebuilt", slip_result=...), physiosync 0.3.3), applied to these beats: one label per tooth,
+A, B and C corrected, U and I not (metrology-atlas study ppg-sawtooth-correction). A case without a fit there is
+skipped and listed; chain labels are not made (they belong to the detect method).
+
+    bash scripts/run_ppg_labels.sh        (the v2 label release: foot_export, then this with --rebuilt-fit)
+
 Writes OUT/<case>.json (one record per case: segments, sync-error models, slips, offset, fiducials) and
 appends the quality intervals to L.csv (case, label, start_s, end_s, tier, applied, reason). Stays on this
 machine; only aggregates are reported.
@@ -57,9 +64,17 @@ def main() -> None:
     ap.add_argument("--offset-labels", default=None, help="CSV of the offset applied to each recording")
     ap.add_argument("--adopted", type=float, default=0.27)
     ap.add_argument("--min-tier", default="B")
+    ap.add_argument("--rebuilt-fit", default=None, help="slip_rebuild fit.jsonl: use the rebuilt correction")
     ap.add_argument("--part", type=int, default=0)
     ap.add_argument("--of", type=int, default=1)
     a = ap.parse_args()
+    fits: dict[int, dict] = {}
+    if a.rebuilt_fit:
+        with open(a.rebuilt_fit) as fh_:
+            for line in fh_:
+                r_ = json.loads(line)
+                if r_.get("real"):
+                    fits[int(r_["case"])] = r_["real"]
     pri = {int(k): v for k, v in json.loads(Path(a.priors).read_text()).items()}
     setup_of: dict[int, str] = {}
     if a.setups:
@@ -95,9 +110,16 @@ def main() -> None:
                     rec_off = so["by_recording"].get(str(c)) or so["all"]
                 if a_t is not None and np.isfinite(a_t).mean() < 0.3:
                     a_t = None
-                m = fit_ecg_ppg_delay(r_t, p_t, adopted_pat_s=a.adopted, frame_s=F, matched=True,
-                                      rate_prior_ppm=pri.get(c), apply_min_tier=a.min_tier, ref_t=a_t,
-                                      offset_s=None if rec_off is None else rec_off["offset_s"])
+                if a.rebuilt_fit:
+                    if c not in fits:
+                        print(json.dumps({"case": c, "skip": "no rebuilt fit"}))
+                        continue
+                    m = fit_ecg_ppg_delay(r_t, p_t, adopted_pat_s=a.adopted, method="rebuilt", slip_result=fits[c],
+                                          offset_s=None if rec_off is None else rec_off["offset_s"])
+                else:
+                    m = fit_ecg_ppg_delay(r_t, p_t, adopted_pat_s=a.adopted, frame_s=F, matched=True,
+                                          rate_prior_ppm=pri.get(c), apply_min_tier=a.min_tier, ref_t=a_t,
+                                          offset_s=None if rec_off is None else rec_off["offset_s"])
                 kw = {"ecg_fiducial": "R peak (SNUADC ECG_II, interpolated)",
                           "ppg_fiducial": ("foot (intersecting tangent) of 0.5-10 Hz band-passed PLETH (SNUADC)"
                                            if a.fiducial == "foot" else
@@ -105,6 +127,7 @@ def main() -> None:
                           "adopted_pat_basis": "placeholder pending choice (see physiosync.pat_reference)",
                           "r_t": r_t, "ppg_t": p_t, "residual_sd_s": VITALDB_RESIDUAL_SD_S,
                           "extra": {"case": c, "reference": "ART upstroke" if a_t is not None else None,
+                                    "correction": "rebuilt (physiosync 0.3.3)" if a.rebuilt_fit else "detect",
                                  "rate_prior_ppm": pri.get(c), "setup": setup_of.get(c)}}
                 rec = pat_measurement_model(m, ecg_fs=500.0, ppg_fs=500.0, **kw)
                 # this recording's PPG fiducial error: frame rounding if it locks to the 30 Hz grid, else
@@ -137,7 +160,7 @@ def main() -> None:
                         d = offset_label(rec, basis=(rec_off or {}).get("basis", "per recording (snapped)"),
                                          n_recordings=(rec_off or {}).get("n"), setup_iqr_s=(rec_off or {}).get("iqr_s"))
                         ow.writerow({"case": c, "setup": setup_of.get(c), **d})
-                if a.chain_labels:
+                if a.chain_labels and not a.rebuilt_fit:
                     rate = m.qc.get("recording_rate_ppm") or (pri.get(c) if not m.qc.get("rate_conflict") else None)
                     p_ = Path(a.chain_labels)
                     first = not p_.exists()

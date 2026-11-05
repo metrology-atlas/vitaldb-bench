@@ -4,14 +4,19 @@
     python examples/pulse_arrival_time.py --out OUT --cohort-figure      # after the cases have run
 
 Per case, on up to ``--minutes`` of SNUADC ECG lead II and PLETH (and arterial pressure where there is a line),
-starting 10 minutes into their overlap:
+starting 10 minutes into their overlap, or, for a recording with a whole-release fit, at the later start of the fit's
+stretch and kept inside it (the correction is known only there):
 
 1. **Fiducials.** R peaks in ECG lead II; the steepest upstroke after each R peak in the PLETH (and in the arterial
    pressure), band-passed 0.5-10 Hz with parabolic sub-sample refinement (as ``tools/pat.py``).
-2. **Step 1, sawtooth removal.** ``physiosync.fit_ecg_ppg_delay`` fits the PLETH's non-physiological delay
-   D(t) = offset + sawtooth(t): a creep at a fixed rate, reset by one 30 Hz frame at each slip (arterial
-   upstrokes, where present, as the reference for the slips). Removing only the sawtooth part leaves the PAT at
-   its stored level.
+2. **Step 1, sawtooth removal.** The PLETH's non-physiological delay D(t) = offset + sawtooth(t): a creep, reset
+   by one 30 Hz frame at each slip. The sawtooth is the rebuilt correction (metrology-atlas study
+   ppg-sawtooth-correction): the recording's slips from the whole-release fit of tools/slip_rebuild.py (read from
+   $PAT_FIT, else $W/slip_rebuild/full3/fit.jsonl), applied with ``physiosync.fit_ecg_ppg_delay(method="rebuilt",
+   slip_result=...)`` (physiosync 0.3.3): each tooth closes on its own slips; unresolved teeth and recordings whose
+   creep is not corrected are left alone. A recording without a whole-release fit falls back to
+   ``method="detect"`` (arterial upstrokes, where present, as the reference), and says so. ``PAT_METHOD=detect``
+   uses detect for every recording, on the same windows, for comparison. Removing only the sawtooth part leaves the PAT at its stored level.
 3. **Step 2, global delay.** Subtract one device delay for every recording, 0.385 s: the stored R-to-PLETH-foot
    delay's median over the release (0.655 s, tools/pat_offset_census.py) minus an adopted mean R-to-finger-foot PAT
    of 0.27 s. Differences between patients are kept; the absolute level rests on the adopted 0.27 s. The PAT here is
@@ -32,6 +37,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -117,6 +123,26 @@ def robust_sd(x):
     return float(1.4826 * np.median(np.abs(x - np.median(x))))
 
 
+_FITS: dict | None = None
+
+
+def rebuilt_fit(case: int) -> dict | None:
+    """The whole-release slip_rebuild result for a case (real beats), or None."""
+    global _FITS
+    if _FITS is None:
+        _FITS = {}
+        path = os.environ.get("PAT_FIT") or (os.path.join(os.environ["W"], "slip_rebuild", "full3", "fit.jsonl")
+                                             if os.environ.get("W") else "")
+        if path and Path(path).exists():
+            with open(path) as fh:
+                for line in fh:
+                    c = int(line[9:line.index(",")]) if line.startswith('{"case": ') else None
+                    if c is not None:
+                        _FITS[c] = line
+    line = _FITS.get(case)
+    return json.loads(line).get("real") if line else None
+
+
 def one_case(root: Path, case: int, minutes: float):
     v = read_vital(root / "vital_files" / f"{case:04d}.vital", track_names={ECG, PPG, ART})
     tr = {k: v.tracks.get(k) for k in (ECG, PPG, ART)}
@@ -124,8 +150,12 @@ def one_case(root: Path, case: int, minutes: float):
         return {"case": case, "skip": "no 500 Hz ECG lead II and PLETH"}, None
     use = [ECG, PPG] + ([ART] if tr[ART] is not None and tr[ART].record_times.size and tr[ART].srate == FS else [])
     ts = {k: sample_times(tr[k]) for k in use}
+    R = rebuilt_fit(case)
     t0 = max(ts[k][0] for k in (ECG, PPG)) + 600
-    t1 = min(min(ts[k][-1] for k in (ECG, PPG)), t0 + 60 * minutes)
+    end = min(ts[k][-1] for k in (ECG, PPG))
+    if R is not None:   # inside the fit's stretch, where the correction is known
+        t0, end = max(t0, R["start"]), min(end, R["end"])
+    t1 = min(end, t0 + 60 * minutes)
     if t1 - t0 < 600:
         return {"case": case, "skip": "less than 10 minutes of overlap"}, None
     seg = {}
@@ -143,9 +173,15 @@ def one_case(root: Path, case: int, minutes: float):
         return {"case": case, "skip": "too few beats with a PLETH upstroke"}, None
     r, p, ix = r_t[ok], p_t[ok], p_i[ok]
     a = a_t[ok] if has_art else None
-    m = fit_ecg_ppg_delay(r, p, adopted_pat_s=ADOPTED, frame_s=1 / 30, matched=True,
-                          ref_t=a if has_art else None)
-    saw = m.shift(p) - m.offset_s                     # the sawtooth part of the delay
+    if R is not None and os.environ.get("PAT_METHOD", "rebuilt") == "rebuilt":
+        m = fit_ecg_ppg_delay(r, p, adopted_pat_s=ADOPTED, matched=True, method="rebuilt", slip_result=R)
+        how = "rebuilt"
+    else:
+        m = fit_ecg_ppg_delay(r, p, adopted_pat_s=ADOPTED, frame_s=1 / 30, matched=True,
+                              ref_t=a if has_art else None)
+        how = "detect" if R is not None else "detect (no whole-release fit)"
+    # the sawtooth part of the delay (outside the rebuilt fit's stretch, its nearest value)
+    saw = m.shift(p) - m.offset_s
     # step 2: one global delay for every recording, so differences in PAT between patients are kept
     pat = {"raw": p - r, "saw": p - saw - r, "cor": p - saw - r - GLOBAL_DELAY}
     rec = pat_measurement_model(m, ecg_fs=FS, ppg_fs=FS, r_t=r, ppg_t=p)
@@ -159,13 +195,15 @@ def one_case(root: Path, case: int, minutes: float):
         win["art"] = ml_windows(r, a - r, dens, t0)
     med = {k: float(np.median(y)) for k, y in pat.items()}
     res = {"case": case, "minutes": round((t1 - t0) / 60, 1), "beats": int(ok.sum()), "arterial_line": bool(has_art),
-           "slips": len(m.slips_t), "tiers": "".join(m.tooth_tier), "ppg_error": ppg_err.get("rounding"),
+           "correction": how, "slips": int(sum(1 for x in m.slips_t if r[0] <= x <= r[-1])),
+           "tiers": "".join(t_ for k_, t_ in enumerate(m.tooth_tier) if k_ == 0 or t_ != m.tooth_tier[k_ - 1]),
+           "ppg_error": ppg_err.get("rounding"),
            "offset_ms": round((med["raw"] - med["cor"]) * 1000, 1),
            "within_case_sd_ms": {k: round(robust_sd(win[k][2]) * 1000, 2) for k in pat},
            "raw_median_ms": round(med["raw"] * 1000, 1)}
     if has_art:
         res["minus_art_sd_ms"] = {k: round(robust_sd(paired(win[k], win["art"])) * 1000, 2) for k in pat}
-    return res, {"t0": t0, "win": win, "slips": [s - t0 for s in m.slips_t]}
+    return res, {"t0": t0, "win": win, "slips": [s - t0 for s in m.slips_t if t0 <= s <= t1]}
 
 
 MISPAIRED_BELOW_MS = 600   # stored median below this: pulses paired one beat out (fast heart rate or doubled R peaks)
