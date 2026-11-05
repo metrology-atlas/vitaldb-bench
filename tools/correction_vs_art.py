@@ -28,6 +28,9 @@ SD (IQR / 1.349) of 30 s window medians, in ms. Policies (the delay model D(t) i
             fitted tooth. With one creep rate for the whole recording, a tooth length a few percent off adds up over
             the teeth; and a gap holding missed slips, with no creep or with the fitted creep and no steps, leaves a
             frame or more per gap. With "gap" too, "gap" wins over "close" in gaps over 1.5 teeth;
+    const   one creep rate for the recording, set by its slips so that creep and steps balance from the first slip to
+            the last: frame x (net steps between them, uncertain ones by p) / their time apart (else the fitted tooth);
+            from a tooth before the first slip to a tooth after the last;
     mask    teeth of tier U (unresolved, tools/slip_tiers.py) are not corrected: the model is held at its median there,
             as physiosync's detect method does for teeth below its threshold.
 
@@ -59,7 +62,7 @@ OPTIONS = ("gap", "nostep", "grid", "unc", "close")
 POLICIES = ("none", "detect", "v26", "v26+gap", "v26+nostep", "v26+gap+nostep", "v26+gap+nostep+grid",
             "v26+gap+nostep+close", "v26+gap+nostep+grid+close", "v26+nostep+close", "v26+nostep+grid+close",
             "v26+nostep+grid+close+unc", "v26+nostep+close+unc", "v26+nostep+close+unc+mask",
-            "v26+nostep+grid+close+unc+mask", "final")
+            "v26+nostep+grid+close+unc+mask", "v26+nostep+const+unc+mask", "v26+nostep+const+unc", "final")
 FINAL = "v26+nostep+close+unc+mask"   # the policy chosen for v2 (5 November): tools/slip_tiers.py v6, physiosync 0.3.2
 
 
@@ -85,6 +88,14 @@ def model(t: np.ndarray, R: dict, opts: set[str]) -> np.ndarray:
     L = (R.get("fit") or {}).get("L")
     real = [e for e in ev if e["kind"] != "uncertain" or e["p"] >= 0.5]
     if saw and L and real and not reported:
+        if "const" in opts:
+            # net steps from the first slip to the last, the sawtooth's way (uncertain ones by p, if counted)
+            net = sum((e["p"] if e["kind"] == "uncertain" else e["sign"] * sign) for e in real[1:]
+                      if e["kind"] != "uncertain" or "unc" in opts)
+            span = real[-1]["t"] - real[0]["t"]
+            Lc = span / net if net >= 1 and span > 0 else L
+            lo, hi = real[0]["t"] - Lc, real[-1]["t"] + Lc
+            D -= sign * FRAME * (np.clip(t, lo, hi) - lo) / Lc
         lo, hi = real[0]["t"] - L, real[-1]["t"] + L
         # creep in teeth: (start, end, teeth crept per second)
         segs = [(lo, real[0]["t"], 1 / L)]
@@ -102,7 +113,8 @@ def model(t: np.ndarray, R: dict, opts: set[str]) -> np.ndarray:
         run = np.zeros(t.size)
         for s0, s1, rate in segs:
             run += rate * (np.clip(t, s0, s1) - s0)
-        D -= sign * FRAME * run
+        if "const" not in opts:
+            D -= sign * FRAME * run
     if "mask" in opts and saw and not reported:
         grid = np.arange(R["start"], R["end"] + 1.0, 1.0)
         med = float(np.median(model(grid, R, opts - {"mask"})))
