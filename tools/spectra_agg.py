@@ -11,7 +11,9 @@ Then, per track (each recording weighted once):
   physical units per Hz (dB above rounding times q = 1/(6 fs) times the recording's step squared); the rounding floor
   q times the median step squared.
 * **Low-pass:** spectra_scan.fit_rolloff on each recording's median spectrum. A fit is kept when its corner is clear
-  of the bounds (above 5.5 Hz, below 0.95 of Nyquist) and its RMS residual is under 1.5 dB; the corners' quantiles
+  of the bounds (above 5.5 Hz, below 0.95 of Nyquist), its RMS residual is under 1.5 dB and the spectrum at the corner
+  stands at least 10 dB above the fitted floor (a corner fitted where the signal has already reached the floor
+  describes the floor, not a filter); the corners' quantiles
   and a histogram (1 Hz bins below 60 Hz, 5 Hz above), by the SNUADC unit (from units.csv) where there is one.
 * **Lines:** in each recording's median spectrum, a bin at 8 Hz or above (below it, the heart and breathing
   harmonics) more than 3 dB above the running median of the 9 bins around it is a peak; per bin, the share of
@@ -149,8 +151,13 @@ def q(v, p=(5, 25, 50, 75, 95), nd=2):
     return {"q": [round(float(x), nd) for x in np.percentile(v, p)], "n": int(v.size)} if v.size else None
 
 
-def fit_ok(f: dict | None, fs: float) -> bool:
-    return bool(f) and 5.5 < f["fc_hz"] < 0.95 * fs / 2 and f["rms_db"] < 1.5
+def fit_ok(f: dict | None, fs: float, d: np.ndarray | None = None) -> bool:
+    if not (bool(f) and 5.5 < f["fc_hz"] < 0.95 * fs / 2 and f["rms_db"] < 1.5):
+        return False
+    if d is None:
+        return True
+    i = int(np.argmin(np.abs(centres(fs) - f["fc_hz"])))
+    return bool(np.isfinite(d[i]) and d[i] - f["floor_db"] >= 10)
 
 
 def summarise(recs: dict, units: dict) -> tuple[dict, dict]:
@@ -172,7 +179,7 @@ def summarise(recs: dict, units: dict) -> tuple[dict, dict]:
             curves[name] = {"f": f, "med": np.nanmedian(phys, 0), "p25": np.nanpercentile(phys, 25, 0),
                             "p75": np.nanpercentile(phys, 75, 0), "floor": qq * float(np.nanmedian(steps)) ** 2,
                             "unit": L[0][1]["unit"], "n": len(L), "fs": fs, "db_med": np.nanmedian(D, 0)}
-        ok = [(c, t["fit"]) for c, t in L if fit_ok(t["fit"], fs)]
+        ok = [(c, t["fit"]) for c, t in L if fit_ok(t["fit"], fs, arr(t["psd_db"]))]
         fc = np.array([x["fc_hz"] for _, x in ok])
         hist = collections.Counter(int(x) if x < 60 else int(x // 5 * 5) for x in fc)
         by_unit = collections.defaultdict(list)
@@ -273,7 +280,7 @@ def figures(curves: dict, S: dict, out: Path) -> list[str]:
         fig.savefig(p, dpi=150)
         plt.close(fig)
         made.append(p.name)
-    names = sorted(curves)
+    names = sorted(n for n in curves if "#" not in n and curves[n]["n"] >= 10)   # not the rare second copies
     k = int(np.ceil(len(names) / 3))
     fig, axs = plt.subplots(k, 3, figsize=(14, 3.6 * k))
     for ax, n in zip(axs.ravel(), names):
