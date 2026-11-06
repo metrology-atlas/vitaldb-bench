@@ -9,6 +9,11 @@ results/clock/periods_{a,b}.jsonl: every interval between two consecutive resets
 with the recording's rate (from the same stamps, so the comparison checks the threshold, not the rate);
 the observed median and p10-p90, and the median of threshold / |rate| for thresholds of 0.4804 s (the stamp step),
 0.498 s (the stamp step plus the 17.7 ms lost at a reset: the drift actually corrected) and 0.5 s.
+
+54, pleth-hr-derivation: the adopted rule's (rmean|n|10|round) delay over recordings, from
+examples/pleth_hr_derivation/part_*.jsonl: 5th-95th percentiles, robust SD (1.4826 x MAD), the window's span (10
+pulse intervals at the recording's median interval, 5th-95th percentiles) and the share of recordings where
+rounding reproduces more values exactly than truncation.
 """
 from __future__ import annotations
 
@@ -36,9 +41,31 @@ def correction_periods(W: Path) -> None:
         print(f"  {thr} s / |rate|: median {np.median(thr / r / 3600):.3f} h")
 
 
+def pleth_hr(W: Path) -> None:
+    d, span, rnd = [], [], []
+    for p in sorted((W / "examples" / "pleth_hr_derivation").glob("part_*.jsonl")):
+        for line in open(p):
+            r = json.loads(line)
+            c = r.get("cands") or {}
+            a, b = c.get("rmean|n|10|round"), c.get("rmean|n|10|trunc")
+            if not a:
+                continue
+            d.append(a[0])
+            span.append(10 * r["median_interval_s"])
+            if b:
+                rnd.append(a[1] > b[1])
+    d = np.array(d)
+    mad = 1.4826 * np.median(np.abs(d - np.median(d)))
+    print(f"54 pleth-hr-derivation: {d.size} recordings; delay median {np.median(d):.2f} s, p5-p95 "
+          f"{np.percentile(d, 5):.2f}-{np.percentile(d, 95):.2f}; robust SD {mad:.3f} s; window p5-p95 "
+          f"{np.percentile(span, 5):.2f}-{np.percentile(span, 95):.2f} s; round beats trunc in "
+          f"{np.mean(rnd):.3f} of {len(rnd)}")
+
+
 def main() -> None:
     W = Path(sys.argv[1])
     correction_periods(W)
+    pleth_hr(W)
 
 
 if __name__ == "__main__":

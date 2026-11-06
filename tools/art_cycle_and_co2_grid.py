@@ -5,8 +5,9 @@
     If ART is taken on its own ~240 Hz clock and placed on the 500 Hz grid without timing correction, its content
     lags or leads by up to one 240 Hz period (4.17 ms) as psi turns, so per-beat delay (detrended) vs psi is a ramp.
     Control: the same binning with psi shifted by a quarter of the record (wrong alignment).
-(b) CO2 grid: change pattern of Primus/CO2 (value differs from previous) demodulated at 12.5 Hz (every 5 samples at
-    62.5 Hz) in 60 s blocks. Locked -> constant phase; drifting -> phase walks at a steady rate.
+(b) CO2 grid: change pattern of Primus/CO2 (value differs from previous). Its update rate is scanned near 25 Hz
+    (24.90-25.10 Hz in 0.0005 Hz steps) on 10-minute pieces, and its phase against an exact 25 Hz grid on the file's
+    sample count is taken in 5 s blocks. Locked -> constant phase; drifting -> phase walks at a steady rate.
 
 Usage: python tools/art_cycle_and_co2_grid.py ROOT OUTDIR CASE [MINUTES]   (appends OUTDIR/saw2.jsonl, saves OUTDIR/c<case>.npz)
 """
