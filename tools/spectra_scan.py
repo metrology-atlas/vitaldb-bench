@@ -17,14 +17,16 @@ scan writes, per part, part_K.jsonl (one line per recording) and part_K.npz (per
 * **Per recording and track:** the median spectrum over the recording's minutes, and its 25th and 75th
   percentiles, on 160 log-spaced bins from 0.1 Hz to Nyquist (dB above rounding), with the step in physical units so
   a figure can show physical power per Hz; the number of minutes.
-* **Per minute and track:** floor_db (80-98% of Nyquist), lf_db (0.2-1 Hz), mid_db (5-15 Hz), hi_db (30-45 Hz) and
+* **Per minute and track** (written with the lines every 20 recordings, so a stopped run resumes cleanly): floor_db (80-98% of Nyquist), lf_db (0.2-1 Hz), mid_db (5-15 Hz), hi_db (30-45 Hz) and
   top_db (55-75% of Nyquist, mains lines excluded), and the mains lines at 60, 120 and 180 Hz (median within +-0.6 Hz
   over the median of a ring 2-6 Hz either side, dB: negative a notch, positive a line); and a coarse shape: 24
   log-spaced bins from 1 Hz to Nyquist (dB above rounding, float16), for finding changes within a recording.
 * **SNUADC channel pairs and the BIS's two channels:** cross-spectra summed over the minutes both channels have;
   coherence and phase at 60, 120 and 180 Hz and coherence in a reference band (55-70% of Nyquist, mains excluded),
   with the phase as a time difference: later_us, positive when the second channel's samples are taken later than
-  the first's (its copy of the line is ahead in phase), checked by synth.
+  the first's (its copy of the line is ahead in phase), checked by synth. A mains line reaches each channel by its
+  own path, so the difference is a sampling delay only where the two pick it up the same way (ECG II and V5, the
+  BIS's two channels); between unlike channels it is mostly coupling phase.
 
 synth checks the low-pass fit (corner recovered within 10%; the order only when the corner is below 0.3 of Nyquist,
 flagged order_ok), the notch measure and the channel delay (about 10 us at two minutes) on synthetic data. The
@@ -50,6 +52,7 @@ NBIN, NSHAPE = 160, 24
 MAINS = (60.0, 120.0, 180.0)
 PAIRS = (("SNUADC/ECG_II", "SNUADC/ART"), ("SNUADC/ECG_II", "SNUADC/PLETH"), ("SNUADC/ART", "SNUADC/PLETH"),
          ("SNUADC/ECG_II", "SNUADC/ECG_V5"), ("SNUADC/ART", "SNUADC/CVP"), ("BIS/EEG1_WAV", "BIS/EEG2_WAV"))
+FLUSH = 20          # recordings per write of lines and minute rows
 FEAT = ("floor_db", "lf_db", "mid_db", "hi_db", "top_db", "m60_db", "m120_db", "m180_db")
 
 
@@ -186,6 +189,10 @@ def pair_spectra(ga: dict, gb: dict, fs: float) -> dict | None:
 
 
 def scan(a) -> None:
+    """Resumable. The per-recording lines and the per-minute rows are written together, every FLUSH recordings
+    (minute rows first), so a stopped run loses at most the batch in hand and never leaves a recording with its line
+    but without its minutes. On start, a recording counts as done only if it has a line and, when it has tracks, its
+    minutes in this part's .npz files; the others are scanned again (agg keeps a recording's last line)."""
     from vitaldb_reader.vital_file import TRACK_WAVE, read_vital
     root = Path(a.root)
     cases = sorted(int(p.stem) for p in (root / "vital_files").glob("*.vital"))
@@ -193,44 +200,61 @@ def scan(a) -> None:
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     jl = out.with_suffix(".jsonl")
-    done = {json.loads(x)["case"] for x in jl.read_text().splitlines() if x.strip()} if jl.exists() else set()
+    npzs = sorted(out.parent.glob(out.name + "_m*.npz"))
+    have = set()
+    for f in npzs:
+        have |= set(np.unique(np.load(f)["case"]).tolist())
+    done = set()
+    if jl.exists():
+        for x in jl.read_text().splitlines():
+            if x.strip():
+                r = json.loads(x)
+                if not r.get("tracks") or r["case"] in have:
+                    done.add(r["case"])
     t0 = time.time()
-    n_npz = len(list(out.parent.glob(out.name + "_m*.npz")))
+    n_npz = len(npzs)
     rows: list = []
-    with jl.open("a") as fh:
-        for c in cases:
-            if c in done:
-                continue
-            if time.time() - t0 > a.time_budget:
-                break
-            t1 = time.time()
-            rec = {"case": c, "tracks": {}, "pairs": {}}
-            try:
-                v = read_vital(root / "vital_files" / f"{c:04d}.vital")
-                grids, fss = {}, {}
-                for name, tr in v.tracks.items():
-                    if tr.track_type != TRACK_WAVE or float(tr.srate) < MIN_FS or not tr.record_times.size:
-                        continue
-                    s, g = track_spectra(tr, rows, c, name)
-                    if s:
-                        rec["tracks"][name] = s
-                        grids[name], fss[name] = g, float(tr.srate)
-                for x, y in PAIRS:
-                    if x in grids and y in grids and fss[x] == fss[y]:
-                        p = pair_spectra(grids[x], grids[y], fss[x])
-                        if p:
-                            rec["pairs"][f"{x}|{y}"] = p
-            except Exception as ex:  # noqa: BLE001
-                rec["error"] = f"{type(ex).__name__}: {ex}"[:300]
-            rec["secs"] = round(time.time() - t1, 1)
-            fh.write(json.dumps(rec) + "\n")
-            fh.flush()
-            if len(rows) > 200000:
-                save_minutes(rows, out, n_npz)
-                n_npz += 1
-                rows = []
-    if rows:
-        save_minutes(rows, out, n_npz)
+    lines: list = []
+
+    def flush():
+        nonlocal n_npz, rows, lines
+        if rows:
+            save_minutes(rows, out, n_npz)
+            n_npz += 1
+        with jl.open("a") as fh:
+            fh.writelines(lines)
+        rows, lines = [], []
+
+    for c in cases:
+        if c in done:
+            continue
+        if time.time() - t0 > a.time_budget:
+            break
+        t1 = time.time()
+        rec = {"case": c, "tracks": {}, "pairs": {}}
+        try:
+            v = read_vital(root / "vital_files" / f"{c:04d}.vital")
+            grids, fss = {}, {}
+            for name, tr in v.tracks.items():
+                if tr.track_type != TRACK_WAVE or float(tr.srate) < MIN_FS or not tr.record_times.size:
+                    continue
+                s, g = track_spectra(tr, rows, c, name)
+                if s:
+                    rec["tracks"][name] = s
+                    grids[name], fss[name] = g, float(tr.srate)
+            for x, y in PAIRS:
+                if x in grids and y in grids and fss[x] == fss[y]:
+                    p = pair_spectra(grids[x], grids[y], fss[x])
+                    if p:
+                        rec["pairs"][f"{x}|{y}"] = p
+            del v, grids
+        except Exception as ex:  # noqa: BLE001
+            rec["error"] = f"{type(ex).__name__}: {ex}"[:300]
+        rec["secs"] = round(time.time() - t1, 1)
+        lines.append(json.dumps(rec) + "\n")
+        if len(lines) >= FLUSH:
+            flush()
+    flush()
     print(json.dumps({"part": a.part, "seconds": round(time.time() - t0, 1)}))
 
 
