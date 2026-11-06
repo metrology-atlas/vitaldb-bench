@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# Run a worked example's (or a study tool's) "scan" over every recording in 8 parallel parts (WSL), then aggregate where matplotlib exists.
+# Run a worked example's (or a study tool's) "scan" over every recording in P parallel parts (WSL; P=8 by default,
+# P=4 where WSL cannot hold 8), then aggregate where matplotlib exists.
 #   bash examples/run_scan.sh hypotension_burden          (writes $W/examples/hypotension_burden/part_*.jsonl)
+#   P=4 O=$W/examples/NAME_v2 bash examples/run_scan.sh NAME   (4 parts, another output folder)
 # The example script must take: scan --root R --cases LIST --out PART.  Aggregate afterwards with:
 #   python examples/NAME.py agg $W/examples/NAME/part_*.jsonl --out $W/examples/NAME/agg
 set -euo pipefail
@@ -16,7 +18,8 @@ W=${_W:-${VITALDB_WORK:-}}; R=${_R:-${VITALDB_ROOT:-}}; export W; export PYTHONP
 # a worked example (examples/NAME.py) or a study tool (tools/NAME.py); output goes to $W/examples/NAME either way
 SCRIPT=examples/$NAME.py
 [ -f "$(dirname "$0")/$NAME.py" ] || SCRIPT=tools/$NAME.py
-O=$W/examples/$NAME
+O=${O:-$W/examples/$NAME}
+P=${P:-8}
 cd "$(dirname "$0")/.."
 PY=${PY:-$(command -v python || command -v python3 || true)}
 if [ -z "$PY" ] || ! "$PY" -c "import numpy, scipy" 2>/dev/null; then
@@ -25,8 +28,8 @@ fi
 mkdir -p "$O"
 N=$(ls "$R"/vital_files/*.vital | wc -l); echo "$N recordings; output in $O"
 start=$(date +%s)
-for i in 0 1 2 3 4 5 6 7; do
-  PART=$(ls "$R"/vital_files/*.vital | sed 's#.*/0*##; s#\.vital##' | awk -v i=$i 'NR % 8 == i' | paste -sd,)
+for i in $(seq 0 $((P - 1))); do
+  PART=$(ls "$R"/vital_files/*.vital | sed 's#.*/0*##; s#\.vital##' | awk -v i=$i -v p=$P 'NR % p == i' | paste -sd,)
   "$PY" -W ignore "$SCRIPT" scan --root "$R" --cases "$PART" --out "$O/part_$i.jsonl" > "$O/log_$i.txt" 2>&1 &
 done
 while [ "$(jobs -r | wc -l)" -gt 0 ]; do

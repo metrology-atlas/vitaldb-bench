@@ -23,6 +23,11 @@ Candidates at each PLETH_HR record stamp t, using the pulses up to t - d, for d 
   rmean|n|N    60 / mean of the last N intervals within 25% of their median         N = 6..14
 each truncated to a whole number (as HR is) and also rounded. Score: the share of records reproduced exactly. Up to
 3,000 records per recording, spread over its first 4 hours of plethysmogram.
+Phase (7 Nov): for the adopted rule's neighbours (rmean|n|8-12 and mean|n|10), also the delay in the convention of
+the HR fits (tools/hr_derivation.py, numeric_derivation_pilot.py): a value stamped at t was computed at t - d - phi,
+phi uniform over the gap since the previous record, so d is the shortest time from the window's close to the stamp.
+Per record, the match at every delay on a 0.1 s grid from 0 to 12 s; the score at d is the mean over the record's
+phase interval [d, d + gap); the best d is reported with its score (key "phase").
 
 scan writes, per recording and candidate, the best delay and its exact-match share (and the share at a few delays
 around it); agg ranks the candidates (wins, pooled exact matches), gives the winner's delay and implied window
@@ -47,6 +52,9 @@ from pat import ppg_points, sample_times  # noqa: E402
 warnings.filterwarnings("ignore")
 CHAIN_S = 0.385
 DELAYS = np.round(np.arange(0, 10.001, 0.25), 2)
+PHASE_GRID = np.round(np.arange(0, 12.0001, 0.1), 2)
+PHASE_D = PHASE_GRID[PHASE_GRID <= 10.0001]
+PHASE_CANDS = {"rmean|n|8", "rmean|n|9", "rmean|n|10", "rmean|n|11", "rmean|n|12", "mean|n|10"}
 NS = list(range(4, 17))
 TS = list(range(4, 17))
 MAX_RECORDS = 3000
@@ -101,11 +109,13 @@ def scan_case(c, root):
     good_iv = (iv > 0.25) & (iv < 2.5)
     ts, ys = pr.record_times.astype(float), pr.physical().astype(float)
     k = np.isfinite(ys) & (ys >= 30) & (ys <= 200) & (ts > te[0] + 30) & (ts < te[-1])
+    gap_full = np.r_[np.nan, np.diff(pr.record_times.astype(float))][k]   # gap since the previous record (all records)
     ts, ys = ts[k], ys[k]
     if ts.size < 100:
         return {"case": c, "skip": "too few PLETH_HR values over the pulses"}
     if ts.size > MAX_RECORDS:
-        ts, ys = ts[np.linspace(0, ts.size - 1, MAX_RECORDS).astype(int)], ys[np.linspace(0, ts.size - 1, MAX_RECORDS).astype(int)]
+        sel = np.linspace(0, ts.size - 1, MAX_RECORDS).astype(int)
+        ts, ys, gap_full = ts[sel], ys[sel], gap_full[sel]
     yi = np.round(ys).astype(int)
     cands = {}
     for N in NS:
@@ -115,8 +125,9 @@ def scan_case(c, root):
             cands[f"tmean|n|{N}"] = ("n", roll_n(iv, N, "tmean"), N)
             cands[f"rmean|n|{N}"] = ("n", roll_n(iv, N, "rmean"), N)
     cs = np.r_[0.0, np.cumsum(iv)]
+    gap = np.where(np.isfinite(gap_full) & (gap_full > 0) & (gap_full < 10), gap_full, np.nanmedian(gap_full))
     out = {"case": c, "records": int(ts.size), "pulses": int(pt.size), "median_interval_s": round(float(np.median(iv[good_iv])), 3),
-           "cands": {}}
+           "median_gap_s": round(float(np.median(gap)), 3), "cands": {}, "phase": {}}
     for name, how in [(f"mean|t|{T}", ("t", "mean", T)) for T in TS] + [(f"count|t|{T}", ("t", "count", T)) for T in TS]:
         cands[name] = how
     for name, spec in cands.items():
@@ -147,7 +158,34 @@ def scan_case(c, root):
         for col, lab in ((1, "trunc"), (2, "round")):
             i = int(np.argmax(r[:, col]))
             out["cands"][f"{name}|{lab}"] = [r[i, 0], round(r[i, col], 4)]
+        if name in PHASE_CANDS:
+            out["phase"].update(phase_delay(name, spec, ts, yi, gap, te))
     return out
+
+
+def phase_delay(name, spec, ts, yi, gap, te):
+    """Best d in the uniform-phase convention (see the module docstring), truncated and rounded."""
+    stat = spec[1]
+    M = {"trunc": np.zeros((ts.size, PHASE_GRID.size)), "round": np.zeros((ts.size, PHASE_GRID.size))}
+    for k, d in enumerate(PHASE_GRID):
+        q = ts - d
+        j = np.searchsorted(te, q, side="right") - 1
+        ok = j >= 0
+        val = np.full(q.size, np.nan)
+        val[ok] = 60.0 / stat[j[ok]]
+        fin = np.isfinite(val)
+        M["trunc"][fin, k] = np.floor(val[fin]) == yi[fin]
+        M["round"][fin, k] = np.round(val[fin]) == yi[fin]
+    m = np.clip(np.round(gap / 0.1).astype(int), 1, PHASE_GRID.size - PHASE_D.size)
+    rows = np.arange(ts.size)[:, None]
+    jj = np.arange(PHASE_D.size)[None, :]
+    res = {}
+    for lab, A in M.items():
+        cs = np.concatenate([np.zeros((ts.size, 1)), np.cumsum(A, axis=1)], axis=1)
+        score = ((cs[rows, jj + m[:, None]] - cs[rows, jj]) / m[:, None]).mean(axis=0)
+        i = int(np.argmax(score))
+        res[f"{name}|{lab}"] = [float(PHASE_D[i]), round(float(score[i]), 4)]
+    return res
 
 
 def scan(a) -> None:
@@ -217,6 +255,22 @@ def agg(a) -> None:
                      "delay_p10_p90_s": [float(np.percentile(delays, 10)), float(np.percentile(delays, 90))],
                      "window_centre_median_s": round(float(np.median(delays + half)), 2)},
             "recordings_where_mean_beats_median_of_same_N": mean_vs_median}
+    ph = [r for r in ok if r.get("phase")]
+    if ph:
+        pd_ = {}
+        for key in sorted(ph[0]["phase"]):
+            d = np.array([r["phase"][key][0] for r in ph if key in r["phase"]])
+            sc = np.array([r["phase"][key][1] for r in ph if key in r["phase"]])
+            ex = np.array([r["cands"][key][0] for r in ph if key in r["phase"] and key in r["cands"]])
+            pd_[key] = {"recordings": int(d.size), "delay_median_s": round(float(np.median(d)), 3),
+                        "delay_p5_p95_s": np.percentile(d, [5, 95]).round(3).tolist(),
+                        "delay_robust_sd_s": round(float(1.4826 * np.median(np.abs(d - np.median(d)))), 3),
+                        "exact_share_median": round(float(np.median(sc)), 4),
+                        "exact_best_delay_median_s": round(float(np.median(ex)), 3) if ex.size else None}
+        gaps = np.array([r["median_gap_s"] for r in ph if r.get("median_gap_s")])
+        summ["phase"] = {"convention": "d = shortest delay from the window's close to the stamp; phi uniform over "
+                                       "the gap since the previous record", "median_gap_s": round(float(np.median(gaps)), 3),
+                         "candidates": pd_}
     (out / "summary.json").write_text(json.dumps(summ, indent=1))
     print(json.dumps(summ, indent=1))
 
