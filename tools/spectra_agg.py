@@ -128,6 +128,8 @@ def part_cache(jl: Path, cache: Path) -> dict:
         if r.get("error"):
             recs[str(r["case"])] = {"error": r["error"]}
             continue
+        if r["tracks"] and not any(k.startswith(f"{r['case']}|") for k in M):
+            continue                       # a line whose minutes were lost in a stopped run; scanned again elsewhere
         T = {}
         for name, t in r["tracks"].items():
             d = arr(t["psd_db"])

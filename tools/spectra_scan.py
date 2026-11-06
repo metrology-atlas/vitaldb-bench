@@ -192,7 +192,8 @@ def scan(a) -> None:
     """Resumable. The per-recording lines and the per-minute rows are written together, every FLUSH recordings
     (minute rows first), so a stopped run loses at most the batch in hand and never leaves a recording with its line
     but without its minutes. On start, a recording counts as done only if it has a line and, when it has tracks, its
-    minutes in this part's .npz files; the others are scanned again (agg keeps a recording's last line)."""
+    minutes in an .npz file, looking across every part's files in the folder (so a rerun may use a different number of
+    parts); the others are scanned again (agg keeps a recording's last line)."""
     from vitaldb_reader.vital_file import TRACK_WAVE, read_vital
     root = Path(a.root)
     cases = sorted(int(p.stem) for p in (root / "vital_files").glob("*.vital"))
@@ -202,11 +203,11 @@ def scan(a) -> None:
     jl = out.with_suffix(".jsonl")
     npzs = sorted(out.parent.glob(out.name + "_m*.npz"))
     have = set()
-    for f in npzs:
+    for f in out.parent.glob("part_*_m*.npz"):           # every part's, so the number of parts can change
         have |= set(np.unique(np.load(f)["case"]).tolist())
     done = set()
-    if jl.exists():
-        for x in jl.read_text().splitlines():
+    for f in out.parent.glob("part_*.jsonl"):
+        for x in f.read_text().splitlines():
             if x.strip():
                 r = json.loads(x)
                 if not r.get("tracks") or r["case"] in have:
