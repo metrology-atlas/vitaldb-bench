@@ -27,7 +27,9 @@ earlier for its delay, as a second BP source.
 Correlations (Pearson r) per recording at two scales, beat to beat and over 30 s windows (window medians; PAT also
 by maximum likelihood as in the PAT example): PAT-SBP, PAT-MAP, PAT-HR, and PAT-SBP with HR held constant
 (partial r). Between patients: the correlation of recording medians. scan writes one JSON line per recording
-(aggregates of that recording; stays on this machine); agg writes DIR/summary.json and DIR/pat_vs_bp.png.
+(aggregates of that recording; stays on this machine); agg writes DIR/summary.json, DIR/pat_vs_bp.png and DIR/pat_vs_bp_ruffolo.png (the per-recording PAT-SBP r drawn
+as Ruffolo et al. 2025 appendix B figure 10: its distribution and cumulative distribution, every timing on the
+recordings where all of them exist).
 """
 from __future__ import annotations
 
@@ -347,6 +349,55 @@ def agg(a) -> None:
     (out / "summary.json").write_text(json.dumps(summ, indent=1))
     print(json.dumps(summ, indent=1))
     figure(ok, summ, out)
+    summ["ruffolo_figure"] = ruffolo_figure(ok, out, a.ruffolo_bin)
+    (out / "summary.json").write_text(json.dumps(summ, indent=1))
+
+
+RUFFOLO = (("naive", "naive pairing", "#777777", "--"), ("own", "own beat", "#1098ad", "-"),
+           ("saw", "+ sawtooth removed (detect)", "#3b4fb8", "-"), ("reb", "own beat + rebuilt correction", "#e8590c", "-"),
+           ("art", "arterial PAT (reference)", "#2f9e44", "-"))
+
+
+def ruffolo_figure(ok, out: Path, bin_w: float = 0.02) -> dict:
+    """Per-recording PAT-SBP r as Ruffolo et al. 2025 appendix B figure 10: distribution and cumulative distribution,
+    beat to beat (their measure: beat-paired r over the hour) and over 30 s windows; every timing on the recordings
+    where all of them have an r. Returns the numbers drawn."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    keys = [k for k, *_ in RUFFOLO]
+    fig, ax = plt.subplots(2, 2, figsize=(13, 7.4))
+    bins = np.linspace(-1, 1, int(round(2 / bin_w)) + 1)
+    drawn = {"bin_width": bin_w}
+    for row, (scale, title) in enumerate((("beat", "beat to beat"), ("win30", "30 s window medians"))):
+        com = [r for r in ok if all(r[scale][k]["sbp"] is not None and np.isfinite(r[scale][k]["sbp"]) for k in keys)]
+        drawn[scale] = {"recordings": len(com)}
+        for k, lab, col, ls in RUFFOLO:
+            x = np.sort(np.array([r[scale][k]["sbp"] for r in com], float))
+            m, neg = float(x.mean()), float(np.mean(x < 0))
+            drawn[scale][k] = {"mean_r": round(m, 3), "median_r": round(float(np.median(x)), 3),
+                               "share_negative": round(neg, 3)}
+            leg = f"{lab}\nmean r {m:+.2f}, {100 * neg:.0f}% below 0"
+            if k == "art":
+                ax[row, 0].hist(x, bins=bins, density=True, histtype="stepfilled", color=col, alpha=0.18, lw=0)
+                ax[row, 0].hist(x, bins=bins, density=True, histtype="step", color=col, lw=1.4, label=leg)
+            else:
+                ax[row, 0].hist(x, bins=bins, density=True, histtype="step", color=col, lw=1.6, ls=ls, label=leg)
+            ax[row, 1].plot(x, np.arange(1, x.size + 1) / x.size, color=col, lw=1.8, ls=ls, label=leg)
+        for a_ in ax[row]:
+            a_.axvline(0, color="0.5", lw=0.8)
+            a_.set_xlim(-1, 1)
+            a_.spines[["top", "right"]].set_visible(False)
+        ax[row, 0].set(xlabel="Pearson r, PAT against SBP", ylabel="density")
+        ax[row, 1].set(xlabel="Pearson r, PAT against SBP", ylabel="cumulative share of recordings", ylim=(0, 1))
+        ax[row, 0].set_title(f"{'AB'[row]}. {title}: one r per recording, {len(com):,} recordings", fontsize=9,
+                             loc="left")
+        ax[row, 1].set_title(f"{'AB'[row]}. {title}: cumulative", fontsize=9, loc="left")
+        ax[row, 1].legend(fontsize=7.5, frameon=False, loc="upper left", bbox_to_anchor=(1.02, 1.0), labelspacing=0.9)
+    fig.tight_layout()
+    fig.savefig(out / "pat_vs_bp_ruffolo.png", dpi=150)
+    plt.close(fig)
+    return drawn
 
 
 def figure(ok, summ, out: Path) -> None:
@@ -389,6 +440,7 @@ def main() -> None:
     g = sub.add_parser("agg")
     g.add_argument("parts", nargs="+")
     g.add_argument("--out", required=True)
+    g.add_argument("--ruffolo-bin", type=float, default=0.02, help="histogram bin width of pat_vs_bp_ruffolo.png")
     a = ap.parse_args()
     scan(a) if a.cmd == "scan" else agg(a)
 

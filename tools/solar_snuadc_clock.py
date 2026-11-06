@@ -8,7 +8,8 @@ The Solar8000's heart rate and mean arterial pressure are computed by the monito
 pressure that SNUADC samples from its analogue outputs, and the recorder stamps each value on arrival with the PC
 clock. Their delay behind the waveform is fixed within a case (numeric-delay-variability), so if the waveform is
 placed on its own sample count, the delay ramps at the SNUADC's drift against the PC, measured without the SNUADC's
-stamps or resets. The 66-case pilot (numeric-clock-check) gave -65.3 ppm against -66.7 from the stamp model.
+stamps or resets. It supersedes the 66-case pilot (tools/numeric_clock_check.py, study numeric-clock-check),
+whose pooled numbers were not saved. tools/clock_edges.py --solar-min-h adds its agg output to the clock network.
 
 Per recording, two timelines for the SNUADC samples:
   counts  the sample count (physiosync.stamp_clock with the rate held at 0: one offset per stretch between gaps,
