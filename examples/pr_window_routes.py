@@ -5,8 +5,8 @@
         --labels $W/results/pat --out $W/pr_window_routes [--poll 2.0] [--pat 0.27]
 
 Route 1, from the comparison with heart rate (examples/hr_vs_pulse_rate.py, its scan parts only; per-lag sufficient
-statistics). The lag L at which HR and PLETH_HR changes agree best (pooled within each HR delay group, read from the
-whole-record lags by a parabola, as that example does) is the difference of the two windows' centres before their
+statistics). The lag L at which HR and PLETH_HR changes agree best (pooled within each HR delay group, record by
+record at the plateau midpoints, 2k + 1 s, by a parabola; see step_peak) is the difference of the two windows' centres before their
 stamps, so PLETH_HR's centre = L + c_HR, with c_HR = d_HR + E[phi] + w_HR / 2:
   d_HR    the recording's HR delay label (numeric_delay_labels.csv, 1 Nov, 8-interval rule; quality good), the
           shortest delay in the delay fits' uniform-phase convention;
@@ -49,15 +49,17 @@ def read_parts(folder: Path) -> dict:
     return rows
 
 
-def step_peak(sub: list) -> float:
-    """The lag of best agreement from the whole-record lags (2k s), by a parabola through the highest and its
-    neighbours (as examples/hr_vs_pulse_rate.py)."""
-    rec = list(range(-8, 9))
+def step_peak(sub: list, off: float = 1.0) -> float:
+    """The lag of best agreement, record by record, by a parabola through the highest and its neighbours. Record k is
+    read at the plateau midpoint, lag 2k + 1 s (off = 1): the recorder's gaps are 1.999-2.001 s, so a read at exactly
+    2k s falls on a plateau's edge and gets record k or k - 1 by chance, which biases the lag upwards
+    (examples/sim_pr_window_routes.py --jitter). off = 0 reproduces the first computation."""
+    rec = list(range(-8, 8))
     c = []
     for k in rec:
         t = np.zeros(6)
         for r in sub:
-            x = r["lags"].get(str(float(RECORD_S * k)))
+            x = r["lags"].get(str(float(RECORD_S * k + off)))
             if x:
                 t += np.array(x["ch"], float)
         c.append(_corr(t))
@@ -116,7 +118,8 @@ def main() -> None:
             "route1_minus_route2_s": round(r1 - r2, 2),
             "expected_from_pat_s": a.pat,
             "left_over_s": round(r1 - r2 - a.pat, 2),
-            "route1_as_first_computed_s": round(L + float(d_hr.mean()) + 3.0, 2),
+            "route1_lag_at_2k_s": round(step_peak(sub, 0.0), 3),
+            "route1_as_first_computed_s": round(step_peak(sub, 0.0) + float(d_hr.mean()) + 3.0, 2),
         }
         # by heart rate: thirds of the recordings by median pulse interval. A left-over that is the same in each third
         # is a delay; one that grows with the interval is a window counted in beats

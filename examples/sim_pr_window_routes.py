@@ -2,7 +2,7 @@
 """Synthetic test of the two routes to PLETH_HR's window (examples/pr_window_routes.py): does the comparison with
 heart rate recover the truth when everything is known?
 
-    python examples/sim_pr_window_routes.py --out $W/pr_window_routes/sim [--recordings 300] [--hours 2] [--seed 1]
+    python examples/sim_pr_window_routes.py --out $W/pr_window_routes/sim [--recordings 300] [--hours 2] [--seed 1] [--jitter]
 
 One heartbeat series per recording: a rate that wanders (an Ornstein-Uhlenbeck process, 75 bpm mean, SD 6 bpm, time
 constant 60 s, plus breathing at 0.25 Hz) and small beat-to-beat jitter; pulses at the finger a fixed pulse-arrival
@@ -15,7 +15,10 @@ phi the wait for the poll.
 The stamped series then go through the comparison's own scan (values held, read at HR stamps + L, changes over 10 s
 blocks) and its lag reading (parabola through the whole-record lags), and route 1 = L + d_HR + poll/2 + 4 x interval
 is set against the truth, the PLETH_HR window centre in the heartbeat time base: d_PR + poll/2 + 5 x interval + PAT.
-Writes OUT/summary.json (true values, route 1, its error) and prints it.
+With --jitter the polls are spaced as the Solar8000's records are (2.000 s 52%, 1.999 s 31%, 2.001 s 17%, roughly as
+solar8000-poll-gap's evidence), not exactly 2 s. The lag is read two ways: at the whole-record lags 2k s, which then
+fall on a plateau's edge and read record k or k - 1 by chance, and at the plateau midpoints 2k + 1 s, which read
+record k (the lag still taken as 2k). Writes OUT/summary.json (true values, route 1 both ways, their errors).
 """
 from __future__ import annotations
 
@@ -93,13 +96,13 @@ def scan(th, xh, tp, xp):
     return out
 
 
-def step_peak(sub):
-    rec = list(range(-8, 9))
+def step_peak(sub, off=0.0):
+    rec = list(range(-8, 8))
     c = []
     for k in rec:
         t = np.zeros(6)
         for r in sub:
-            t += np.array(r[str(float(RECORD_S * k))]["ch"], float)
+            t += np.array(r[str(float(RECORD_S * k + off))]["ch"], float)
         c.append(_corr(t))
     c = np.array(c)
     i = int(np.nanargmax(c))
@@ -113,27 +116,34 @@ def main() -> None:
     ap.add_argument("--recordings", type=int, default=300)
     ap.add_argument("--hours", type=float, default=2.0)
     ap.add_argument("--seed", type=int, default=1)
+    ap.add_argument("--jitter", action="store_true")
     a = ap.parse_args()
     rng = np.random.default_rng(a.seed)
     res = {"pat_s": PAT, "d_pr_s": D_PR, "poll_s": POLL, "recordings_per_group": a.recordings, "hours": a.hours,
-           "groups": {}}
+           "jitter": a.jitter, "groups": {}}
     for g, dhr in D_HR.items():
         rows, ivs = [], []
         for _ in range(a.recordings):
             r = beats(rng, a.hours)
             p = r + PAT
-            polls = np.arange(rng.uniform(0, POLL), r[-1], POLL)
+            if a.jitter:
+                gaps = rng.choice([2.0, 1.999, 2.001], size=int(r[-1] / 1.9) + 10, p=[0.52, 0.31, 0.17])
+                polls = rng.uniform(0, POLL) + np.r_[0, np.cumsum(gaps)]
+                polls = polls[polls < r[-1]]
+            else:
+                polls = np.arange(rng.uniform(0, POLL), r[-1], POLL)
             th, xh = stamped(*monitor(r, 8, 0.15, True, dhr), polls)
             tp, xp = stamped(*monitor(p, 10, 0.25, False, D_PR), polls)
             rows.append(scan(th, xh, tp, xp))
             ivs.append(np.median(np.diff(r)))
         iv = float(np.mean(ivs))
-        L = step_peak(rows)
-        route1 = L + dhr + POLL / 2 + 4 * iv
         truth = D_PR + POLL / 2 + 5 * iv + PAT
-        res["groups"][g] = {"lag_s": round(L, 3), "true_lag_s": round(truth - (dhr + POLL / 2 + 4 * iv), 3),
-                            "route1_centre_s": round(route1, 3), "true_centre_s": round(truth, 3),
-                            "route1_error_s": round(route1 - truth, 3)}
+        out_g = {"true_lag_s": round(truth - (dhr + POLL / 2 + 4 * iv), 3), "true_centre_s": round(truth, 3)}
+        for name, off in (("at_2k", 0.0), ("at_2k_plus_1", 1.0)):
+            L = step_peak(rows, off)
+            route1 = L + dhr + POLL / 2 + 4 * iv
+            out_g[name] = {"lag_s": round(L, 3), "route1_centre_s": round(route1, 3), "route1_error_s": round(route1 - truth, 3)}
+        res["groups"][g] = out_g
     a.out.mkdir(parents=True, exist_ok=True)
     (a.out / "summary.json").write_text(json.dumps(res, indent=1) + "\n")
     print(json.dumps(res, indent=1))
