@@ -2,7 +2,7 @@
 """Does each route to PLETH_HR's window get its own numeric right? The monitor's HR and PLETH_HR against the same
 numerics recomputed from the waveforms, per recording; a correct window and delay give a lag of zero.
 
-    bash examples/run_scan.sh numeric_recompute_lag      (P=4 O=$W/examples/numeric_recompute_lag_v1)
+    P=4 O=$W/examples/numeric_recompute_lag_v1 bash examples/run_scan.sh numeric_recompute_lag
     python tools/numeric_recompute_lag.py agg $W/examples/numeric_recompute_lag_v1/part_*.jsonl --out DIR
 
 Why: the two routes to where PLETH_HR's window sits differ by 1.0 s, 0.75 s beyond the pulse-arrival time, more at
@@ -21,6 +21,10 @@ Per recording (every --every-th case; first 4 hours of plethysmogram), on the SN
   PLETH_HR recomputed as rmean|n|10 (within 25%, rounded) from pulses (tools/pleth_hr_derivation.pulses), its delay
            fitted here in the uniform-phase convention (pleth_hr_derivation.phase_delay) on the stamp model, and
            also on the raw stamps, as the derivation did; stamped at the monitor's PLETH_HR stamps.
+Each recomputed value is placed at its last beat + d + WAIT, WAIT = 1 s: the delay convention has a value stamped at
+t computed at t - d - phi, phi uniform over the 2 s gap, so on average the monitor's value is half a gap older than a
+value recomputed at every beat (a pilot without WAIT read both lags about one record negative). With the right
+window and delay each lag is then zero on average; what matters for the two routes is PLETH_HR's lag minus HR's.
 Then, as examples/hr_vs_pulse_rate.py does for HR against PLETH_HR: the recomputed value held and read at the
 monitor's stamps + L (L = -6..6 s, 0.5 s), changes over 10 s blocks, sufficient statistics per lag; and the median of
 raw minus stamp-model time at the pulses. agg reads each pair's lag of best agreement (record by record at the plateau
@@ -51,6 +55,7 @@ from vent_sync_pilot import snu_times  # noqa: E402
 warnings.filterwarnings("ignore")
 LAGS = np.round(np.arange(-6, 6.01, 0.5), 1)
 KEY = "rmean|n|10"
+WAIT = 1.0          # half the 2 s gap: the mean wait for the poll in the delay convention
 
 
 def hr_rule(rr):
@@ -124,7 +129,7 @@ def run_case(root, c, u, step_rates, d_hr):
         ok = np.isfinite(y)
         m = (ht > tc[0] + 30) & (ht < tc[-1])
         if ok.sum() > 200 and m.sum() > 300:
-            rec = stamp_at(tc[ok] + d_hr, y[ok], ht[m])
+            rec = stamp_at(tc[ok] + d_hr + WAIT, y[ok], ht[m])
             res["hr"] = lag_stats(ht[m], hv[m], rec)
             res["hr_delay_s"] = d_hr
     # ---- PLETH_HR from pulses, on the stamp model and on the raw stamps
@@ -157,7 +162,7 @@ def run_case(root, c, u, step_rates, d_hr):
             ok = np.isfinite(stat)
             val = np.round(60.0 / stat[ok])
             # a value stamped at t was ready by t - phi; the recomputed value ready at close + d is stamped at the next
-            rec = stamp_at(te_[ok] + d, val, pt[m])
+            rec = stamp_at(te_[ok] + d + WAIT, val, pt[m])
             res["pr"] = lag_stats(pt[m], pv[m], rec)
     return res
 
@@ -223,6 +228,12 @@ def agg(a) -> None:
                 o[f"{key}_recordings"] = len(s)
                 o[f"{key}_lag_s"] = round(peak(s, key), 3)
                 o[f"{key}_lag_boot_p2.5_p97.5"] = [round(float(np.percentile(bt, 2.5)), 3), round(float(np.percentile(bt, 97.5)), 3)]
+        both = [r for r in sub if "hr" in r and "pr" in r]
+        if len(both) >= 30:
+            diff = lambda rs: peak(rs, "pr") - peak(rs, "hr")
+            bt = [diff([both[i] for i in rng.integers(0, len(both), len(both))]) for _ in range(30)]
+            o["pr_minus_hr_lag_s"] = round(diff(both), 3)
+            o["pr_minus_hr_lag_boot_p2.5_p97.5"] = [round(float(np.percentile(bt, 2.5)), 3), round(float(np.percentile(bt, 97.5)), 3)]
         for k in ("pr_delay_model_s", "pr_delay_raw_s", "raw_minus_model_s", "hr_delay_s", "pr_exact_model", "pr_exact_raw"):
             x = np.array([r[k] for r in sub if r.get(k) is not None])
             if x.size:
@@ -253,7 +264,7 @@ def main() -> None:
         s.add_argument(k, required=True)
     for k in ("--units", "--step-rates", "--labels"):
         s.add_argument(k)
-    s.add_argument("--every", type=int, default=3, help="every N-th case (case %% N == 0)")
+    s.add_argument("--every", type=int, default=1, help="every N-th case (case %% N == 0)")
     s.add_argument("--time-budget", type=float, default=0)
     g = sub.add_parser("agg")
     g.add_argument("parts", nargs="+")
