@@ -1,13 +1,14 @@
 # SPDX-License-Identifier: MIT
 """Figure: the recording PCs' clock rate against the mains grid (aggregates only; no case ids).
 
-    python tools/mains_hum_plot.py per_recording.csv out.png [--setup-min-n 10]
+    python tools/mains_hum_plot.py per_recording.csv out.png [--setup-min-n 30]
 
-per_recording.csv from tools/mains_hum.py agg (with its snu_teeth column). g = r - line = f_PC - f_grid (positive = the
-PC runs fast). (a) g where the SNUADC rate r comes from whole teeth (two corrections in one stretch), and where it
-does not: there r is a line fitted through a one-step staircase, which carries no rate
-(examples/sim_stamp_clock_onecorr.py), so its spread is the fit's, not the PCs'. (b) median and IQR by recording
-setup, whole teeth only, setups with at least --setup-min-n such recordings.
+per_recording.csv from tools/mains_hum.py agg (its rate_src and snu_rate_setup columns). g = r - line = f_PC - f_grid
+(positive = the PC runs fast). (a) g by where the SNUADC rate r comes from: the recording's own whole teeth (two
+corrections in one stretch); its setup's rate, borrowed (the median of the setup's whole-teeth rates, the recording
+left out); or neither, where r is a line fitted through a one-step staircase, which carries no rate
+(examples/sim_stamp_clock_onecorr.py). (b) median and IQR by recording setup, own and borrowed rates together, setups
+with at least --setup-min-n recordings.
 """
 import argparse
 import collections
@@ -26,11 +27,14 @@ def main(table, out, setup_min_n):
     m = pd.read_csv(table)
     m = m[m.snu_line.notna() & m.snu_rate.notna() & (m.snu_events >= 1)].copy()
     m["g"] = m.snu_rate - m.snu_line
-    teeth = m.snu_teeth.fillna(0) >= 1
+    src = m.rate_src.fillna("fit")
+    m["g_used"] = np.where(src == "teeth", m.snu_rate, np.where(src == "setup", m.snu_rate_setup, np.nan)) - m.snu_line
     fig, (a, b) = plt.subplots(1, 2, figsize=(11, 4.2), gridspec_kw={"width_ratios": [1.15, 1]})
     bins = np.arange(-120, 101, 4)
-    for sel, col, lab in ((teeth, BLUE, "rate from whole teeth"), (~teeth, GREY, "no whole tooth (line fit, not a rate)")):
-        g = m[sel].g.values
+    for sel, col, lab, gcol in ((src == "teeth", BLUE, "own whole teeth", "g_used"),
+                                (src == "setup", ORANGE, "setup's rate, borrowed", "g_used"),
+                                (src == "fit", GREY, "neither (line fit, not a rate)", "g")):
+        g = m[sel][gcol].values
         a.hist(np.clip(g, -120, 100), bins=bins, histtype="stepfilled", color=col, alpha=0.25, lw=0)
         a.hist(np.clip(g, -120, 100), bins=bins, histtype="step", color=col, lw=1.2)
         med = np.median(g); a.axvline(med, color=col, lw=1.2, ymax=0.78)
@@ -44,7 +48,8 @@ def main(table, out, setup_min_n):
     a.text(0, 1.01, "recordings with mains hum and a measured SNUADC rate; values beyond the axis at its edge",
            transform=a.transAxes, fontsize=7.5, color=MUTED)
     by = collections.defaultdict(list)
-    for k, v in zip(m.key[teeth], m.g[teeth]):
+    used = m.g_used.notna()
+    for k, v in zip(m.key[used], m.g_used[used]):
         by[k].append(v)
     keys = sorted([k for k, v in by.items() if len(v) >= setup_min_n], key=lambda k: np.median(by[k]))
     for i, k in enumerate(keys):
@@ -55,8 +60,7 @@ def main(table, out, setup_min_n):
         b.text(-82, i, f"setup {chr(65 + i)} (SNUADC {port}, n = {len(v)})", fontsize=7.5, va="center", ha="right", color=INK)
     b.axvline(0, color=GREY, lw=1, ls=(0, (4, 3))); b.set_yticks([]); b.set_xlim(-80, 50)
     b.set_xlabel("PC clock rate against the grid (ppm)\nmedian and interquartile range", fontsize=8)
-    b.set_title(f"b  By setup (whole teeth, {setup_min_n}+ recordings)", fontsize=9, loc="left", fontweight="bold",
-                pad=18)
+    b.set_title(f"b  By setup ({setup_min_n}+ recordings)", fontsize=9, loc="left", fontweight="bold", pad=18)
     for ax in (a, b):
         ax.grid(color=GRID, lw=0.6); ax.set_axisbelow(True); ax.tick_params(labelsize=7.5)
         for s in ("top", "right"):
@@ -68,6 +72,6 @@ def main(table, out, setup_min_n):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("table"); ap.add_argument("out"); ap.add_argument("--setup-min-n", type=int, default=10)
+    ap.add_argument("table"); ap.add_argument("out"); ap.add_argument("--setup-min-n", type=int, default=30)
     x = ap.parse_args()
     main(x.table, x.out, x.setup_min_n)

@@ -177,19 +177,61 @@ def agg(a):
                              bis_line=statistics.median(b) if b else None, bis_rate=rb[0] if rb else None,
                              snu_port=p.get("SNUADC"), bis_port=p.get("BIS"),
                              key=" ".join(f"{k}:{v}" for k, v in sorted(p.items()))))
+    # SNUADC rate by setup (the recording station, by its device ports): the median of the setup's rates from whole
+    # teeth, leaving the recording itself out. Within a setup a recording's own rate sits a robust SD of 0.75 ppm from
+    # it (examples/setup_rate_check.py), so a recording without a whole tooth can borrow it (--setup-rates).
+    teeth_by_key = defaultdict(list)
+    for r in rows:
+        if r["snu_rate"] is not None and r["snu_events"] and (r["snu_teeth"] or 0) >= 1:
+            teeth_by_key[r["key"]].append(r["snu_rate"])
+    for r in rows:
+        r["snu_rate_setup"], r["rate_src"] = None, None
+        if r["snu_rate"] is None or not r["snu_events"]:
+            continue
+        teeth = (r["snu_teeth"] or 0) >= 1
+        others = list(teeth_by_key.get(r["key"], []))
+        if teeth:
+            others.remove(r["snu_rate"])
+        if len(others) >= a.setup_min_rates:
+            r["snu_rate_setup"] = round(float(np.median(others)), 2)
+        r["rate_src"] = "teeth" if teeth else ("setup" if r["snu_rate_setup"] is not None else "fit")
+
+    def r_used(r):
+        if r["rate_src"] == "teeth" or (r["rate_src"] is not None and a.min_teeth == 0 and not a.setup_rates):
+            return r["snu_rate"]
+        if r["rate_src"] == "setup" and a.setup_rates:
+            return r["snu_rate_setup"]
+        if r["rate_src"] == "fit" and a.min_teeth == 0 and not a.setup_rates:
+            return r["snu_rate"]
+        return None
+
     import csv
     with open(a.table, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0])); w.writeheader(); w.writerows(rows)
     # --min-teeth 1: only rates from whole teeth (two corrections in one stretch). With fewer, stamp_clock fits a line
     # through a staircase of one step, which carries no rate (vitaldb-bench examples/sim_stamp_clock_onecorr.py).
-    g = [(r["snu_rate"] - r["snu_line"], r) for r in rows if r["snu_line"] is not None and r["snu_events"]
-         and (r["snu_teeth"] or 0) >= a.min_teeth]
+    # --setup-rates: recordings without a whole tooth take their setup's rate (above) instead.
+    g = [(r_used(r) - r["snu_line"], r) for r in rows if r["snu_line"] is not None and r_used(r) is not None]
+    # check: within setups with both, g from own whole teeth against g from the borrowed setup rate
+    gk = defaultdict(lambda: {"teeth": [], "setup": []})
+    for r in rows:
+        if r["snu_line"] is not None and r["rate_src"] == "teeth":
+            gk[r["key"]]["teeth"].append(r["snu_rate"] - r["snu_line"])
+        if r["snu_line"] is not None and r["rate_src"] == "setup":
+            gk[r["key"]]["setup"].append(r["snu_rate_setup"] - r["snu_line"])
+    both = [(float(np.median(v["setup"])) - float(np.median(v["teeth"])), len(v["teeth"]), len(v["setup"]))
+            for v in gk.values() if len(v["teeth"]) >= 5 and len(v["setup"]) >= 5]
     by_port, by_key = defaultdict(list), defaultdict(list)
     for v, r in g:
         by_port[r["snu_port"]].append(v); by_key[r["key"]].append(v)
     summ = {"coverage": dict(cov),
             "snuadc_line_ppm": q([r["snu_line"] for r in rows if r["snu_line"] is not None]),
-            "min_teeth": a.min_teeth,
+            "min_teeth": a.min_teeth, "setup_rates": a.setup_rates, "setup_min_rates": a.setup_min_rates,
+            "pc_vs_grid_by_rate_source": {k: q([v for v, r in g if r["rate_src"] == k]) for k in ("teeth", "setup", "fit")},
+            "check_setup_minus_teeth_g_by_setup": {
+                "setups": len(both),
+                "median_difference_ppm": round(float(np.median([d for d, _, _ in both])), 2) if both else None,
+                "differences_ppm": sorted(round(d, 1) for d, _, _ in both)},
             "pc_vs_grid_ppm": {"one correction": q([v for v, r in g if r["snu_events"] == 1]),
                                "two or more": q([v for v, r in g if r["snu_events"] >= 2]),
                                "all with corrections": q([v for v, r in g]),
@@ -211,6 +253,9 @@ def main():
     s.add_argument("--block-min", type=float, default=0.0)
     g = sp.add_parser("agg"); g.add_argument("parts", nargs="+"); g.add_argument("--rates", nargs="+", required=True)
     g.add_argument("--ports", required=True); g.add_argument("--table", required=True); g.add_argument("--summary", required=True)
+    g.add_argument("--setup-rates", action="store_true", help="recordings without a whole tooth take their setup's "
+                   "SNUADC rate (median of its whole-teeth rates, the recording left out)")
+    g.add_argument("--setup-min-rates", type=int, default=5, help="fewest whole-teeth rates for a setup rate (default 5)")
     g.add_argument("--setup-min-n", type=int, default=30, help="fewest recordings for a setup's median (default 30)")
     g.add_argument("--min-teeth", type=int, default=0, help="keep only SNUADC rates from at least this many whole teeth "
                    "(1: rates measured from the teeth; 0, the default, keeps the line fits of one-correction recordings)")
