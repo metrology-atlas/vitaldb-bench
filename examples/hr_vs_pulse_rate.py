@@ -230,19 +230,22 @@ def agg(a) -> None:
                       "at_atlas_centre_lag": _agreement(labelled, lambda r: _nearest(centre_lag[r["case"]])),
                       "at_best_lag": _agreement(ok, lambda r: keys[best])},
     }
-    # Both numerics arrive in one message every 2 s, so between whole-record lags the curve is flat. The peak is read
-    # from the whole-record lags (2k s) by a parabola through the highest and its neighbours. For windows symmetric
+    # Both numerics arrive in one message every 2 s, so the curve is a staircase with a step per record. The peak is
+    # read record by record at the steps' midpoints (2k + 1 s, taken as lag 2k) by a parabola through the highest and
+    # its neighbours: the recorder's gaps are 1.999-2.001 s, so a read at exactly 2k s falls on a step's edge and gets
+    # record k or k - 1 by chance, which biased the first computation upwards (examples/sim_pr_window_routes.py
+    # --jitter; 8 Nov). For windows symmetric
     # about their centre, the lag at which changes agree best is the difference of the two windows' centres
     # (delay + half the window), whatever the signal's volatility, which sets only the curve's height and width.
     # So L + d_HR + w_HR/2 is where PLETH_HR's window is centred before its stamp.
-    rec = [k for k in range(-8, 9)]
+    rec = [k for k in range(-8, 8)]
 
     def step_peak(sub):
         c = []
         for k in rec:
             t = np.zeros(6)
             for r in sub:
-                x = r["lags"].get(str(float(RECORD_S * k)))
+                x = r["lags"].get(str(float(RECORD_S * k + 1)))
                 if x:
                     t += np.array(x["ch"], float)
             c.append(_corr(t))
