@@ -153,10 +153,11 @@ def agg(a):
             d = json.loads(l)
             for k in ("SNUADC/ECG_II", "BIS/EEG1_WAV"):
                 if isinstance(d.get(k), dict) and d[k].get("rate_ppm") is not None:
-                    rates[d["case"]][k] = (d[k]["rate_ppm"], d[k].get("events", 0), d[k].get("hours"))
+                    rates[d["case"]][k] = (d[k]["rate_ppm"], d[k].get("events", 0), d[k].get("hours"),
+                                           len(d[k].get("event_intervals_s") or []))
     ports = {}
     for l in open(a.ports):
-        d = json.loads(l); ports[d["case"]] = d["ports"]
+        d = json.loads(l); ports[d["case"]] = {k: str(v).replace("\x00", "") for k, v in d["ports"].items()}
     rows, cov = [], Counter()
     for f in a.parts:
         for l in open(f):
@@ -172,23 +173,31 @@ def agg(a):
             rs = rates.get(c, {}).get("SNUADC/ECG_II"); rb = rates.get(c, {}).get("BIS/EEG1_WAV"); p = ports.get(c, {})
             rows.append(dict(case=c, snu_line=statistics.median(s) if s else None,
                              snu_rate=rs[0] if rs else None, snu_events=rs[1] if rs else None, hours=rs[2] if rs else None,
+                             snu_teeth=rs[3] if rs else None,
                              bis_line=statistics.median(b) if b else None, bis_rate=rb[0] if rb else None,
                              snu_port=p.get("SNUADC"), bis_port=p.get("BIS"),
                              key=" ".join(f"{k}:{v}" for k, v in sorted(p.items()))))
     import csv
     with open(a.table, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0])); w.writeheader(); w.writerows(rows)
-    g = [(r["snu_rate"] - r["snu_line"], r) for r in rows if r["snu_line"] is not None and r["snu_events"]]
+    # --min-teeth 1: only rates from whole teeth (two corrections in one stretch). With fewer, stamp_clock fits a line
+    # through a staircase of one step, which carries no rate (vitaldb-bench examples/sim_stamp_clock_onecorr.py).
+    g = [(r["snu_rate"] - r["snu_line"], r) for r in rows if r["snu_line"] is not None and r["snu_events"]
+         and (r["snu_teeth"] or 0) >= a.min_teeth]
     by_port, by_key = defaultdict(list), defaultdict(list)
     for v, r in g:
         by_port[r["snu_port"]].append(v); by_key[r["key"]].append(v)
     summ = {"coverage": dict(cov),
             "snuadc_line_ppm": q([r["snu_line"] for r in rows if r["snu_line"] is not None]),
+            "min_teeth": a.min_teeth,
             "pc_vs_grid_ppm": {"one correction": q([v for v, r in g if r["snu_events"] == 1]),
                                "two or more": q([v for v, r in g if r["snu_events"] >= 2]),
-                               "all with corrections": q([v for v, r in g])},
+                               "all with corrections": q([v for v, r in g]),
+                               "whole teeth": q([v for v, r in g if (r["snu_teeth"] or 0) >= 1]),
+                               "no whole tooth": q([v for v, r in g if not (r["snu_teeth"] or 0)])},
             "pc_vs_grid_by_snuadc_port": {k: q(v) for k, v in sorted(by_port.items(), key=lambda kv: -len(kv[1])) if len(v) >= 20},
-            "pc_vs_grid_by_setup_medians": sorted(round(float(np.median(v)), 1) for v in by_key.values() if len(v) >= 30),
+            "setup_min_n": a.setup_min_n,
+            "pc_vs_grid_by_setup_medians": sorted(round(float(np.median(v)), 1) for v in by_key.values() if len(v) >= a.setup_min_n),
             "bis_line_ppm": q([r["bis_line"] for r in rows if r["bis_line"] is not None])}
     json.dump(summ, open(a.summary, "w"), indent=1)
     print(json.dumps(summ["coverage"]), json.dumps(summ["pc_vs_grid_ppm"]))
@@ -202,6 +211,9 @@ def main():
     s.add_argument("--block-min", type=float, default=0.0)
     g = sp.add_parser("agg"); g.add_argument("parts", nargs="+"); g.add_argument("--rates", nargs="+", required=True)
     g.add_argument("--ports", required=True); g.add_argument("--table", required=True); g.add_argument("--summary", required=True)
+    g.add_argument("--setup-min-n", type=int, default=30, help="fewest recordings for a setup's median (default 30)")
+    g.add_argument("--min-teeth", type=int, default=0, help="keep only SNUADC rates from at least this many whole teeth "
+                   "(1: rates measured from the teeth; 0, the default, keeps the line fits of one-correction recordings)")
     a = ap.parse_args()
     scan(a) if a.cmd == "scan" else agg(a)
 
