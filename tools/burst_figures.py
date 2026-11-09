@@ -113,7 +113,7 @@ def examples(a) -> None:
 
 
 def validation(a) -> None:
-    Bs, Bm = load(a.stamps, "stamps"), load(a.model, "model3")
+    Bs, Bm = load(a.stamps, "stamps"), load(a.model, a.variant)
     modes = {int(k): v for k, v in json.loads(Path(a.modes).read_text()).items()}
     L = json.loads(Path(a.levels).read_text())
     plt = plt_()
@@ -198,6 +198,7 @@ def main() -> None:
     p = sub.add_parser("validation")
     p.add_argument("--stamps", required=True)
     p.add_argument("--model", required=True)
+    p.add_argument("--variant", default="model3", help="the stamp-model variant in --model (model4 from 9 Nov 2026)")
     p.add_argument("--modes", required=True)
     p.add_argument("--levels", required=True)
     p.add_argument("--out", required=True)
