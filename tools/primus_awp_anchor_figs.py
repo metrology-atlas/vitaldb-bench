@@ -33,6 +33,7 @@ from scipy import ndimage  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "examples"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from fallback_rate import load_step_rates  # noqa: E402
 
 BLUE, ORANGE, INK, MUTED, GRID, PALE = "#2a78d6", "#eb6834", "#0b0b0b", "#52514e", "#e4e3df", "#f6c9b5"
 # recording, window centre (s from the first AWP sample) for A-B; recording, pause stop (s) for C
@@ -64,13 +65,13 @@ def fig_ambiguity(a, out):
     from vent_sync_pilot import G, binned, trig_avg
     modes = {int(k): v for k, v in json.loads(Path(a.modes).read_text()).items()}
     ports = {int(k): (v or {}).get("port") for k, v in json.loads(Path(a.ports).read_text()).items()}
-    rates = json.loads(Path(a.step_rates).read_text())
+    rates = load_step_rates(a.step_rates)
 
     def load(c):
         v = read_vital(Path(a.root) / "vital_files" / f"{c:04d}.vital", track_names={"Primus/AWP", "SNUADC/CVP"})
         aw, cv = v.tracks["Primus/AWP"], v.tracks["SNUADC/CVP"]
         ta = sample_times(aw); xa = np.nan_to_num(aw.physical().astype(float))[: ta.size]
-        tc = P.model_times(cv, ports.get(c), modes.get(c), rates); xc = cv.physical().astype(float)[: tc.size]
+        tc = P.model_times(cv, ports.get(c), modes.get(c), rates.for_case(c)); xc = cv.physical().astype(float)[: tc.size]
         return ta, xa, tc, xc, P.breath_onsets(ta, xa, float(aw.srate)), float(cv.srate)
 
     fig, ax = plt.subplots(3, 1, figsize=(7, 10.5))

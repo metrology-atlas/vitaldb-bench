@@ -46,6 +46,7 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "examples"))
+from fallback_rate import load_step_rates  # noqa: E402
 from hr_vs_pulse_rate import BLOCK, RECORD_S, _corr, _held  # noqa: E402
 from numeric_derivation_pilot import beat_series, numeric_obs  # noqa: E402
 from pat import sample_times  # noqa: E402
@@ -170,7 +171,7 @@ def run_case(root, c, u, step_rates, d_hr):
 def scan(a) -> None:
     w = os.environ.get("VITALDB_WORK") or os.environ.get("W") or ""
     U = {int(r["case"]): r for r in csv.DictReader(open(a.units or f"{w}/results/sync_full/units.csv"))}
-    step_rates = json.loads(Path(a.step_rates or f"{w}/results/pat/snuadc_step_rates.json").read_text())
+    step_rates = load_step_rates(a.step_rates or f"{w}/results/pat/snuadc_step_rates.json")
     D = {}
     for r in csv.DictReader(open(a.labels or f"{w}/results/pat/numeric_delay_labels.csv")):
         if r["track"] == "Solar8000/HR" and r.get("quality") == "good":
@@ -185,7 +186,7 @@ def scan(a) -> None:
             break
         t1 = time.time()
         try:
-            r = run_case(a.root, c, U.get(c, {}), step_rates, D.get(c))
+            r = run_case(a.root, c, U.get(c, {}), step_rates.for_case(c), D.get(c))
         except Exception as e:  # noqa: BLE001
             r = {"case": c, "error": repr(e)[:300]}
         r["secs"] = round(time.time() - t1, 1)

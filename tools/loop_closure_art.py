@@ -28,6 +28,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent))
+from fallback_rate import load_step_rates  # noqa: E402
 import rare_device_sync as rds  # noqa: E402
 
 BLOCK = 1800.0
@@ -111,13 +112,13 @@ def main() -> None:
         agg(a.inputs, a.summary)
         return
     U = {int(r["case"]): r for r in csv.DictReader(open(a.units))}
-    sr = json.loads(Path(a.step_rates).read_text())
+    sr = load_step_rates(a.step_rates)
     done = {json.loads(l)["case"] for l in open(a.out)} if Path(a.out).exists() else set()
     for c in [int(x) for x in a.cases.split(",") if x]:
         if c in done:
             continue
         try:
-            r = scan_case(a.root, c, U.get(c, {}), sr)
+            r = scan_case(a.root, c, U.get(c, {}), sr.for_case(c))
         except Exception as e:  # noqa: BLE001
             r = {"case": c, "error": repr(e)[:300]}
         with open(a.out, "a") as fh:

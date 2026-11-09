@@ -18,6 +18,12 @@ burst check showed such recordings drift like step mode (they end before their f
 Variant "model3" (19 Oct) is "model2" except that a BIS track with no correction at all, no whole tooth and no known
 unit or case rate takes its port's median BIS rate against the recorder PC (--bis-rates, from the correction steps of the full
 release; '*' for ports with too few recordings) instead of the stamps' rate (0). Rates never come from the bursts.
+Variant "model4" (9 Nov 2026) is "model3" with two changes. A step-mode SNUADC track without a whole tooth takes its
+setup's rate (the "cases" table of --step-rates, tools/port_rates.py --setup-min) before its port's. A BIS track
+without a whole tooth and with no unit or case rate takes its setup's, else its port's BIS rate (--bis-rates, same
+format) whether or not it made corrections: with corrections but no whole tooth, model3 kept stamp_clock's line fit,
+which is not a rate (physiosync 0.3.4 rate_measured; examples/sim_stamp_clock_onecorr.py). Setup rates predict a
+recording's own rate to a robust SD of 0.75 ppm (SNUADC) and 1.45 ppm (BIS) (examples/setup_rate_check.py).
 """
 
 from __future__ import annotations
@@ -32,6 +38,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent))
+from fallback_rate import load_step_rates  # noqa: E402
 from physiosync import corrected_times, stamp_clock
 from shared_artifacts import BAND, DT, burst_probe, envelope
 from vitaldb_reader.vital_file import read_vital
@@ -51,8 +58,8 @@ def main() -> None:
     ap.add_argument("--bis-rates", default=None, help="JSON BIS port -> median BIS rate against the PC (ppm), '*' for any")
     ap.add_argument("--ports", default=None, help="JSON case -> {port: SNUADC port, ...} for every recording")
     a = ap.parse_args()
-    step_rates = json.loads(Path(a.step_rates).read_text()) if a.step_rates else {}
-    bis_rates = json.loads(Path(a.bis_rates).read_text()) if a.bis_rates else {}
+    step_rates = load_step_rates(a.step_rates)
+    bis_rates = load_step_rates(a.bis_rates)
     modes = {int(k): v for k, v in json.loads(Path(a.modes).read_text()).items()} if a.modes else {}
     ports = {int(k): (v or {}).get("port") for k, v in json.loads(Path(a.ports).read_text()).items()} if a.ports else {}
     bis_ports = {int(k): (v or {}).get("bis_port") for k, v in json.loads(Path(a.ports).read_text()).items()} if a.ports else {}
@@ -87,7 +94,8 @@ def main() -> None:
                         known = float(known) if known not in (None, "") else None
                         unit = u.get(f"{dev}_unit_mean_ppm")
                         unit = float(unit) if unit not in (None, "") else None
-                        if variant in ("model", "model2", "model3"):
+                        fb = None
+                        if variant in ("model", "model2", "model3", "model4"):
                             clk = stamp_clock(tr.record_times, st, fs, correction_sign=sign)
                             if clk["rate_source"] == "fit":
                                 if dev == "snuadc":
@@ -95,19 +103,26 @@ def main() -> None:
                                     # tooth: the port's typical step-mode rate
                                     ev = clk["corrections"]["median_event_s"]
                                     port = ports.get(c) or u.get("snuadc_port")
-                                    port_rate = step_rates.get(port, step_rates.get("*", 0.0))
+                                    sr = step_rates.for_case(c) if variant == "model4" else step_rates
+                                    port_rate = sr.get(port, sr.get("*", 0.0))
                                     if ev is not None and ev <= -0.4:
-                                        fall = port_rate
-                                    elif variant in ("model2", "model3") and ev is None and modes.get(c) != "small":
-                                        fall = port_rate      # no correction at all: step mode before its first reset
+                                        fall, fb = port_rate, sr.tier
+                                    elif variant in ("model2", "model3", "model4") and ev is None and modes.get(c) != "small":
+                                        fall, fb = port_rate, sr.tier  # no correction at all: step mode before its first reset
                                     else:
-                                        fall = 0.0
+                                        fall, fb = 0.0, "trusted_stamps"
                                 else:
                                     fall = unit if unit is not None else known
+                                    fb = "unit_mean" if unit is not None else ("sync_full" if known is not None else None)
                                     if (variant == "model3" and fall is None and clk["corrections"]["events"] == 0
                                             and bis_rates):
                                         bport = bis_ports.get(c) or u.get("bis_port")
-                                        fall = bis_rates.get(bport, bis_rates.get("*"))
+                                        fall, fb = bis_rates.get(bport, bis_rates.get("*")), "port_bis_rate"
+                                    elif variant == "model4" and fall is None and bis_rates:
+                                        bport = bis_ports.get(c) or u.get("bis_port")
+                                        br = bis_rates.for_case(c)
+                                        fall = br.get(bport, br.get("*"))
+                                        fb = "setup_bis_rate" if br.tier == "setup_step_rate" else "port_bis_rate"
                                 if fall is not None:
                                     clk = stamp_clock(tr.record_times, st, fs, rate_ppm=fall, correction_sign=sign)
                         elif variant == "stamps":       # the recorded stamps, uncorrected (for figures)
@@ -125,6 +140,8 @@ def main() -> None:
                         clocks[k] = {"rate_ppm": round(clk["rate_ppm"], 2), "source": clk["rate_source"], "teeth": clk["teeth"],
                                      "events": clk["corrections"]["events"], "gaps": clk["gaps"],
                                      "p2p_ms": round(clk["sawtooth_p2p_s"] * 1000, 1)}
+                        if fb and clk["rate_source"] == "given":
+                            clocks[k]["fallback"] = fb
                     t0 = float(np.floor(min(t[0] for t in times.values())))
                     n = int((max(t[-1] for t in times.values()) - t0) / DT) + 1
                     env = {k: envelope(times[k], raw[k][1][: times[k].size], raw[k][2], BAND[k], t0, n) for k in times}

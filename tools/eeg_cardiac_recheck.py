@@ -20,6 +20,7 @@ import numpy as np
 from scipy import signal
 
 sys.path.insert(0, str(Path(__file__).parent))
+from fallback_rate import load_step_rates  # noqa: E402
 import vent_sync_pilot as V
 from pat import r_peaks
 from physiosync import corrected_times, stamp_clock
@@ -30,7 +31,7 @@ for k in ("--root", "--cases", "--units", "--step-rates", "--bursts", "--out"):
     ap.add_argument(k, required=True)
 a = ap.parse_args()
 U = {int(r["case"]): r for r in csv.DictReader(open(a.units))}
-sr = json.loads(Path(a.step_rates).read_text())
+sr = load_step_rates(a.step_rates)
 B = {json.loads(l)["case"]: json.loads(l) for l in open(a.bursts)}
 
 
@@ -55,7 +56,7 @@ with open(a.out, "a") as fh:
         try:
             v = read_vital(Path(a.root) / "vital_files" / f"{c:04d}.vital", track_names={"SNUADC/ECG_II", "BIS/EEG1_WAV", "BIS/EEG2_WAV"})
             u = U.get(c, {})
-            te, _ = V.snu_times(v.tracks["SNUADC/ECG_II"], u, sr)
+            te, _ = V.snu_times(v.tracks["SNUADC/ECG_II"], u, sr.for_case(c))
             xe = v.tracks["SNUADC/ECG_II"].physical().astype(float)
             g = [x for x in B.get(c, {}).get("model", {}).get("burst", {}).get("ecg~eeg1", [])
                  if x[2] >= 0.3 and x[2] - x[3] >= 0.15]

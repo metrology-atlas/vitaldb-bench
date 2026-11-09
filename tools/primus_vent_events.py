@@ -43,6 +43,7 @@ from scipy import ndimage, signal
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "examples"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from fallback_rate import load_step_rates  # noqa: E402
 import ppv_by_breath as P  # noqa: E402
 from pat import sample_times  # noqa: E402
 from primus_sync_accuracy import lowpass_mean  # noqa: E402
@@ -172,7 +173,7 @@ def scan_case(c, a, modes, ports, step_rates):
 def scan(a):
     modes = {int(k): v for k, v in json.loads(Path(a.modes).read_text()).items()}
     ports = {int(k): (v or {}).get("port") for k, v in json.loads(Path(a.ports).read_text()).items()}
-    step_rates = json.loads(Path(a.step_rates).read_text())
+    step_rates = load_step_rates(a.step_rates)
     out = Path(a.out)
     done = {json.loads(l)["case"] for l in out.read_text().splitlines() if l.strip()} if out.exists() else set()
     t_start = time.time()
@@ -184,7 +185,7 @@ def scan(a):
                 break
             t1 = time.time()
             try:
-                r = scan_case(c, a, modes, ports, step_rates)
+                r = scan_case(c, a, modes, ports, step_rates.for_case(c))
             except Exception as err:  # noqa: BLE001
                 r = {"case": c, "error": f"{type(err).__name__}: {err}"[:300]}
             r["secs"] = round(time.time() - t1, 1)

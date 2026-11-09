@@ -31,6 +31,7 @@ import numpy as np
 from physiosync import corrected_times
 
 sys.path.insert(0, str(Path(__file__).parent))
+from fallback_rate import load_step_rates  # noqa: E402
 from clock_model_fit import fit_track  # noqa: E402
 from vitaldb_reader.resets import reorder_case  # noqa: E402
 from vitaldb_reader.vital_file import read_vital  # noqa: E402
@@ -41,7 +42,7 @@ EDGES = np.arange(-1.0, 1.0001, 0.005)
 
 def scan(a) -> None:
     U = {int(r["case"]): r for r in csv.DictReader(open(a.units))}
-    step_rates = json.loads(Path(a.step_rates).read_text())
+    step_rates = load_step_rates(a.step_rates)
     out = Path(a.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     done = {json.loads(x)["case"] for x in out.read_text().splitlines() if x.strip()} if out.exists() else set()
@@ -60,7 +61,7 @@ def scan(a) -> None:
                 if tr is None or tr.record_times.size < 3 or not tr.srate:
                     r["skip"] = "no ECG_II"
                 else:
-                    info, clk = fit_track(tr, "SNUADC", U.get(c, {}), step_rates)
+                    info, clk = fit_track(tr, "SNUADC", U.get(c, {}), step_rates.for_case(c))
                     st = tr.record_offsets[: tr.record_times.size]
                     d = tr.record_times - corrected_times(clk, st)
                     h, _ = np.histogram(np.clip(d, EDGES[0], EDGES[-1] - 1e-9), EDGES)

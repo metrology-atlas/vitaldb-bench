@@ -44,6 +44,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent))
+from fallback_rate import load_step_rates  # noqa: E402
 import numeric_derivation_pilot as ndp  # noqa: E402
 from vitaldb_reader.vital_file import TRACK_NUMERIC  # noqa: E402
 
@@ -470,7 +471,7 @@ def main():
         hrwin_agg(a.inputs, a.devices, a.summary)
         return
     U = {int(r["case"]): r for r in csv.DictReader(open(a.units))}
-    sr = json.loads(Path(a.step_rates).read_text())
+    sr = load_step_rates(a.step_rates)
     done = set()
     if Path(a.out).exists():
         done = {json.loads(l)["case"] for l in open(a.out)}
@@ -478,7 +479,7 @@ def main():
         if c in done:
             continue
         try:
-            r = (scan_hr_window if a.mode == "hrwin" else scan_case)(a.root, c, U.get(c, {}), sr)
+            r = (scan_hr_window if a.mode == "hrwin" else scan_case)(a.root, c, U.get(c, {}), sr.for_case(c))
         except Exception as e:  # noqa: BLE001
             r = {"case": c, "error": repr(e)[:300]}
         with open(a.out, "a") as fh:

@@ -40,6 +40,7 @@ import numpy as np
 from numpy.lib.stride_tricks import sliding_window_view
 
 sys.path.insert(0, str(Path(__file__).parent))
+from fallback_rate import load_step_rates  # noqa: E402
 from numeric_derivation_pilot import beat_series, fit, best_of, lookup, numeric_obs, step_res, subsample  # noqa: E402
 from vent_sync_pilot import snu_times  # noqa: E402
 from vitaldb_reader.vital_file import read_vital  # noqa: E402
@@ -129,7 +130,7 @@ def run_case(root, c, u, step_rates):
 def scan(a):
     w = os.environ.get("VITALDB_WORK") or os.environ.get("W") or ""
     U = {int(r["case"]): r for r in csv.DictReader(open(a.units or f"{w}/results/sync_full/units.csv"))}
-    step_rates = json.loads(Path(a.step_rates or f"{w}/results/pat/snuadc_step_rates.json").read_text())
+    step_rates = load_step_rates(a.step_rates or f"{w}/results/pat/snuadc_step_rates.json")
     out = Path(a.out)
     done = {json.loads(l)["case"] for l in out.read_text().splitlines() if l.strip()} if out.exists() else set()
     for c in [int(x) for x in a.cases.split(",") if x]:
@@ -137,7 +138,7 @@ def scan(a):
             continue
         t1 = time.time()
         try:
-            r = run_case(a.root, c, U.get(c, {}), step_rates)
+            r = run_case(a.root, c, U.get(c, {}), step_rates.for_case(c))
         except Exception as e:  # noqa: BLE001
             r = {"case": c, "error": repr(e)[:300]}
         r["secs"] = round(time.time() - t1, 1)

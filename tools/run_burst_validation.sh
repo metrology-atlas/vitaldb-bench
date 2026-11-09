@@ -3,8 +3,10 @@
 #   bash tools/run_burst_validation.sh VARIANT OUTDIR      e.g.  bash tools/run_burst_validation.sh model3 burst_validation_m3
 # OUTDIR is under the work folder W (scripts/local.env). Then aggregate (needs matplotlib):
 #   python tools/burst_validation_agg.py --inp $W/OUTDIR --modes ... --ports ... --variant VARIANT
+# P=4 runs 4 parts (each takes two of the eight case lists); STEP_RATES and BIS_RATES choose the rates files
+# (defaults: the 19 October files, as model3 was run). model4 needs the tools/port_rates.py --setup-min files.
 set -euo pipefail
-V=${1:?variant (model, model2, model3)}; OUTNAME=${2:?output folder under the work folder}
+V=${1:?variant (model, model2, model3, model4)}; OUTNAME=${2:?output folder under the work folder}
 # Machine-specific paths come from the environment or scripts/local.env (copy scripts/local.env.example; git
 # ignores the copy); the environment wins. W is the work folder (VITALDB_WORK), R the VitalDB release (VITALDB_ROOT).
 _W=${W:-}; _R=${R:-}; _PP=${PYTHONPATH:-}
@@ -14,6 +16,9 @@ W=${_W:-${VITALDB_WORK:-}}; R=${_R:-${VITALDB_ROOT:-}}; export PYTHONPATH=${_PP:
 : "${W:?set W or VITALDB_WORK to your work folder (see scripts/local.env.example)}"
 : "${R:?set R or VITALDB_ROOT to the VitalDB release folder (see scripts/local.env.example)}"
 O=$W/$OUTNAME
+P=${P:-8}
+STEP_RATES=${STEP_RATES:-$W/results/pat/snuadc_step_rates.json}
+BIS_RATES=${BIS_RATES:-$W/results/pat/bis_port_rates.json}
 cd "$(dirname "$0")/.."
 PY=${PY:-$(command -v python || command -v python3 || true)}
 if [ -z "$PY" ] || ! "$PY" -c "import numpy, scipy" 2>/dev/null; then
@@ -23,10 +28,11 @@ if [ -z "$PY" ] || ! "$PY" -c "import numpy, scipy" 2>/dev/null; then
 fi
 mkdir -p "$O"
 start=$(date +%s)
-for i in 0 1 2 3 4 5 6 7; do
-  "$PY" -W ignore tools/sa_corrected.py --root "$R" --cases "$(cat $W/pat_census/cases_$i.txt)" \
-    --units $W/results/sync_full/units.csv --step-rates $W/results/pat/snuadc_step_rates.json \
-    --bis-rates $W/results/pat/bis_port_rates.json --modes $W/results/sync_full/snuadc_mode_label.json \
+for i in $(seq 0 $((P - 1))); do
+  CASES=$(for j in 0 1 2 3 4 5 6 7; do if [ $((j % P)) -eq $i ]; then cat $W/pat_census/cases_$j.txt; echo; fi; done | paste -sd, | sed 's/,,*/,/g; s/^,//; s/,$//')
+  "$PY" -W ignore tools/sa_corrected.py --root "$R" --cases "$CASES" \
+    --units $W/results/sync_full/units.csv --step-rates "$STEP_RATES" \
+    --bis-rates "$BIS_RATES" --modes $W/results/sync_full/snuadc_mode_label.json \
     --ports $W/results/sync_full/snuadc_mode.json --variants "$V" --out "$O/part_$i.jsonl" > "$O/log_$i.txt" 2>&1 &
 done
 while [ "$(jobs -r | wc -l)" -gt 0 ]; do

@@ -27,6 +27,7 @@ import numpy as np
 from physiosync import corrected_times, stamp_clock
 
 sys.path.insert(0, str(Path(__file__).parent))
+from fallback_rate import load_step_rates  # noqa: E402
 from shared_artifacts import BAND, DT, burst_probe, envelope
 from vitaldb_reader.resets import RULE_VERSION as RESET_RULE, reorder_case
 from vitaldb_reader.vital_file import read_vital
@@ -43,7 +44,7 @@ def _num(x):
     return float(x) if x not in (None, "") else None
 
 
-def fit_track(tr, dev: str, u: dict, step_rates: dict) -> dict:
+def fit_track(tr, dev: str, u: dict, step_rates: dict, bis_rates=None) -> dict:
     """Stamp clock of one track with the VitalDB fallback rules; breaks as sample counts."""
     st = tr.record_offsets[: tr.record_times.size]
     fs, sign = float(tr.srate), DEVICES[dev]
@@ -54,12 +55,17 @@ def fit_track(tr, dev: str, u: dict, step_rates: dict) -> dict:
         if dev == "SNUADC":
             ev = clk["corrections"]["median_event_s"]
             if ev is not None and ev <= STEP_EVENT_S:
-                fall, tier = step_rates.get(u.get("snuadc_port"), step_rates.get("*", 0.0)), "port_step_rate"
+                fall, tier = step_rates.get(u.get("snuadc_port"), step_rates.get("*", 0.0)), getattr(step_rates, "tier", "port_step_rate")
             else:
                 fall, tier = 0.0, "trusted_stamps"
         else:
             unit, known = _num(u.get("bis_unit_mean_ppm")), _num(u.get("bis_drift_ppm"))
             fall, tier = (unit, "unit_mean") if unit is not None else (known, "sync_full")
+            if fall is None and bis_rates:
+                # no unit or case rate: the BIS's setup rate, else its port's (tools/port_rates.py; --bis-rates). Without
+                # it the line fit stays, which is not a rate where the BIS made corrections but has no whole tooth.
+                fall = bis_rates.get(u.get("bis_port"), bis_rates.get("*"))
+                tier = "setup_bis_rate" if bis_rates.tier == "setup_step_rate" else "port_bis_rate"
         if fall is not None:
             clk = stamp_clock(tr.record_times, st, fs, rate_ppm=fall, correction_sign=sign, event_loss_s=loss)
         else:
@@ -82,7 +88,7 @@ def fit_track(tr, dev: str, u: dict, step_rates: dict) -> dict:
             "gaps": clk["gaps"], "sawtooth_p2p_s": clk["sawtooth_p2p_s"]}, clk
 
 
-def one_case(path: Path, u: dict, step_rates: dict) -> dict:
+def one_case(path: Path, u: dict, step_rates: dict, bis_rates=None) -> dict:
     """Fits and burst probe for one .vital file."""
     # SNUADC reset clusters in sampling order, as the TimeNet builds store them, so sample counts agree
     v, _ = reorder_case(read_vital(path))
@@ -92,7 +98,7 @@ def one_case(path: Path, u: dict, step_rates: dict) -> dict:
         dev = name.split("/", 1)[0]
         if dev not in DEVICES or tr.track_type != 1 or tr.record_times.size < 3 or not tr.srate:
             continue
-        info, clk = fit_track(tr, dev, u, step_rates)
+        info, clk = fit_track(tr, dev, u, step_rates, bis_rates)
         res["tracks"][name] = info
         if name in PROBE.values():
             st = tr.record_offsets[: tr.record_times.size]
@@ -124,13 +130,16 @@ def main() -> None:
     ap.add_argument("--units", required=True, help="sync_full units.csv")
     ap.add_argument("--step-rates", required=True, help="JSON port -> SNUADC step-mode rate (ppm)")
     ap.add_argument("--out", required=True)
+    ap.add_argument("--bis-rates", default=None, help="BIS fallback rates (tools/port_rates.py; with a 'cases' table the "
+                    "setup's rate comes first); without it a BIS with no whole tooth and no unit or case rate keeps the line fit")
     ap.add_argument("--time-budget", type=float, default=0, help="stop after this many seconds (0: no limit)")
     a = ap.parse_args()
     cases = [int(x) for x in a.cases.split(",") if x]
     for f in a.cases_json:
         doc = json.loads(Path(f).read_text())
         cases += [int(c) for c in (doc["cases"] if isinstance(doc, dict) else doc)]
-    step_rates = json.loads(Path(a.step_rates).read_text())
+    step_rates = load_step_rates(a.step_rates)
+    bis_rates = load_step_rates(a.bis_rates) if a.bis_rates else None
     U = {int(r["case"]): r for r in csv.DictReader(open(a.units))}
     out = Path(a.out)
     done = {json.loads(line)["case"] for line in out.read_text().splitlines() if line.strip()} if out.exists() else set()
@@ -142,7 +151,8 @@ def main() -> None:
                 break
             t1 = time.time()
             try:
-                res = {"case": c, **one_case(Path(a.root) / "vital_files" / f"{c:04d}.vital", U.get(c, {}), step_rates)}
+                res = {"case": c, **one_case(Path(a.root) / "vital_files" / f"{c:04d}.vital", U.get(c, {}), step_rates.for_case(c),
+                                       bis_rates.for_case(c) if bis_rates is not None else None)}
             except Exception as ex:  # noqa: BLE001
                 res = {"case": c, "error": f"{type(ex).__name__}: {ex}"[:300]}
             res["seconds"] = round(time.time() - t1, 1)

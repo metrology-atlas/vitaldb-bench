@@ -28,6 +28,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent))
+from fallback_rate import load_step_rates  # noqa: E402
 import clock_model_fit as cmf  # noqa: E402
 import numeric_delay_variability as ndv  # noqa: E402
 from physiosync import corrected_times  # noqa: E402
@@ -91,7 +92,7 @@ def main() -> None:
     ap.add_argument("--time-budget", type=float, default=160)
     a = ap.parse_args()
     cases = json.loads(Path(a.cases_json).read_text())
-    step_rates = json.loads(Path(a.step_rates).read_text())
+    step_rates = load_step_rates(a.step_rates)
     U = {int(r["case"]): r for r in csv.DictReader(open(a.units))}
     out = Path(a.out)
     done = {json.loads(x)["case"] for x in out.read_text().splitlines() if x.strip()} if out.exists() else set()
@@ -104,7 +105,7 @@ def main() -> None:
                 break
             t1 = time.time()
             try:
-                r = {"case": c, **one(Path(a.root) / "vital_files" / f"{c:04d}.vital", U.get(c, {}), step_rates)}
+                r = {"case": c, **one(Path(a.root) / "vital_files" / f"{c:04d}.vital", U.get(c, {}), step_rates.for_case(c))}
             except Exception as ex:  # noqa: BLE001
                 r = {"case": c, "error": f"{type(ex).__name__}: {ex}"[:200]}
             r["seconds"] = round(time.time() - t1, 1)

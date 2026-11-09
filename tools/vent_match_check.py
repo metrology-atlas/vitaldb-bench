@@ -15,6 +15,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent))
+from fallback_rate import load_step_rates  # noqa: E402
 import vent_sync_pilot as V
 from pat import sample_times
 from vitaldb_reader.vital_file import read_vital
@@ -24,7 +25,7 @@ for k in ("--root", "--cases", "--units", "--step-rates", "--pilot", "--out"):
     ap.add_argument(k, required=True)
 a = ap.parse_args()
 U = {int(r["case"]): r for r in csv.DictReader(open(a.units))}
-sr = json.loads(Path(a.step_rates).read_text())
+sr = load_step_rates(a.step_rates)
 P = {json.loads(l)["case"]: json.loads(l) for l in open(a.pilot)}
 done = set()
 if Path(a.out).exists():
@@ -38,7 +39,7 @@ with open(a.out, "a") as fh:
         ta = sample_times(aw)
         xa = np.nan_to_num(aw.physical().astype(float))
         on = V.breath_onsets(ta, xa, float(aw.srate))
-        tc, _ = V.snu_times(v.tracks["SNUADC/CVP"], U.get(c, {}), sr)
+        tc, _ = V.snu_times(v.tracks["SNUADC/CVP"], U.get(c, {}), sr.for_case(c))
         xc = v.tracks["SNUADC/CVP"].physical().astype(float)
         t0 = float(np.floor(min(ta[0], tc[0])))
         n = int((max(ta[-1], tc[-1]) - t0) / V.G) + 1

@@ -41,6 +41,7 @@ import numpy as np
 from scipy import ndimage, signal
 
 sys.path.insert(0, str(Path(__file__).parent))
+from fallback_rate import load_step_rates  # noqa: E402
 from numeric_derivation_pilot import VALID, analyse_track, candidates, numeric_obs  # noqa: E402
 from vent_sync_pilot import snu_times  # noqa: E402
 from vitaldb_reader.vital_file import read_vital  # noqa: E402
@@ -317,7 +318,7 @@ def main() -> None:
     ap.add_argument("--seed", type=int, default=11)
     a = ap.parse_args()
     U = {int(r["case"]): r for r in csv.DictReader(open(a.units))}
-    step_rates = json.loads(Path(a.step_rates).read_text())
+    step_rates = load_step_rates(a.step_rates)
     done = set()
     if Path(a.out).exists():
         done = {json.loads(l)["case"] for l in Path(a.out).read_text().splitlines() if l.strip()}
@@ -326,7 +327,7 @@ def main() -> None:
             continue
         t1 = time.time()
         try:
-            res = run_case(a.root, c, U.get(c, {}), step_rates, a.seed)
+            res = run_case(a.root, c, U.get(c, {}), step_rates.for_case(c), a.seed)
         except Exception as e:  # noqa: BLE001
             res = {"case": c, "error": repr(e)[:300]}
         res["secs"] = round(time.time() - t1, 1)

@@ -39,6 +39,7 @@ import numpy as np
 from scipy import ndimage, signal
 
 sys.path.insert(0, str(Path(__file__).parent))
+from fallback_rate import load_step_rates  # noqa: E402
 from pat import r_peaks, sample_times
 from physiosync import corrected_times, stamp_clock
 from vitaldb_reader.vital_file import read_vital
@@ -291,7 +292,7 @@ def main() -> None:
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
     U = {int(r["case"]): r for r in csv.DictReader(open(a.units))}
-    step_rates = json.loads(Path(a.step_rates).read_text())
+    step_rates = load_step_rates(a.step_rates)
     done = set()
     if Path(a.out).exists():
         done = {json.loads(l)["case"] for l in Path(a.out).read_text().splitlines() if l.strip()}
@@ -315,7 +316,7 @@ def main() -> None:
                     tr = v.tracks.get(n)
                     if tr is None or not tr.record_times.size:
                         continue
-                    t, clk = snu_times(tr, u, step_rates)
+                    t, clk = snu_times(tr, u, step_rates.for_case(c))
                     x = tr.physical().astype(np.float64)
                     tracks[k] = (t, x, float(tr.srate))
                     if k == "ecg":

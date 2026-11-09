@@ -14,6 +14,7 @@ import json
 import time
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'examples')); sys.path.insert(0, str(Path(__file__).resolve().parent))
+from fallback_rate import load_step_rates  # noqa: E402
 import numpy as np
 import ppv_by_breath as P
 from pat import sample_times
@@ -23,7 +24,7 @@ root=Path.home()/'mnt/vitalDB/vitaldb-a-high-fidelity-multi-parameter-vital-sign
 W=Path.home()/'mnt/vitalDB/work'
 modes={int(k):v for k,v in json.load(open(W/'results/sync_full/snuadc_mode_label.json')).items()}
 ports={int(k):(v or {}).get('port') for k,v in json.load(open(W/'results/sync_full/snuadc_mode.json')).items()}
-rates=json.load(open(W/'results/pat/snuadc_step_rates.json'))
+rates=load_step_rates(W/'results/pat/snuadc_step_rates.json')
 out=open(sys.argv[2],'a'); t0=time.time()
 for c in map(int, sys.argv[1].split(',')):
     if time.time()-t0>150: break
@@ -34,7 +35,7 @@ for c in map(int, sys.argv[1].split(',')):
         ta=sample_times(aw); xa=np.nan_to_num(aw.physical().astype(float))
         on=P.breath_onsets(ta,xa,float(aw.srate))
         if on.size<200: continue
-        tc=P.model_times(cv,ports.get(c),modes.get(c),rates)
+        tc=P.model_times(cv,ports.get(c),modes.get(c),rates.for_case(c))
         tl,ll=P.cvp_lag(ta,xa,tc,cv.physical().astype(float),on)
         if tl.size<10: continue
         z=tl[0]; tl=tl-z; g=np.diff(ta); pauses=ta[1:][g>5]-z

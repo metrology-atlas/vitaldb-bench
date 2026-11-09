@@ -52,6 +52,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--stamps", required=True)
     ap.add_argument("--model", required=True)
+    ap.add_argument("--variant", default="model3", help="the stamp-model variant in --model (default model3; model4 from 9 Nov 2026)")
     ap.add_argument("--modes", required=True)
     ap.add_argument("--out", required=True)
     a = ap.parse_args()
@@ -59,7 +60,7 @@ def main() -> None:
     out.mkdir(parents=True, exist_ok=True)
     modes = {int(k): v for k, v in json.loads(Path(a.modes).read_text()).items()}
     s = good_windows(a.stamps, "stamps").rename(columns={"lag_ms": "lag_stamps"})[["case", "t", "lag_stamps"]]
-    m = good_windows(a.model, "model3").rename(columns={"lag_ms": "lag_model"})[["case", "t", "lag_model"]]
+    m = good_windows(a.model, a.variant).rename(columns={"lag_ms": "lag_model"})[["case", "t", "lag_model"]]
     w = s.merge(m, on=["case", "t"])
     n = w.groupby("case").size()
     w = w[w.case.isin(n[n >= 5].index)].copy()
