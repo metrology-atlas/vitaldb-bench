@@ -32,3 +32,20 @@ def test_setup_rate_wins_for_its_cases():
 def test_empty_file_gives_empty_table():
     r = load_step_rates(None)
     assert r.for_case(1).get("COM4", r.get("*", 0.0)) == 0.0
+
+
+def test_no_correction_bound():
+    import numpy as np
+    fs = 500.0
+    st = np.arange(0, 7200 * fs, 100)                     # one 2 h stretch of 100-sample records
+    clk = {"breaks": np.array([0])}
+    plain = StepRates(PORTS).for_case(1)
+    assert plain.no_correction_rate(-65.4, clk, st, fs) == (-65.4, False)       # no bound in the file
+    r = StepRates({**PORTS, "no_correction_bound_s": 0.5, "cases": {"7": -79.6}})
+    assert "no_correction_bound_s" not in r
+    b = 0.5 / ((st[-1] - st[0]) / fs) * 1e6                # about 69.4 ppm
+    assert r.for_case(8).no_correction_rate(-65.4, clk, st, fs) == (-65.4, False)
+    rate, capped = r.for_case(7).no_correction_rate(-79.6, clk, st, fs)
+    assert capped and abs(rate + b) < 1e-9
+    two = {"breaks": np.array([0, st.size // 2])}           # a gap halves the stretch: the bound doubles
+    assert r.for_case(7).no_correction_rate(-79.6, two, st, fs) == (-79.6, False)

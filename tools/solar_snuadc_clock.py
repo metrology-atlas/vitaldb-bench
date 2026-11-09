@@ -56,6 +56,8 @@ def timelines(tr, port, mode, step_rates):
         ev = clk["corrections"]["median_event_s"]
         pr = step_rates.get(port, step_rates.get("*", 0.0))
         fall = pr if (ev is not None and ev <= -0.4) or (ev is None and mode != "small") else 0.0
+        if ev is None and fall:   # no correction at all: capped by the 0.5 s bound when the rates file sets it
+            fall, _ = step_rates.no_correction_rate(fall, clk, st, fs)
         clk = stamp_clock(tr.record_times, st, fs, rate_ppm=fall, correction_sign=-1, event_loss_s=LOSS_S)
         info["model_rate_ppm"] = round(fall, 2)
     model = corrected_times(clk, st, tr.record_sizes[: st.size])

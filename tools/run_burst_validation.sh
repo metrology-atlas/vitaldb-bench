@@ -4,9 +4,10 @@
 # OUTDIR is under the work folder W (scripts/local.env). Then aggregate (needs matplotlib):
 #   python tools/burst_validation_agg.py --inp $W/OUTDIR --modes ... --ports ... --variant VARIANT
 # P=4 runs 4 parts (each takes two of the eight case lists); STEP_RATES and BIS_RATES choose the rates files
-# (defaults: the 19 October files, as model3 was run). model4 needs the tools/port_rates.py --setup-min files.
+# (defaults: the 19 October files, as model3 was run). model4 needs the tools/port_rates.py --setup-min files; model5
+# also needs "no_correction_bound_s" in the step-rates file (snuadc_step_rates_v4.json).
 set -euo pipefail
-V=${1:?variant (model, model2, model3, model4)}; OUTNAME=${2:?output folder under the work folder}
+V=${1:?variant (model, model2, model3, model4, model5)}; OUTNAME=${2:?output folder under the work folder}
 # Machine-specific paths come from the environment or scripts/local.env (copy scripts/local.env.example; git
 # ignores the copy); the environment wins. W is the work folder (VITALDB_WORK), R the VitalDB release (VITALDB_ROOT).
 _W=${W:-}; _R=${R:-}; _PP=${PYTHONPATH:-}

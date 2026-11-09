@@ -24,6 +24,9 @@ without a whole tooth and with no unit or case rate takes its setup's, else its 
 format) whether or not it made corrections: with corrections but no whole tooth, model3 kept stamp_clock's line fit,
 which is not a rate (physiosync 0.3.4 rate_measured; examples/sim_stamp_clock_onecorr.py). Setup rates predict a
 recording's own rate to a robust SD of 0.75 ppm (SNUADC) and 1.45 ppm (BIS) (examples/setup_rate_check.py).
+Variant "model5" (9 Nov 2026) is "model4" except that a SNUADC track with no correction at all has its borrowed rate
+capped at 0.5 s over its longest stretch between gaps (Vital Recorder's re-anchoring rule, H.-C. Lee, 9 Nov 2026;
+tools/fallback_rate.py no_correction_rate). It needs a --step-rates file with "no_correction_bound_s".
 """
 
 from __future__ import annotations
@@ -60,6 +63,8 @@ def main() -> None:
     a = ap.parse_args()
     step_rates = load_step_rates(a.step_rates)
     bis_rates = load_step_rates(a.bis_rates)
+    if "model5" in a.variants.split(",") and not step_rates.bound_s:
+        sys.exit("model5 needs a --step-rates file with no_correction_bound_s")
     modes = {int(k): v for k, v in json.loads(Path(a.modes).read_text()).items()} if a.modes else {}
     ports = {int(k): (v or {}).get("port") for k, v in json.loads(Path(a.ports).read_text()).items()} if a.ports else {}
     bis_ports = {int(k): (v or {}).get("bis_port") for k, v in json.loads(Path(a.ports).read_text()).items()} if a.ports else {}
@@ -95,7 +100,7 @@ def main() -> None:
                         unit = u.get(f"{dev}_unit_mean_ppm")
                         unit = float(unit) if unit not in (None, "") else None
                         fb = None
-                        if variant in ("model", "model2", "model3", "model4"):
+                        if variant in ("model", "model2", "model3", "model4", "model5"):
                             clk = stamp_clock(tr.record_times, st, fs, correction_sign=sign)
                             if clk["rate_source"] == "fit":
                                 if dev == "snuadc":
@@ -103,12 +108,15 @@ def main() -> None:
                                     # tooth: the port's typical step-mode rate
                                     ev = clk["corrections"]["median_event_s"]
                                     port = ports.get(c) or u.get("snuadc_port")
-                                    sr = step_rates.for_case(c) if variant == "model4" else step_rates
+                                    sr = step_rates.for_case(c) if variant in ("model4", "model5") else step_rates
                                     port_rate = sr.get(port, sr.get("*", 0.0))
                                     if ev is not None and ev <= -0.4:
                                         fall, fb = port_rate, sr.tier
-                                    elif variant in ("model2", "model3", "model4") and ev is None and modes.get(c) != "small":
+                                    elif variant in ("model2", "model3", "model4", "model5") and ev is None and modes.get(c) != "small":
                                         fall, fb = port_rate, sr.tier  # no correction at all: step mode before its first reset
+                                        if variant == "model5":
+                                            fall, capped = sr.no_correction_rate(port_rate, clk, st, fs)
+                                            fb = "rate_bound" if capped else fb
                                     else:
                                         fall, fb = 0.0, "trusted_stamps"
                                 else:
@@ -118,7 +126,7 @@ def main() -> None:
                                             and bis_rates):
                                         bport = bis_ports.get(c) or u.get("bis_port")
                                         fall, fb = bis_rates.get(bport, bis_rates.get("*")), "port_bis_rate"
-                                    elif variant == "model4" and fall is None and bis_rates:
+                                    elif variant in ("model4", "model5") and fall is None and bis_rates:
                                         bport = bis_ports.get(c) or u.get("bis_port")
                                         br = bis_rates.for_case(c)
                                         fall = br.get(bport, br.get("*"))
