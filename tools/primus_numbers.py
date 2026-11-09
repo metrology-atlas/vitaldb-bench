@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 """The numbers of the Primus AWP and CO2 timing forms, from saved outputs, with each stretch on its right breath.
 
-    python tools/primus_numbers.py --work $W --out $W/primus_numbers [--uncorrected]
+    python tools/primus_numbers.py --work $W --out $W/primus_numbers [--sync DIR] [--uncorrected]
 
 Replaces work/reframe_stage3/primus_numbers.py (a script outside any repository; --uncorrected reproduces its
 numbers). Inputs: the per-window AWP-to-CVP lags of tools/primus_sync_accuracy.py ($W/primus_sync_accuracy/
@@ -44,6 +44,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--work", required=True)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--sync", default=None, help="folder of primus_sync_accuracy parts (default WORK/primus_sync_accuracy)")
     ap.add_argument("--uncorrected", action="store_true", help="k = 0 for every stretch (the 1 November numbers)")
     a = ap.parse_args()
     W = Path(a.work)
@@ -56,7 +57,7 @@ def main():
     p_step = {1: 0.0, 2: 1 - loo["step2_right_share"], 3: 1 - loo["step3_right_share"]}
     E, C, RAW, PW, TW, steps, SL, RC = [], [], [], [], [], {1: 0, 2: 0, 3: 0}, [], []
     missing = 0
-    for p in sorted(glob.glob(str(W / "primus_sync_accuracy" / "part_*.jsonl"))):
+    for p in sorted(glob.glob(str(Path(a.sync) if a.sync else W / "primus_sync_accuracy") + "/part_*.jsonl")):
         for line in open(p, encoding="utf-8"):
             r = json.loads(line)
             A = (r.get("arms") or {}).get("cvp")
