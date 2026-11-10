@@ -7,6 +7,9 @@
 # Writes $W/NAME/part_*.jsonl and log_*.txt (or $OUT/... when OUT is set); rerunning resumes (finished recordings
 # are skipped).
 # The tool must take: scan --root R --cases LIST --out PART [extra arguments].
+# Run record: metrology-atlas's provenance.py writes $O/_runs/run_*.json (command, script and git state, input
+# hashes, then outputs and exit status), found at ../../metrology-atlas from this repository or at
+# $METROLOGY_ATLAS_PROVENANCE. If it is missing or fails, the scan runs anyway (warnings in $O/_runs_warnings.txt).
 set -euo pipefail
 NAME=${1:?tool script name without .py}; shift
 # Machine-specific paths come from the environment or scripts/local.env (copy scripts/local.env.example; git
@@ -23,10 +26,20 @@ cd "$(dirname "$0")/.."
 SCRIPT=tools/$NAME.py
 [ -f "$SCRIPT" ] || SCRIPT=examples/$NAME.py
 PY=${PY:-$(command -v python || command -v python3 || true)}
+PROV=${METROLOGY_ATLAS_PROVENANCE:-$(pwd)/../../metrology-atlas/metrology_atlas/provenance.py}
+export METROLOGY_ATLAS_ROOTS=${METROLOGY_ATLAS_ROOTS:-"W=$W;R=$R;code=$(cd ../.. && pwd)"}
 if [ -z "$PY" ] || ! "$PY" -c "import numpy, scipy" 2>/dev/null; then
   echo "No Python with numpy and scipy found: activate the analysis environment first (your (vb) prompt), or set PY=..."; exit 1
 fi
 mkdir -p "$O"
+REC=""
+if [ -f "$PROV" ]; then
+  REC=$("$PY" "$PROV" begin --out "$O" --script "$SCRIPT" --input "$R" \
+    --note "tools/run_tool_scan.sh $NAME, P=$P: $SCRIPT scan --root R --cases PART --out $O/part_I.jsonl ARGS" \
+    -- "$@" 2>>"$O/_runs_warnings.txt") || REC=""
+else
+  echo "no run record: $PROV not found" >> "$O/_runs_warnings.txt"
+fi
 N=$(ls "$R"/vital_files/*.vital | wc -l); echo "$N recordings; output in $O"
 start=$(date +%s)
 for i in $(seq 0 $((P - 1))); do
@@ -36,5 +49,6 @@ done
 while [ "$(jobs -r | wc -l)" -gt 0 ]; do
   sleep 60; echo "$(( ($(date +%s) - start) / 60 )) min: $(cat "$O"/part_*.jsonl 2>/dev/null | wc -l) of $N recordings"
 done
-wait
+STATUS=0; wait || STATUS=$?
 echo "done in $(( ($(date +%s) - start) / 60 )) min: $(cat "$O"/part_*.jsonl | wc -l) of $N recordings"
+if [ -n "$REC" ]; then "$PY" "$PROV" end "$REC" --exit-code "$STATUS" 2>>"$O/_runs_warnings.txt" || true; fi
