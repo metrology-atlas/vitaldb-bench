@@ -2,6 +2,7 @@
 """Which breath each Primus stretch is on: a rule from pauses in ventilation, checked by leaving stretches out.
 
     python tools/primus_breath_rule.py --work $W --out $W/primus_breath_rule
+        [--breaths FILE] [--records DIR] [--vent-events DIR]   (defaults: the paths below, under --work)
 
 Inputs (all saved outputs, nothing is read from the recordings):
   $W/primus_awp_anchor/breaths.json        per recording: the matched-lag line of each stretch between AWP pauses
@@ -46,16 +47,19 @@ def resolved(x):
     return x["r"] >= 0.5 and bool(nb) and x["r"] - max(nb) >= 0.15 and LAG_RANGE[0] < x["lag"] < LAG_RANGE[1]
 
 
-def load(W: Path):
-    B = json.loads((W / "primus_awp_anchor" / "breaths.json").read_text())["stretches"]
+def load(W: Path, breaths=None, records=None, vent_events=None):
+    breaths = Path(breaths) if breaths else W / "primus_awp_anchor" / "breaths.json"
+    records = Path(records) if records else W / "primus_awp_anchor" / "records"
+    vent_events = Path(vent_events) if vent_events else W / "primus_vent_events"
+    B = json.loads(breaths.read_text())["stretches"]
     gaps = {}
-    for p in glob.glob(str(W / "primus_awp_anchor" / "records" / "part_*.jsonl")):
+    for p in glob.glob(str(records / "part_*.jsonl")):
         for l in open(p, encoding="utf-8"):
             r = json.loads(l)
             if r.get("awp"):
                 gaps[r["case"]] = r["awp"]["gaps"]
     ev, pauses = {}, {}
-    for p in glob.glob(str(W / "primus_vent_events" / "part_*.jsonl")):
+    for p in glob.glob(str(vent_events / "part_*.jsonl")):
         for l in open(p, encoding="utf-8"):
             r = json.loads(l)
             pauses[r["case"]] = r.get("pauses", [])
@@ -65,7 +69,7 @@ def load(W: Path):
                         if resolved(x):
                             t = e[edge]
                             ev.setdefault((r["case"], arm), []).append((float(t), float(x["lag"]), float(e["T"])))
-    s = json.loads((W / "primus_vent_events" / "summary.json").read_text())
+    s = json.loads((vent_events / "summary.json").read_text())
     art_bias = s["bias_check"]["art"]["event_minus_matched_s_p10_25_50_75_90"][2]
     return B, gaps, ev, pauses, art_bias
 
@@ -127,9 +131,12 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--work", required=True)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--breaths", help="breaths.json of primus_awp_anchor.py (default WORK/primus_awp_anchor/breaths.json)")
+    ap.add_argument("--records", help="folder of primus_awp_anchor.py records parts (default WORK/primus_awp_anchor/records)")
+    ap.add_argument("--vent-events", help="folder of primus_vent_events.py parts and summary.json (default WORK/primus_vent_events)")
     a = ap.parse_args()
     W = Path(a.work)
-    B, gaps, ev, pauses, art_bias = load(W)
+    B, gaps, ev, pauses, art_bias = load(W, a.breaths, a.records, a.vent_events)
     # main mode: corrected start offsets of stretches fixed by their own CVP events
     own = []
     for rec in B:

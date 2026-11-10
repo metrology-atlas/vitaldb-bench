@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 """The numbers of the Primus AWP and CO2 timing forms, from saved outputs, with each stretch on its right breath.
 
-    python tools/primus_numbers.py --work $W --out $W/primus_numbers [--sync DIR] [--uncorrected]
+    python tools/primus_numbers.py --work $W --out $W/primus_numbers [--sync DIR] [--rule DIR] [--uncorrected]
 
 Replaces work/reframe_stage3/primus_numbers.py (a script outside any repository; --uncorrected reproduces its
 numbers). Inputs: the per-window AWP-to-CVP lags of tools/primus_sync_accuracy.py ($W/primus_sync_accuracy/
@@ -45,12 +45,14 @@ def main():
     ap.add_argument("--work", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--sync", default=None, help="folder of primus_sync_accuracy parts (default WORK/primus_sync_accuracy)")
+    ap.add_argument("--rule", default=None, help="folder of primus_breath_rule.py outputs (default WORK/primus_breath_rule)")
     ap.add_argument("--uncorrected", action="store_true", help="k = 0 for every stretch (the 1 November numbers)")
     a = ap.parse_args()
     W = Path(a.work)
     K = {}
-    rule = json.loads((W / "primus_breath_rule" / "summary.json").read_text())
-    for x in json.loads((W / "primus_breath_rule" / "stretch_k.json").read_text()):
+    RD = Path(a.rule) if a.rule else W / "primus_breath_rule"
+    rule = json.loads((RD / "summary.json").read_text())
+    for x in json.loads((RD / "stretch_k.json").read_text()):
         if x["arm"] == "cvp":
             K[(x["case"], x["stretch"])] = (0 if a.uncorrected else x["k"], x["T"], x["step"])
     loo = rule["leave_one_out"]
