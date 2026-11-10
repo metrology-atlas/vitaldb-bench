@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: MIT
 """Figures for two clock routes: the SNUADC rate through the Solar8000 numerics, and the Primus step at each AWP pause.
 
-    python tools/clock_route_figs.py --work W --out DIR
+    python tools/clock_route_figs.py --work W --out DIR [--solar-dir DIR] [--pause-steps-agg DIR]
+    (defaults W/solar_snuadc_clock and W/primus_pause_steps/agg; choose reruns, e.g. the stage-3 _v4 folders)
 
 Aggregates only. Inputs: W/solar_snuadc_clock/agg/counts_combined.csv (tools/solar_snuadc_clock.py agg),
 W/solar_snuadc_clock/reset_rates.csv (the reset-interval rates per recording, from clock_network/edges_v3.csv),
@@ -33,10 +34,11 @@ def style(ax):
     ax.set_axisbelow(True)
 
 
-def solar(W: Path, out: Path):
+def solar(W: Path, out: Path, SD: Path | None = None):
     """Median Solar8000 rate by recording length: the estimate shrinks toward 0 in short recordings."""
-    c = pd.read_csv(W / "solar_snuadc_clock/agg/counts_combined.csv")
-    r = pd.read_csv(W / "solar_snuadc_clock/reset_rates.csv")
+    SD = Path(SD) if SD else W / "solar_snuadc_clock"
+    c = pd.read_csv(SD / "agg/counts_combined.csv")
+    r = pd.read_csv(SD / "reset_rates.csv")
     modes = json.loads((W / "results/sync_full/snuadc_mode.json").read_text())
     c["hours"] = c["case"].map(lambda k: (modes.get(str(k)) or {}).get("dur_h"))
     c["resets"] = c["case"].isin(r["case"])
@@ -67,9 +69,10 @@ def solar(W: Path, out: Path):
     fig.savefig(out / "solar-snuadc-rate.png", dpi=150, facecolor="white")
 
 
-def pauses(W: Path, out: Path):
-    s = [json.loads(x) for x in open(W / "primus_pause_steps/agg/steps.jsonl")]
-    summ = json.loads((W / "primus_pause_steps/agg/summary.json").read_text())
+def pauses(W: Path, out: Path, PD: Path | None = None):
+    PD = Path(PD) if PD else W / "primus_pause_steps/agg"
+    s = [json.loads(x) for x in open(PD / "steps.jsonl")]
+    summ = json.loads((PD / "summary.json").read_text())
     ctrl = summ["control_s_p5_10_25_50_75_90_95"]
     co2 = np.array([x["step_s"] for x in s if x["co2_gap"]]) * 1000
     no = np.array([x["step_s"] for x in s if not x["co2_gap"]]) * 1000
@@ -93,11 +96,13 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--work", required=True)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--solar-dir", default=None)
+    ap.add_argument("--pause-steps-agg", default=None)
     a = ap.parse_args()
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    solar(Path(a.work), out)
-    pauses(Path(a.work), out)
+    solar(Path(a.work), out, a.solar_dir)
+    pauses(Path(a.work), out, a.pause_steps_agg)
 
 
 if __name__ == "__main__":

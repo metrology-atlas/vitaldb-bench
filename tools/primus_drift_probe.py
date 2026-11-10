@@ -2,6 +2,9 @@
 """Primus clock drift from breath matching, and what happens at its AWP pauses. Per recording, this machine only.
 
     python tools/primus_drift_probe.py CASES OUT.jsonl        (CASES comma-separated; stops after 150 s, rerun to resume)
+        [--work W] [--root R] [--step-rates FILE] [--time-budget S]
+    Defaults as first run (the Cowork VM's paths, results/pat/snuadc_step_rates.json, 150 s); --time-budget 0 runs
+    every case. Recordings already in OUT are skipped (only recordings with a result are written).
 
 For recordings with Primus AWP and SNUADC CVP: the AWP-to-CVP lag in 10 min windows (examples/ppv_by_breath.py
 cvp_lag; SNUADC on the stamp model, so on the recorder PC's timeline), the Primus AWP pauses (stamp gaps > 5 s), and
@@ -19,15 +22,26 @@ import numpy as np
 import ppv_by_breath as P
 from pat import sample_times
 from vitaldb_reader.vital_file import read_vital
-from pathlib import Path
-root=Path.home()/'mnt/vitalDB/vitaldb-a-high-fidelity-multi-parameter-vital-signs-database-in-surgical-patients-1.0.0'
-W=Path.home()/'mnt/vitalDB/work'
+import argparse
+ap=argparse.ArgumentParser()
+ap.add_argument('cases'); ap.add_argument('out')
+ap.add_argument('--work', default=str(Path.home()/'mnt/vitalDB/work'))
+ap.add_argument('--root', default=str(Path.home()/'mnt/vitalDB/vitaldb-a-high-fidelity-multi-parameter-vital-signs-database-in-surgical-patients-1.0.0'))
+ap.add_argument('--step-rates', default=None, help='default WORK/results/pat/snuadc_step_rates.json')
+ap.add_argument('--time-budget', type=float, default=150, help='seconds, 0 for no limit')
+A=ap.parse_args()
+root=Path(A.root)
+W=Path(A.work)
 modes={int(k):v for k,v in json.load(open(W/'results/sync_full/snuadc_mode_label.json')).items()}
 ports={int(k):(v or {}).get('port') for k,v in json.load(open(W/'results/sync_full/snuadc_mode.json')).items()}
-rates=load_step_rates(W/'results/pat/snuadc_step_rates.json')
-out=open(sys.argv[2],'a'); t0=time.time()
-for c in map(int, sys.argv[1].split(',')):
-    if time.time()-t0>150: break
+rates=load_step_rates(A.step_rates or W/'results/pat/snuadc_step_rates.json')
+done=set()
+if Path(A.out).exists():
+    done={json.loads(l)['case'] for l in open(A.out) if l.strip()}
+out=open(A.out,'a'); t0=time.time()
+for c in map(int, A.cases.split(',')):
+    if c in done: continue
+    if A.time_budget and time.time()-t0>A.time_budget: break
     try:
         v=read_vital(root/'vital_files'/f'{c:04d}.vital', track_names={'Primus/AWP','SNUADC/CVP'})
         aw,cv=v.tracks.get('Primus/AWP'),v.tracks.get('SNUADC/CVP')

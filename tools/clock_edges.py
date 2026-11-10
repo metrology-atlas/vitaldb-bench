@@ -2,7 +2,11 @@
 """The VitalDB clock-link edge table: every measured link between two clocks, per recording, from existing outputs.
 
     python tools/clock_edges.py --work W --out W/clock_network/edges.csv [--atlas A] [--reset-loss] [--drop-missed]
-        [--solar-min-h H]
+        [--solar-min-h H] [--solar-dir DIR] [--breath-dir DIR]
+
+--solar-dir (default W/solar_snuadc_clock) and --breath-dir (default W/results/primus_drift) choose the runs behind the
+solar and breath edges, so the network can be rebuilt on reruns (stage 3, v4 rates) without moving the saved ones.
+The solar folder must hold part_*.jsonl, agg/counts_combined.csv and reset_rates.csv.
 
 Adopted run (loop-closure): --reset-loss --drop-missed --solar-min-h 6. Three constants are read from the atlas's parameter files
 (--atlas, default code/metrology-atlas/datasets/vitaldb, two levels above this repository), not typed here: the true step-mode
@@ -103,10 +107,11 @@ def atlas_params(atlas: Path) -> dict:
             "arith_ppm": -val("snuadc-stamp-arithmetic")}               # +0.954: PC gains this on the stamps vs count
 
 
-def solar_rates(W: Path) -> pd.DataFrame:
+def solar_rates(W: Path, S: Path | None = None) -> pd.DataFrame:
     """Per recording: the Solar8000 route's SNUADC count rate (ppm, se), its length (h: the last 30-minute block's
-    centre plus a quarter hour), its SNUADC mode and the stamp model's rate, from the solar_snuadc_clock run."""
-    S = W / "solar_snuadc_clock"
+    centre plus a quarter hour), its SNUADC mode and the stamp model's rate, from the solar_snuadc_clock run
+    (S, default W/solar_snuadc_clock)."""
+    S = Path(S) if S else W / "solar_snuadc_clock"
     info = {}
     for p in sorted(glob.glob(str(S / "part_*.jsonl"))):
         for line in open(p, encoding="utf-8"):
@@ -121,11 +126,11 @@ def solar_rates(W: Path) -> pd.DataFrame:
     return c
 
 
-def solar_se_factor(W: Path, min_h: float) -> dict:
+def solar_se_factor(W: Path, min_h: float, S: Path | None = None) -> dict:
     """The factor on the Solar8000 route's standard error: median |route - reset rate| / se over recordings of at
     least min_h hours with whole reset intervals (solar_snuadc_clock/reset_rates.csv), over 0.6745."""
-    c = solar_rates(W).merge(pd.read_csv(W / "solar_snuadc_clock" / "reset_rates.csv").rename(columns={"ppm": "reset"}),
-                             on="case")
+    S = Path(S) if S else W / "solar_snuadc_clock"
+    c = solar_rates(W, S).merge(pd.read_csv(S / "reset_rates.csv").rename(columns={"ppm": "reset"}), on="case")
     c = c[(c.hours >= min_h) & np.isfinite(c.reset)]
     z = np.abs((c.ppm - c.reset) / c.se)
     return {"factor": round(float(np.median(z) / 0.6745), 3), "n": int(len(c)),
@@ -133,7 +138,8 @@ def solar_se_factor(W: Path, min_h: float) -> dict:
 
 
 def edges(W: Path, reset_loss: bool = False, drop_missed: bool = False, params: dict | None = None,
-          solar_min_h: float | None = None, solar_factor: float = 1.0) -> pd.DataFrame:
+          solar_min_h: float | None = None, solar_factor: float = 1.0, solar_dir: Path | None = None,
+          breath_dir: Path | None = None) -> pd.DataFrame:
     P = params
     rows = []
     cont = W / "signal_survey" / "continuity"
@@ -160,7 +166,7 @@ def edges(W: Path, reset_loss: bool = False, drop_missed: bool = False, params: 
             v = float(np.sum(w * g.ppm) / np.sum(w))
             rows.append([case, "bis", "snuadc", -v, float(1 / np.sqrt(w.sum())), "bursts", "ecg;eeg",
                          f"{len(g)} intervals"])
-    for p in sorted(glob.glob(str(W / "results" / "primus_drift" / "probe_*.jsonl"))):
+    for p in sorted(glob.glob(str(Path(breath_dir) if breath_dir else W / "results" / "primus_drift") + "/probe_*.jsonl")):
         for line in open(p, encoding="utf-8"):
             r = json.loads(line)
             f = stretch_slope(r["tl"], r["ll"], r["p"])
@@ -178,7 +184,7 @@ def edges(W: Path, reset_loss: bool = False, drop_missed: bool = False, params: 
                 rows.append([r["case"], "primus", "pc", f[0] * 1e6, f[1] * 1e6, "pip_numeric", "awp;pip numerics",
                              f"{len(B)} blocks"])
     if solar_min_h is not None:
-        for r in solar_rates(W).itertuples():
+        for r in solar_rates(W, solar_dir).itertuples():
             if np.isfinite(r.hours) and r.hours >= solar_min_h:
                 rows.append([int(r.case), "snuadc", "pc", float(r.ppm), float(r.se) * solar_factor, "solar",
                              "ecg;art;solar8000 numerics", f"{r.hours:.1f} h"])
@@ -201,14 +207,19 @@ def main():
     ap.add_argument("--drop-missed", action="store_true", help="leave out reset intervals that likely span a missed reset")
     ap.add_argument("--solar-min-h", type=float, default=None,
                     help="add the Solar8000 route (snuadc-pc) in recordings of at least this many hours")
+    ap.add_argument("--solar-dir", default=None, help="solar_snuadc_clock run folder (default WORK/solar_snuadc_clock)")
+    ap.add_argument("--breath-dir", default=None, help="primus_drift_probe outputs (default WORK/results/primus_drift)")
     a = ap.parse_args()
     P = atlas_params(Path(a.atlas))
-    sf = solar_se_factor(Path(a.work), a.solar_min_h) if a.solar_min_h is not None else None
-    E = edges(Path(a.work), a.reset_loss, a.drop_missed, P, a.solar_min_h, sf["factor"] if sf else 1.0)
+    sf = solar_se_factor(Path(a.work), a.solar_min_h, a.solar_dir) if a.solar_min_h is not None else None
+    E = edges(Path(a.work), a.reset_loss, a.drop_missed, P, a.solar_min_h, sf["factor"] if sf else 1.0,
+              a.solar_dir, a.breath_dir)
     Path(a.out).parent.mkdir(parents=True, exist_ok=True)
     E.to_csv(a.out, index=False)
     Path(a.out + ".params.json").write_text(json.dumps({"atlas": str(a.atlas), "reset_loss": a.reset_loss,
-                                                       "drop_missed": a.drop_missed, "solar_min_h": a.solar_min_h, "solar_se_factor": sf, **P}, indent=1))
+                                                       "drop_missed": a.drop_missed, "solar_min_h": a.solar_min_h, "solar_se_factor": sf,
+                                                       **({"solar_dir": a.solar_dir} if a.solar_dir else {}),
+                                                       **({"breath_dir": a.breath_dir} if a.breath_dir else {}), **P}, indent=1))
     print("parameters:", P)
     print(E.groupby("method").agg(edges=("value", "size"), median=("value", "median"), se_median=("se", "median")).round(2))
 
