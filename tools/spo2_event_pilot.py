@@ -55,7 +55,8 @@ STALE = 5.0
 def envelope(t, x, fs, band, t0, n):
     ok = np.isfinite(x)
     x = np.where(ok, x, 0.0)
-    band = (band[0], min(band[1], 0.45 * fs))  # 100 Hz files: 30-240 Hz becomes 30-45 Hz (below Nyquist)
+    if band[1] >= 0.5 * fs:  # 100 Hz files: 30-240 Hz becomes 30-45 Hz (below Nyquist); 500 Hz keeps 30-240 Hz
+        band = (band[0], 0.45 * fs)
     sos = signal.butter(4, band, btype="bandpass", fs=fs, output="sos")
     y = signal.sosfiltfilt(sos, x) ** 2
     b = np.floor((t - t0) / DT).astype(np.int64)
