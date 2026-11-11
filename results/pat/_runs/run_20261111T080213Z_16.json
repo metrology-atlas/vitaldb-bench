@@ -1,0 +1,46 @@
+{
+ "schema": "metrology-atlas-run/0.2",
+ "kind": "reconstructed",
+ "started": null,
+ "finished": null,
+ "exit_code": null,
+ "out": "code:vitaldb/vitaldb-bench/results/pat",
+ "cwd": "code:vitaldb/vitaldb-bench",
+ "command": [
+  "agg",
+  "PARTS",
+  "--root",
+  "R",
+  "--summary",
+  "emr_markers_summary.json"
+ ],
+ "script": {
+  "path": "code:vitaldb/vitaldb-bench/tools/emr_markers.py",
+  "sha256": "32a28e90003ef6a74c4649517a441b1d51367bffabe4eae16d4a38791020470e",
+  "git": {
+   "repo": "code:vitaldb/vitaldb-bench",
+   "commit": "ad1e676b66db337c2a198dea72b38f81d94fd4db",
+   "dirty": true,
+   "changed_files": [
+    "examples/co2_gradient_spread.py",
+    "examples/hr_rule_exact.py",
+    "examples/recording_duration.py",
+    "examples/snuadc_start_delay.py"
+   ],
+   "file": "tools/emr_markers.py",
+   "file_changed": false
+  }
+ },
+ "inputs": [],
+ "packages": [],
+ "python": "3.10.12",
+ "host": "claude",
+ "note": "reconstructed 11 Nov from the tool's docstring; committed with vitaldb-bench; parts not kept, not reproduced",
+ "outputs": [
+  {
+   "path": "code:vitaldb/vitaldb-bench/results/pat/emr_markers_summary.json",
+   "bytes": 4653,
+   "sha256": "cf0932b04cab1c841dfd912a74b0859f6b9b190fa82949a0dc93bcfc56c83c32"
+  }
+ ]
+}

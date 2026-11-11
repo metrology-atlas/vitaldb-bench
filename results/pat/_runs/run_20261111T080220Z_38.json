@@ -1,0 +1,51 @@
+{
+ "schema": "metrology-atlas-run/0.2",
+ "kind": "reconstructed",
+ "started": null,
+ "finished": null,
+ "exit_code": null,
+ "out": "code:vitaldb/vitaldb-bench/results/pat",
+ "cwd": "code:vitaldb/vitaldb-bench",
+ "command": [
+  "--root",
+  "R",
+  "--cases",
+  "PILOT",
+  "--units",
+  "units.csv",
+  "--step-rates",
+  "rates.json",
+  "--out",
+  "out.jsonl"
+ ],
+ "script": {
+  "path": "code:vitaldb/vitaldb-bench/tools/spo2_event_pilot.py",
+  "sha256": "305e78736dc92408848300fbdc2001b7727357440b580a0ee22ce814f715863e",
+  "git": {
+   "repo": "code:vitaldb/vitaldb-bench",
+   "commit": "ad1e676b66db337c2a198dea72b38f81d94fd4db",
+   "dirty": true,
+   "changed_files": [
+    "examples/co2_gradient_spread.py",
+    "examples/hr_rule_exact.py",
+    "examples/recording_duration.py",
+    "examples/snuadc_start_delay.py",
+    "results/pat/_runs/"
+   ],
+   "file": "tools/spo2_event_pilot.py",
+   "file_changed": false
+  }
+ },
+ "inputs": [],
+ "packages": [],
+ "python": "3.10.12",
+ "host": "claude",
+ "note": "reconstructed 11 Nov: the 1 Nov SpO2 pilot (231 cases), committed with vitaldb-bench; the release rerun is overnight_v4b/spo2",
+ "outputs": [
+  {
+   "path": "code:vitaldb/vitaldb-bench/results/pat/spo2_event_pilot_summary.json",
+   "bytes": 42897,
+   "sha256": "4c06c9213abe03eb5db787a2cc75814a191d4236a86d210e99472becf4bce796"
+  }
+ ]
+}
