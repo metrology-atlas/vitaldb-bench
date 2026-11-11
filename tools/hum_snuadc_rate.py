@@ -3,7 +3,11 @@
 the summary leaves.
 
     python tools/hum_snuadc_rate.py --table per_recording.csv --bursts burst_per_recording.csv \
-        --rates hum_rates.csv --summary summary.json [--check-out check.csv]
+        --rates hum_rates.csv --summary summary.json [--check-out check.csv] [--min-teeth 1]
+
+--min-teeth 1 pools g only from recordings whose SNUADC rate comes from whole teeth (two corrections in one
+stretch; the table's snu_teeth column, tools/mains_hum.py agg since 9 Nov): a recording with one correction gets a
+line fit, not a rate (atlas study mains-grid-pc-rate). Default 0, as first run (all recordings with corrections).
 
 Without stamp corrections the SNUADC samples are put on the recorder PC's timeline with an assumed rate (the port's
 typical rate), and drift on it. The hum gives the SNUADC rate against the grid (line = f_grid - f_SNUADC, from
@@ -51,9 +55,12 @@ def main():
     ap.add_argument("--bursts", required=True, help="per_recording.csv from tools/burst_validation_agg.py")
     ap.add_argument("--rates", required=True); ap.add_argument("--summary", required=True)
     ap.add_argument("--check-out", help="per-recording errors of the check, for tools/hum_snuadc_plot.py (stays local)")
+    ap.add_argument("--min-teeth", type=int, default=0, help="pool g only from recordings with this many whole teeth")
     a = ap.parse_args()
     m = pd.read_csv(a.table); b = pd.read_csv(a.bursts)
     pool = m[(m.snu_events >= 1) & m.snu_line.notna()].copy(); pool["g"] = pool.snu_rate - pool.snu_line
+    if a.min_teeth:
+        pool = pool[pool.snu_teeth.fillna(0) >= a.min_teeth]
 
     def with_hum_rate(t):
         gs = [g_setup(r, pool, exclude=r.case) for _, r in t.iterrows()]
@@ -85,7 +92,7 @@ def main():
         return {"n": int(e.size), "median_ppm": round(float(np.median(e)), 1), "zero_robust_sd_ppm": z(e),
                 "median_abs_ms_per_h": round(float(3.6 * np.median(np.abs(e)))),
                 "share_over_0.1_s_per_h": round(float(np.mean(np.abs(e) > 100 / 3.6)), 3)}
-    summ = {"pool_with_corrections": int(len(pool)), "pool_g_ppm_median": round(float(pool.g.median()), 1),
+    summ = {**({"min_teeth": a.min_teeth} if a.min_teeth else {}), "pool_with_corrections": int(len(pool)), "pool_g_ppm_median": round(float(pool.g.median()), 1),
             "constant_ppm": round(k, 1), "calibration_recordings": int(len(cal)),
             "test": {"assumed_rate": stats(e_given), "hum_rate": stats(e_hum),
                      "by_mode": {md: {"assumed_rate": stats(s.y), "hum_rate": stats(s.y - s.x - k)}
