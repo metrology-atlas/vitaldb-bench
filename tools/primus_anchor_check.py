@@ -28,6 +28,7 @@ if the stretch-to-stretch offset changes are in the AWP stamps (the PC-stamped P
 
 numerics (the bound from the release-wide PIP fits, no recordings read):
     python tools/primus_anchor_check.py numerics --work $W --out $W/primus_anchor_check
+    (v4 chain, 11 Nov 2026: add --primus-numbers $W/primus_numbers_v4/per_recording.json --numeric $W/overnight_v4/numeric)
 The numeric derivation (tools/numeric_derivation_pilot.py, release-wide outputs $W/overnight/numeric/part_*.jsonl;
 atlas study numerics-derivation-release) fits per recording the delay d from the end of a breath's inspiration
 (the pressure back below half its peak) on the AWP stamps to the PIP stamp, for the rule "peak of the last breath".
@@ -127,8 +128,8 @@ def scan(a):
 
 def agg(a):
     W = Path(a.work)
-    B = {r["case"]: r for r in json.loads((W / "primus_awp_anchor" / "breaths.json").read_text())["stretches"] if r["arm"] == "cvp"}
-    K = {(x["case"], x["stretch"]): x for x in json.loads((W / "primus_breath_rule" / "stretch_k.json").read_text()) if x["arm"] == "cvp"}
+    B = {r["case"]: r for r in json.loads(Path(a.breaths or W / "primus_awp_anchor" / "breaths.json").read_text())["stretches"] if r["arm"] == "cvp"}
+    K = {(x["case"], x["stretch"]): x for x in json.loads(Path(a.stretch_k or W / "primus_breath_rule" / "stretch_k.json").read_text()) if x["arm"] == "cvp"}
     R = [json.loads(l) for p in a.parts for l in open(p, encoding="utf-8") if l.strip()]
     rows = []
     for r in R:
@@ -172,12 +173,12 @@ def agg(a):
 def numerics(a):
     W = Path(a.work)
     lag = {}
-    pr = json.loads((W / "primus_numbers" / "per_recording.json").read_text())
+    pr = json.loads(Path(a.primus_numbers or W / "primus_numbers" / "per_recording.json").read_text())
     for c, l in zip(pr["case"], pr["lag_median_s"]):
         lag[c] = l
     rows = []
     import glob as _g
-    for p in sorted(_g.glob(str(W / "overnight" / "numeric" / "part_*.jsonl"))):
+    for p in sorted(_g.glob(str(Path(a.numeric or W / "overnight" / "numeric") / "part_*.jsonl"))):
         for line in open(p, encoding="utf-8"):
             r = json.loads(line)
             t = (r.get("tracks") or {}).get("PIP")
@@ -210,7 +211,11 @@ def main():
     s = sp.add_parser("scan"); s.add_argument("--root", required=True); s.add_argument("--cases", required=True)
     s.add_argument("--out", required=True); s.add_argument("--time-budget", type=float, default=0)
     g = sp.add_parser("agg"); g.add_argument("parts", nargs="+"); g.add_argument("--work", required=True); g.add_argument("--out", required=True)
+    g.add_argument("--breaths", help="default $W/primus_awp_anchor/breaths.json")
+    g.add_argument("--stretch-k", help="default $W/primus_breath_rule/stretch_k.json")
     n = sp.add_parser("numerics"); n.add_argument("--work", required=True); n.add_argument("--out", required=True)
+    n.add_argument("--primus-numbers", help="per_recording.json of primus_numbers.py; default $W/primus_numbers/per_recording.json")
+    n.add_argument("--numeric", help="folder of numeric_derivation_pilot.py part_*.jsonl; default $W/overnight/numeric")
     a = ap.parse_args()
     {"scan": scan, "agg": agg, "numerics": numerics}[a.cmd](a)
 

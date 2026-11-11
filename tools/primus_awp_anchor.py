@@ -39,7 +39,7 @@ gapsteps: joins each pause step (breaths.json) with its AWP gap (records/part_*.
 2 s): is the gap a whole number of records (the 0.48 s grid carries on) or not (a new anchor)? Steps by gap kind,
 in seconds and in breath periods. Writes gapsteps_summary.json and gapsteps.json (one row per step).
 
-    python tools/primus_awp_anchor.py gapsteps --out $W/primus_awp_anchor
+    python tools/primus_awp_anchor.py gapsteps --out $W/primus_awp_anchor [--records $W/primus_awp_anchor/records]
 
 records: per recording with Primus/AWP (and Primus/CO2 for comparison), how its record times are made: the share of
 consecutive records exactly one record length apart (30 samples at the track's rate, within 1 ms), the record
@@ -265,7 +265,7 @@ def gapsteps(a):
     out = Path(a.out)
     B = json.loads((out / "breaths.json").read_text())
     G = {}
-    for p in sorted((out / "records").glob("part_*.jsonl")):
+    for p in sorted(Path(a.records or out / "records").glob("part_*.jsonl")):
         for l in open(p, encoding="utf-8"):
             r = json.loads(l)
             if r.get("awp"):
@@ -376,6 +376,7 @@ def main(argv=None):
     sc.add_argument("--out", required=True)
     m = sp.add_parser("arms"); m.add_argument("--parts", nargs="+", required=True); m.add_argument("--out", required=True)
     gs = sp.add_parser("gapsteps"); gs.add_argument("--out", required=True)
+    gs.add_argument("--records", help="folder of records/part_*.jsonl (default OUT/records)")
     b = sp.add_parser("breaths"); b.add_argument("--out", required=True)
     c = sp.add_parser("records"); c.add_argument("--root", required=True); c.add_argument("--cases", required=True)
     c.add_argument("--out", required=True)

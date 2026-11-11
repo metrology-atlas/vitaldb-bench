@@ -3,6 +3,7 @@
 
     python tools/primus_awp_anchor_figs.py --work $W --root $R --out DIR
         [--modes M --ports P --step-rates S]   (defaults: $W/results/sync_full/..., $W/results/pat/...)
+        [--anchor DIR --rule DIR --numbers DIR] (defaults: $W/primus_awp_anchor, primus_breath_rule, primus_numbers)
 
 Writes three figures into DIR, their panels stacked vertically for the study page's column:
   primus-awp-breath-ambiguity.png  why breath matching can sit a breath off, from two recordings read here:
@@ -149,9 +150,9 @@ def fig_ambiguity(a, out):
 
 def fig_rates(a, out):
     W = Path(a.work)
-    B = json.loads((W / "primus_awp_anchor" / "breaths.json").read_text())["stretches"]
-    K = {(x["case"], x["stretch"], x["arm"]): x for x in json.loads((W / "primus_breath_rule" / "stretch_k.json").read_text())}
-    m0 = json.loads((W / "primus_breath_rule" / "summary.json").read_text())["main_mode_s"]
+    B = json.loads((Path(a.anchor) / "breaths.json").read_text())["stretches"]
+    K = {(x["case"], x["stretch"], x["arm"]): x for x in json.loads((Path(a.rule) / "stretch_k.json").read_text())}
+    m0 = json.loads((Path(a.rule) / "summary.json").read_text())["main_mode_s"]
     rows = [(s_["at_start"], s_["T"], K.get((r["case"], s_["i"], r["arm"]), {}).get("corrected_start_s"))
             for r in B for s_ in r["stretches"] if s_.get("T")]
     rates = (18, 16, 14, 12)
@@ -183,10 +184,10 @@ def fig_rates(a, out):
 
 def fig_correction(a, out):
     W = Path(a.work)
-    before = json.loads((W / "primus_numbers" / "per_recording_uncorrected.json").read_text())["lag_median_s"]
-    after = json.loads((W / "primus_numbers" / "per_recording.json").read_text())["lag_median_s"]
-    S = json.loads((W / "primus_breath_rule" / "summary.json").read_text())["leave_one_out"]
-    G = json.loads((W / "primus_awp_anchor" / "gapsteps.json").read_text())
+    before = json.loads((Path(a.numbers) / "per_recording_uncorrected.json").read_text())["lag_median_s"]
+    after = json.loads((Path(a.numbers) / "per_recording.json").read_text())["lag_median_s"]
+    S = json.loads((Path(a.rule) / "summary.json").read_text())["leave_one_out"]
+    G = json.loads((Path(a.anchor) / "gapsteps.json").read_text())
     fig, ax = plt.subplots(3, 1, figsize=(7, 10.5))
     bins = np.arange(-8, 2.01, 0.25)
     b_, a_ = -np.array(before), -np.array(after)
@@ -231,11 +232,17 @@ def main():
     ap.add_argument("--work", required=True); ap.add_argument("--root", required=True); ap.add_argument("--out", required=True)
     ap.add_argument("--modes"); ap.add_argument("--ports"); ap.add_argument("--step-rates")
     ap.add_argument("--only", choices=("ambiguity", "rates", "correction"))
+    ap.add_argument("--anchor", help="primus_awp_anchor.py outputs (breaths, gapsteps); default $W/primus_awp_anchor")
+    ap.add_argument("--rule", help="primus_breath_rule.py outputs; default $W/primus_breath_rule")
+    ap.add_argument("--numbers", help="primus_numbers.py outputs, with and without --uncorrected; default $W/primus_numbers")
     a = ap.parse_args()
     W = Path(a.work)
     a.modes = a.modes or str(W / "results" / "sync_full" / "snuadc_mode_label.json")
     a.ports = a.ports or str(W / "results" / "sync_full" / "snuadc_mode.json")
     a.step_rates = a.step_rates or str(W / "results" / "pat" / "snuadc_step_rates.json")
+    a.anchor = a.anchor or str(W / "primus_awp_anchor")
+    a.rule = a.rule or str(W / "primus_breath_rule")
+    a.numbers = a.numbers or str(W / "primus_numbers")
     out = Path(a.out); out.mkdir(parents=True, exist_ok=True)
     for name, f in (("ambiguity", fig_ambiguity), ("rates", fig_rates), ("correction", fig_correction)):
         if a.only in (None, name):
