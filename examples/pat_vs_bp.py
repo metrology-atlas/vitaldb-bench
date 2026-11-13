@@ -17,8 +17,8 @@ PAT, ECG R peak to the steepest PLETH upstroke, under five timings:
   reb       own, with the rebuilt sawtooth correction removed (metrology-atlas study ppg-sawtooth-correction): the
             whole-release fit of tools/slip_rebuild.py v26 (physiosync method "rebuilt"), its delay model
             (tools/slip_tiers.py correction, physiosync 0.3.2 delay_at: corrected steps, creep where it is corrected) evaluated at each upstroke;
-            only where the fit's stretch covers the beat. The fit is read from $PAT_BP_FIT, else
-            $W/slip_rebuild/full3/fit.jsonl;
+            only where the fit's stretch covers the beat. The fit is read from --fit (so that the run record
+            hashes it), else $PAT_BP_FIT, else $W/slip_rebuild/full3/fit.jsonl; a missing fit stops the scan;
   art       ECG R peak to the arterial upstroke: no PLETH delay and no sawtooth, the reference.
 Blood pressure per beat from the arterial waveform: systolic (peak after the arterial upstroke) and mean (foot to
 foot); heart rate from the RR interval. The monitor's ART_SBP numeric at each beat, as stamped and moved 2.1 s
@@ -144,12 +144,12 @@ def slope(x, y):
     return float(np.polyfit(y[m], x[m], 1)[0] * 1000) if m.sum() >= 20 and np.std(y[m]) > 0 else None   # ms per mmHg
 
 
-def load_fits(cases: list[int]) -> dict:
-    """The rebuilt fit's real-beat result for each case, from $PAT_BP_FIT or $W/slip_rebuild/full3/fit.jsonl."""
-    path = os.environ.get("PAT_BP_FIT") or (os.path.join(os.environ["W"], "slip_rebuild", "full3", "fit.jsonl")
-                                             if os.environ.get("W") else "")
-    if not path or not Path(path).exists():
-        return {}
+def load_fits(cases: list[int], path: str | None = None) -> dict:
+    """The rebuilt fit's real-beat result for each case, from --fit, $PAT_BP_FIT or $W/slip_rebuild/full3/fit.jsonl."""
+    path = path or os.environ.get("PAT_BP_FIT") or (os.path.join(os.environ["W"], "slip_rebuild", "full3", "fit.jsonl")
+                                                    if os.environ.get("W") else "")
+    if not path or not Path(path).exists():   # without the fit every rebuilt value would be missing: stop instead
+        raise FileNotFoundError(f"no rebuilt fit at {path!r}: pass --fit")
     want, out = set(cases), {}
     with open(path) as fh:
         for line in fh:
@@ -255,7 +255,7 @@ def scan(a) -> None:
     done = {json.loads(l)["case"] for l in out.read_text().splitlines() if l.strip()} if out.exists() else set()
     t0 = time.time()
     cases = [int(x) for x in a.cases.split(",") if x]
-    fits = load_fits(cases)
+    fits = load_fits(cases, a.fit)
     with open(out, "a") as fh:
         for c in cases:
             if c in done:
@@ -437,6 +437,7 @@ def main() -> None:
         s.add_argument(k, required=True)
     s.add_argument("--time-budget", type=float, default=0)
     s.add_argument("--minutes", type=float, default=60)
+    s.add_argument("--fit", help="whole-release rebuilt fit (fit.jsonl of tools/slip_rebuild.py)")
     g = sub.add_parser("agg")
     g.add_argument("parts", nargs="+")
     g.add_argument("--out", required=True)

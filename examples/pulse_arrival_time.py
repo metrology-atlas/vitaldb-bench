@@ -124,6 +124,7 @@ def robust_sd(x):
 
 
 _FITS: dict | None = None
+_FIT_PATH: str | None = None   # --fit; else $PAT_FIT; else $W/slip_rebuild/full3/fit.jsonl
 
 
 def rebuilt_fit(case: int) -> dict | None:
@@ -131,9 +132,11 @@ def rebuilt_fit(case: int) -> dict | None:
     global _FITS
     if _FITS is None:
         _FITS = {}
-        path = os.environ.get("PAT_FIT") or (os.path.join(os.environ["W"], "slip_rebuild", "full3", "fit.jsonl")
-                                             if os.environ.get("W") else "")
-        if path and Path(path).exists():
+        path = _FIT_PATH or os.environ.get("PAT_FIT") or (
+            os.path.join(os.environ["W"], "slip_rebuild", "full3", "fit.jsonl") if os.environ.get("W") else "")
+        if not path or not Path(path).exists():   # without the fit every case would fall back silently: stop instead
+            raise FileNotFoundError(f"no rebuilt fit at {path!r}: pass --fit")
+        if True:
             with open(path) as fh:
                 for line in fh:
                     c = int(line[9:line.index(",")]) if line.startswith('{"case": ') else None
@@ -411,7 +414,10 @@ def main() -> None:
     ap.add_argument("--figure", nargs="*", type=int, default=[])
     ap.add_argument("--cohort-figure", action="store_true")
     ap.add_argument("--time-budget", type=float, default=150)
+    ap.add_argument("--fit", help="whole-release rebuilt fit (fit.jsonl of tools/slip_rebuild.py)")
     a = ap.parse_args()
+    global _FIT_PATH
+    _FIT_PATH = a.fit
     (a.out / "windows").mkdir(parents=True, exist_ok=True)
     sf = a.out / "summary.json"
     done = json.loads(sf.read_text()) if sf.exists() else {}
