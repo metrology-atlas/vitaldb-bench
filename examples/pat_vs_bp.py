@@ -15,8 +15,8 @@ PAT, ECG R peak to the steepest PLETH upstroke, under five timings:
   saw       own, with the PLETH sawtooth removed (physiosync.fit_ecg_ppg_delay, step 1 of the PAT example);
   cor       saw, less the global device delay (step 2); a constant, so every correlation must equal saw's;
   reb       own, with the rebuilt sawtooth correction removed (metrology-atlas study ppg-sawtooth-correction): the
-            whole-release fit of tools/slip_rebuild.py v26 (= physiosync 0.3.1, method "rebuilt"), its delay model
-            (tools/slip_tiers.py correction: corrected steps, creep where it is corrected) evaluated at each upstroke;
+            whole-release fit of tools/slip_rebuild.py v26 (physiosync method "rebuilt"), its delay model
+            (tools/slip_tiers.py correction, physiosync 0.3.2 delay_at: corrected steps, creep where it is corrected) evaluated at each upstroke;
             only where the fit's stretch covers the beat. The fit is read from $PAT_BP_FIT, else
             $W/slip_rebuild/full3/fit.jsonl;
   art       ECG R peak to the arterial upstroke: no PLETH delay and no sawtooth, the reference.
