@@ -61,9 +61,9 @@ disk() {
   echo "$(date +%H:%M) $free GB free on the work drive"
   [ "$free" -ge "$MIN_FREE_GB" ] || { echo "less than $MIN_FREE_GB GB free: stopped"; exit 1; }
 }
-rec() {                                          # run one command with a run record; its output also to $O/steps.log
-  echo "== $(date +%H:%M) $*" >> "$O/steps.log"
-  "$PY" "$PROV" record --out "$O" -- "$PY" -W ignore "$@" 2>&1 | tee -a "$O/steps.log"
+rec() {                                          # run one command with a run record; its output also to $O.steps.log (beside the folder, so no run record lists it)
+  echo "== $(date +%H:%M) $*" >> "$O.steps.log"
+  "$PY" "$PROV" record --out "$O" -- "$PY" -W ignore "$@" 2>&1 | tee -a "$O.steps.log"
   return "${PIPESTATUS[0]}"
 }
 resolution() {                                   # the pinned vitaldb-resolution, exported once outside the repo
