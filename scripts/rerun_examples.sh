@@ -133,7 +133,7 @@ PYC
     done; wait
     if grep -l Traceback "$O"/log_*.txt > /dev/null 2>&1; then echo "failed: see $O/log_*.txt"; exit 1; fi
     if [ "$TEST" = 1 ]; then rec examples/$NAME.py summarise --out "$O" --root "$R"
-    else rec examples/$NAME.py summarise --out "$O" --root "$R" --figure 136-1 16-3; fi
+    else rec examples/$NAME.py summarise --out "$O" --root "$R" --draws-csv "$D" --figure 136-1 16-3; fi
     rec examples/$NAME.py lagsummary --out "$O"
     rec examples/co2_gradient_spread.py "$O/parts" --out "$O/co2_gradient_spread.json";;
   fluid_balance)

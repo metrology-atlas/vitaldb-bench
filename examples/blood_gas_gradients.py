@@ -166,7 +166,8 @@ def agg(x) -> dict:
 
 def summarise(a) -> None:
     df = pd.concat([pd.read_csv(p) for p in sorted((a.out / "parts").glob("*.csv"))], ignore_index=True)
-    s = {"gases": int(df.gas.nunique()), "cases": int(df.case.nunique())}
+    s = {"gases": int(df.gas.nunique()), "cases": int(df.case.nunique()),
+         "access_s_median": round(float(df.drop_duplicates("gas").access_s.median()), 1)}
     for key in TRACKS:
         x = df[df.kind == key].dropna(subset=["head_med"])
         w = x.head_hi - x.head_lo
@@ -305,8 +306,8 @@ def examples_figure(df: pd.DataFrame, gases: list[str], root: Path, out: Path) -
             ax = axes[i, j]
             rec = tr.get(key)
             r = df[(df.case == c) & (df.gas == g.gas) & (df.kind == key)]
-            if rec is None or r.empty or meta is None:
-                continue
+            if rec is None or r.empty or meta is None:   # a requested figure panel must not come out blank
+                raise SystemExit(f"--figure {gid}: no {key} track, gradient or access times (pass --draws-csv)")
             r = r.iloc[0]
             t0 = meta["start_s"]
             m = (rec[:, 0] > t0 - 900) & (rec[:, 0] < t0 + 900)
@@ -569,7 +570,9 @@ def main() -> None:
     elif a.cmd == "lagsummary":
         lag_summary(a)
     else:
-        if a.figure and a.draws_csv is not None:
+        if a.figure and a.draws_csv is None:
+            ap.error("--figure needs --draws-csv for the access times")
+        if a.figure:
             d = pd.read_csv(a.draws_csv)
             for g in d[d.draw_id.isin(a.figure)].itertuples():
                 EX_META[(g.case, g.draw_id)] = {"start_s": g.start_s, "end_s": g.end_s, "lab_time_s": g.lab_time_s}
