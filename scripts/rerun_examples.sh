@@ -48,7 +48,9 @@ for repo in "$B" "$CODE/physiosync" "$CODE/vitaldb-reader"; do
     echo "uncommitted changes in $repo: commit first, so the run records point at code anyone can check out"; exit 1
   fi
 done
-"$PY" -c "import numpy, scipy, matplotlib, pandas" || { echo "no analysis Python ($PY)"; exit 1; }
+"$PY" -c "import numpy, scipy, matplotlib, pandas, sklearn" 2>/dev/null || {
+  echo "$PY lacks numpy, scipy, matplotlib, pandas or scikit-learn: install them first, e.g."
+  echo "  $PY -m pip install numpy scipy matplotlib pandas scikit-learn"; exit 1; }
 if [ "$TEST" = 1 ]; then O=$W/examples_v3_test/$NAME; else O=$W/examples_v3/$NAME; fi
 if [ -d "$O" ] && [ -n "$(ls -A "$O" 2>/dev/null)" ] && [ "$TEST" != 1 ]; then
   echo "$O already has outputs; this script never writes over a run"; exit 1
@@ -59,7 +61,11 @@ disk() {
   echo "$(date +%H:%M) $free GB free on the work drive"
   [ "$free" -ge "$MIN_FREE_GB" ] || { echo "less than $MIN_FREE_GB GB free: stopped"; exit 1; }
 }
-rec() { "$PY" "$PROV" record --out "$O" -- "$PY" -W ignore "$@"; }        # run one command with a run record
+rec() {                                          # run one command with a run record; its output also to $O/steps.log
+  echo "== $(date +%H:%M) $*" >> "$O/steps.log"
+  "$PY" "$PROV" record --out "$O" -- "$PY" -W ignore "$@" 2>&1 | tee -a "$O/steps.log"
+  return "${PIPESTATUS[0]}"
+}
 resolution() {                                   # the pinned vitaldb-resolution, exported once outside the repo
   VR=$HOME/vitaldb-resolution-$RES_TAG
   [ -d "$VR" ] || { mkdir -p "$VR"; git -C "$CODE/vitaldb/vitaldb-resolution" archive "$RES_TAG" | tar -x -C "$VR"; }
