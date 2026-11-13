@@ -36,6 +36,8 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from vitaldb_reader.errors import VitalFormatError
+from vitaldb_reader.vital_file import read_vital
 
 TRACKS = {"etco2": "Primus/ETCO2", "spo2": "Solar8000/PLETH_SPO2"}
 LAB = {"etco2": "pco2", "spo2": "sao2"}
@@ -45,15 +47,14 @@ NICE = {"etco2": "EtCO₂", "spo2": "SpO₂", "pco2": "PaCO₂", "sao2": "SaO₂
 
 
 def load_tracks(path: Path) -> dict[str, np.ndarray]:
-    import vitaldb
-
-    vf = vitaldb.VitalFile(str(path), list(TRACKS.values()))
+    """The two numeric tracks as (record time, value) arrays, read with vitaldb-reader at native resolution."""
+    v = read_vital(path, track_names=set(TRACKS.values()))
     out = {}
     for key, nm in TRACKS.items():
-        t = vf.trks.get(nm)
-        if t is None or not t.recs:
+        t = v.tracks.get(nm)
+        if t is None or t.record_times.size == 0:
             continue
-        a = np.array([(r["dt"], r["val"]) for r in t.recs if r["val"] is not None], float)
+        a = np.column_stack([t.record_times.astype(float), t.physical()])
         a = a[np.isfinite(a[:, 1]) & (a[:, 1] > 0)]
         if len(a):
             out[key] = a[np.argsort(a[:, 0])]
@@ -113,10 +114,13 @@ def run(a) -> None:
         print(f"{part.name} exists; skipped")
         return
     rows = []
+    unreadable = []
     for c in cases:
         try:
             tr = load_tracks(a.root / "vital_files" / f"{c:04d}.vital")
-        except Exception:  # noqa: BLE001
+        except (OSError, VitalFormatError) as e:  # an unreadable file skips its case; anything else stops the run
+            unreadable.append(c)
+            print(f"case {c}: unreadable ({type(e).__name__}: {e})")
             continue
         for g in d[d.case == c].itertuples():
             k = a.k
@@ -148,7 +152,7 @@ def run(a) -> None:
                 rows.append(row)
     part.parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(rows).to_csv(part, index=False)
-    print(f"cases {A}:{B} ({len(cases)}), {len(rows)} gradients -> {part.name}")
+    print(f"cases {A}:{B} ({len(cases)}), {len(rows)} gradients, {len(unreadable)} unreadable -> {part.name}")
 
 
 def agg(x) -> dict:
@@ -342,10 +346,13 @@ def lagscan(a) -> None:
         print(f"{part.name} exists; skipped")
         return
     rows = []
+    unreadable = []
     for c in cases:
         try:
             tr = load_tracks(a.root / "vital_files" / f"{c:04d}.vital")
-        except Exception:  # noqa: BLE001
+        except (OSError, VitalFormatError) as e:  # an unreadable file skips its case; anything else stops the run
+            unreadable.append(c)
+            print(f"case {c}: unreadable ({type(e).__name__}: {e})")
             continue
         for g in d[d.case == c].itertuples():
             for key, rec in tr.items():
@@ -359,7 +366,7 @@ def lagscan(a) -> None:
                 rows.append(row)
     part.parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(rows).to_csv(part, index=False)
-    print(f"cases {A}:{B} ({len(cases)}), {len(rows)} rows -> {part.name}")
+    print(f"cases {A}:{B} ({len(cases)}), {len(rows)} rows, {len(unreadable)} unreadable -> {part.name}")
 
 
 def _change_r(df: pd.DataFrame, col: str) -> tuple[pd.Series, pd.Series]:
