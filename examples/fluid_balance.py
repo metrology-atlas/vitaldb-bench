@@ -26,6 +26,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+WIDE_ML = 300     # a 95% interval wider than this belongs to the separate wide group
+
 TERMS = (("intraop_crystalloid", +1), ("intraop_colloid", +1), ("intraop_ebl", -1), ("intraop_uo", -1))
 
 
@@ -67,6 +69,7 @@ def main() -> None:
         lo, med, hi = np.percentile(bal, [2.5, 50, 97.5])
         sds = {v: float(np.std(parts[v])) for v, _ in TERMS}
         rows.append({"case": int(r["caseid"]), "naive": naive, "median": med, "lo": lo, "hi": hi, "width": hi - lo,
+                     "ebl_recorded": float(r["intraop_ebl"]),
                      **{f"sd_{v.split('_', 1)[1]}": s for v, s in sds.items()}})
         if int(r["caseid"]) in a.figure:
             keep[int(r["caseid"])] = (bal, naive, r)
@@ -81,6 +84,13 @@ def main() -> None:
             "naive_balance_ml_median": round(float(df.naive.median()), 1),
             "variance_share_median": {k[3:]: round(v, 3) for k, v in share.items()},
             "sign_uncertain": int(((df.lo < 0) & (df.hi > 0)).sum())}
+    # the separate group of wide intervals (the cohort figure's second peak, near 380 mL): how many, and the blood
+    # loss recorded in them (a round 500 or 1,000 mL may have been rounded to the nearest 500)
+    wide = df[df.width > WIDE_ML]
+    summ["wide_group"] = {"width_above_ml": WIDE_ML, "cases": int(len(wide)),
+                          "width_median_ml": round(float(wide.width.median()), 1) if len(wide) else None,
+                          "by_recorded_ebl_ml": {str(int(k)): int(v) for k, v in
+                                                 wide.ebl_recorded.value_counts().sort_index().items()}}
     (a.out / "summary.json").write_text(json.dumps(summ, indent=1))
     print(json.dumps(summ, indent=1))
     figures(df, keep, a.out)

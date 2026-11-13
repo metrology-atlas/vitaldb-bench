@@ -136,7 +136,7 @@ def agg(a) -> None:
     for lo in bins[:-1]:        # noisy measure alone manufactures a level-dependent bias (regression to the mean)
         m = (avg >= lo) & (avg < lo + 10)
         if m.sum() >= 30:
-            by_level.append({"art_from": int(lo), "readings": int(m.sum()), "mean_diff": round(float(d[m].mean()), 2),
+            by_level.append({"mean_from": int(lo), "readings": int(m.sum()), "mean_diff": round(float(d[m].mean()), 2),
                              "sd_diff": round(float(d[m].std()), 2)})
     uc = np.unique(case_id)
     per_mean = np.array([d[case_id == c].mean() for c in uc if (case_id == c).sum() >= 3])
@@ -152,7 +152,7 @@ def agg(a) -> None:
                        "consecutive_pairs": int(dn.size), "lag_curve": [[int(L), round(float(x), 3)] for L, x in zip(LAGS, cor)]},
             "population": {"mean_diff": round(float(d.mean()), 2), "sd_diff": round(float(d.std()), 2),
                            "loa": [round(float(d.mean() - 1.96 * d.std()), 1), round(float(d.mean() + 1.96 * d.std()), 1)],
-                           "by_arterial_level": by_level},
+                           "by_mean_level": by_level},
             "individual": {"patient_mean_diff_p10_50_90": [round(float(np.percentile(per_mean, p)), 2) for p in (10, 50, 90)],
                            "between_patient_sd": round(float(per_mean.std()), 2), "within_patient_sd": round(float(within.std()), 2),
                            "patients_with_3_plus": int(per_mean.size)},
@@ -177,8 +177,8 @@ def figure(cor, best, art, d, per_mean, summ, out):
     ax[0].set_ylabel("correlation of changes")
     ax[0].set_title(f"A. The cuff value belongs to its stamp ({-LAGS[best]:+d} s)", fontsize=9, loc="left")
     ax[1].scatter((art + art + d) / 2, d, s=2, alpha=0.15, color="#3f51b5", lw=0)
-    lv = summ["population"]["by_arterial_level"]
-    ax[1].plot([x["art_from"] + 5 for x in lv], [x["mean_diff"] for x in lv], "o-", color="#e65100", ms=3)
+    lv = summ["population"]["by_mean_level"]
+    ax[1].plot([x["mean_from"] + 5 for x in lv], [x["mean_diff"] for x in lv], "o-", color="#e65100", ms=3)
     ax[1].axhline(0, color="0.4", lw=0.8)
     ax[1].axvline(65, color="0.4", lw=0.8, ls=":")
     ax[1].set_xlim(30, 140); ax[1].set_ylim(-50, 50)

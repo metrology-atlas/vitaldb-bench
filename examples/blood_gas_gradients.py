@@ -177,6 +177,18 @@ def summarise(a) -> None:
             "interval_contains_0": round(float(((x.head_lo <= 0) & (x.head_hi >= 0)).mean()), 3),
             "monitor_at_ceiling": round(float((x.monitor_draw >= 100).mean()), 3) if key == "spo2" else None,
         }
+        if key == "etco2":      # pooled over all gases: lab against the monitor at the draw and at the stamp
+            for col, nm in (("monitor_draw", "pooled_r_at_draw"), ("monitor_stamp", "pooled_r_at_stamp")):
+                y = x.dropna(subset=[col])
+                s[key][nm] = round(float(np.corrcoef(y.lab, y[col])[0, 1]), 3)
+        if key == "spo2":       # the ceiling: lab SaO2 at 100, and the sign of SaO2 - SpO2 where SpO2 is below 100
+            below = x[x.monitor_draw < 100]
+            s[key]["lab_at_100"] = round(float((x.lab >= 100).mean()), 3)
+            s[key]["monitor_below_100"] = {
+                "n": int(len(below)),
+                "spo2_clearly_above_sao2": round(float((below.head_hi < 0).mean()), 3),
+                "spo2_clearly_below_sao2": round(float((below.head_lo > 0).mean()), 3),
+                "lab_at_100": round(float((below.lab >= 100).mean()), 3)}
     (a.out / "summary.json").write_text(json.dumps(s, indent=1))
     print(json.dumps(s, indent=1))
     cohort_figure(df, a.out / "bg_cohort.png")
@@ -397,6 +409,8 @@ def lag_summary(a) -> None:
         dl, dm = _change_r(x, "m_stamp")
         ok = dl.notna() & dm.notna()
         r_stamp = np.corrcoef(dl[ok], dm[ok])[0, 1]
+        xs = x.dropna(subset=["m_stamp"])
+        pooled_stamp = np.corrcoef(xs.lab, xs["m_stamp"])[0, 1]
         ax[j].fill_between(LAGS_MIN, lo, hi, color="#9ecae1", alpha=.6, lw=0)
         ax[j].plot(LAGS_MIN, rs, "o-", color="#08519c", ms=4, label="within-patient: change vs change (95% CI)")
         ax[j].plot(LAGS_MIN, pooled, "s--", color="#636363", ms=3, lw=1, label="all gases pooled")
@@ -418,6 +432,7 @@ def lag_summary(a) -> None:
                     "r_at_draw": round(float(rs[list(LAGS_MIN).index(0)]), 3), "r_at_stamp": round(float(r_stamp), 3),
                     "r_by_offset": {int(l): round(float(r), 3) for l, r in zip(LAGS_MIN, rs)},
                     "pooled_by_offset": {int(l): round(float(r), 3) for l, r in zip(LAGS_MIN, pooled)},
+                    "pooled_at_stamp": round(float(pooled_stamp), 3),
                     "stamp_median_min": round(st, 1)}
     fig.tight_layout()
     fig.savefig(a.out / "bg_lagscan.png", dpi=150)
@@ -463,7 +478,10 @@ def lag_summary(a) -> None:
                     "r_at_draw": round(float(rs[list(LAGS_MIN).index(0)]), 3),
                     "r_at_stamp": round(float(rank_r(dl[ok], dm[ok])), 3),
                     "r_by_offset": {int(l): round(float(r), 3) for l, r in zip(LAGS_MIN, rs)}}
-        if ci_on:
+        if ci_on:               # the 95% intervals at the draw and at the stamp, to say whether they overlap
+            i0 = list(LAGS_MIN).index(0)
+            res[key]["ci95_at_draw"] = [round(float(lo[i0]), 3), round(float(hi[i0]), 3)]
+            res[key]["ci95_at_stamp"] = [round(float(v), 3) for v in boot_rank(dl[ok], dm[ok], x.case[ok])]
             axs.fill_between(LAGS_MIN, lo, hi, color="#9ecae1", alpha=.6, lw=0)
         axs.plot(LAGS_MIN, rs, "o-" if ci_on else "s--", color=col, ms=4 if ci_on else 3, lw=1.5 if ci_on else 1,
                  label=f"{lab}: change vs change")
