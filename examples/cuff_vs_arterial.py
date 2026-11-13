@@ -96,7 +96,7 @@ def agg(a) -> None:
     out.mkdir(parents=True, exist_ok=True)
     A = {r["case"]: np.array([[np.nan if x is None else x for x in row] for row in r["art"]], float) for r in ok}
     # 1. timing: changes between consecutive readings (< 10 min apart, clean), cuff against arterial, per lag
-    cor, sdd = [], []
+    cor, sdd, npairs = [], [], []
     for li in range(LAGS.size):
         dn, da = [], []
         for r in ok:
@@ -104,6 +104,7 @@ def agg(a) -> None:
             k = (np.diff(t) < 600) & cl[1:] & cl[:-1] & np.isfinite(ar[1:]) & np.isfinite(ar[:-1])
             dn.append(np.diff(n)[k]); da.append(np.diff(ar)[k])
         dn, da = np.concatenate(dn), np.concatenate(da)
+        npairs.append(int(dn.size))
         cor.append(float(np.corrcoef(dn, da)[0, 1])); sdd.append(float(np.std(dn - da)))
     cor = np.array(cor)
     best = int(np.argmax(cor))
@@ -149,7 +150,7 @@ def agg(a) -> None:
             "timing": {"best_lag_s": int(LAGS[best]), "best_lag_boot_p2.5_p97.5": [float(np.percentile(boot, 2.5)), float(np.percentile(boot, 97.5))],
                        "corr_at_best": round(float(cor[best]), 3), "corr_at_0": round(float(cor[list(LAGS).index(0)]), 3),
                        "corr_at_60_before": round(float(cor[list(LAGS).index(60)]), 3),
-                       "consecutive_pairs": int(dn.size), "lag_curve": [[int(L), round(float(x), 3)] for L, x in zip(LAGS, cor)]},
+                       "consecutive_pairs": npairs[best], "lag_curve": [[int(L), round(float(x), 3)] for L, x in zip(LAGS, cor)]},
             "population": {"mean_diff": round(float(d.mean()), 2), "sd_diff": round(float(d.std()), 2),
                            "loa": [round(float(d.mean() - 1.96 * d.std()), 1), round(float(d.mean() + 1.96 * d.std()), 1)],
                            "by_mean_level": by_level},
