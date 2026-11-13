@@ -50,16 +50,24 @@ def main() -> None:
     clin = pd.read_csv(a.root / "clinical_data.csv")
     use = clin[(clin.intraop_uo > 0) & clin.weight.notna() & clin.anestart.notna() & clin.aneend.notna()]
     rng = np.random.default_rng(0)
-    rows, keep = [], {}
+    rows, keep, extra = [], {}, []
+    no_distribution = 0
     for r in use.to_dict("records"):
         d = {v: reg.case_distribution(r, v) for v in ("intraop_uo", "weight", "ane_duration")}
         if any(x.status != "ok" or not x.components for x in d.values()):
+            no_distribution += 1
             continue
         u = d["intraop_uo"].sample(a.draws, rng)
         w = d["weight"].sample(a.draws, rng)
         t = d["ane_duration"].sample(a.draws, rng) / 60.0
         ok = (w > 0) & (t > 0)
         rate = u[ok] / w[ok] / t[ok]
+        pos = ok & (u > 0)
+        lv = {k: float(np.var(np.log(x[pos]))) for k, x in (("uo", u), ("weight", w), ("duration", t))}
+        tot = sum(lv.values())
+        uo_rec = float(r["intraop_uo"])
+        extra.append({"round_small_uo": uo_rec % 50 == 0 and uo_rec <= 200,
+                      **{f"share_{k}": (v / tot if tot > 0 else np.nan) for k, v in lv.items()}})
         naive = r["intraop_uo"] / r["weight"] / ((r["aneend"] - r["anestart"]) / 3600.0)
         p = float(np.mean(rate < THRESHOLD))
         lo, med, hi = np.percentile(rate, [2.5, 50, 97.5])
@@ -85,6 +93,20 @@ def main() -> None:
         "rel_width_95_p10_p90": [round(float(df.rel_width.quantile(.1)), 3), round(float(df.rel_width.quantile(.9)), 3)],
         "median_minus_naive_median": round(float((df["median"] - df.naive).median()), 4),
     }
+    # who is left out, and where the spread comes from (summary only; cases.csv is unchanged)
+    pos_uo = clin[clin.intraop_uo > 0]
+    summ["left_out"] = {
+        "positive_uo": len(pos_uo),
+        "missing_weight_or_anaesthesia_times": int(len(pos_uo) - len(use)),
+        "no_distribution_for_an_input": no_distribution,
+        "recorded_zero_uo": int((clin.intraop_uo == 0).sum())}
+    ex = pd.DataFrame(extra)
+    rs = ex.round_small_uo.values
+    summ["rel_width_95_median_by_uo"] = {
+        "round_50_or_100_up_to_200": {"cases": int(rs.sum()), "median": round(float(df.rel_width[rs].median()), 3)},
+        "other": {"cases": int((~rs).sum()), "median": round(float(df.rel_width[~rs].median()), 3)}}
+    summ["log_variance_share_median"] = {k: round(float(ex[f"share_{k}"].median()), 3)
+                                         for k in ("uo", "weight", "duration")}
     (a.out / "summary.json").write_text(json.dumps(summ, indent=1))
     print(json.dumps(summ, indent=1))
     figures(df, keep, a.out)
