@@ -29,7 +29,7 @@ case "$NAME" in
 cuff_vs_arterial          scan of every recording, 4 parts (about 10 min)
 hypotension_burden        scan of every recording, 4 parts (about 30 min)
 induction_hypotension     scan of every recording, 4 parts (about 20 min)
-pat_vs_bp                 scan of every recording, 4 parts (about 30 min); needs $W/slip_rebuild/full3/fit.jsonl
+pat_vs_bp                 scan of every recording, 4 parts (about 30 min); needs the slip_rebuild_fit run
 ppv_by_breath             scan of the recordings with Primus and SNUADC, 4 parts (about 50 min)
 pulse_arrival_time        121 recordings, rebuilt and detect (about an hour)
 blood_gas_gradients       Monte Carlo per gas and the timing scan, in chunks (about 1-2 h)
@@ -38,12 +38,14 @@ oliguria_labels           clinical table only (under a minute)
 regression_with_rounding  clinical table only (under a minute)
 urine_output_rate         clinical table only (a few minutes)
 delta_pat_hist            not an example: beat-to-beat change in PAT, every recording, 4 parts (about 25 min)
+slip_rebuild_fit          not an example: the whole-release rebuilt PPG fit the two PAT examples read, 6 parts (about 30 min)
 L
   exit 0;;
 esac
 
 cd "$B"
 SCRIPT=examples/$NAME.py; [ "$NAME" = delta_pat_hist ] && SCRIPT=tools/$NAME.py
+[ "$NAME" = slip_rebuild_fit ] && SCRIPT=tools/slip_rebuild.py
 [ -f "$SCRIPT" ] || { echo "no $SCRIPT"; exit 1; }
 for repo in "$B" "$CODE/physiosync" "$CODE/vitaldb-reader"; do
   if [ -n "$(git -C "$repo" status --porcelain --untracked-files=no)" ]; then
@@ -96,7 +98,7 @@ case "$NAME" in
     all_cases | test_cases | scan_parts
     rec "examples/$NAME.py" agg "$O"/part_*.jsonl --root "$R" --out "$O/agg";;
   pat_vs_bp)
-    FIT=${PAT_BP_FIT:-$W/slip_rebuild/full3/fit.jsonl}; [ -e "$FIT" ] || { echo "missing $FIT"; exit 1; }
+    FIT=${PAT_BP_FIT:-$W/examples_v3/slip_rebuild_fit/fit.jsonl}; [ -e "$FIT" ] || { echo "missing $FIT"; exit 1; }
     all_cases | test_cases | scan_parts --fit "$FIT"
     rec "examples/$NAME.py" agg "$O"/part_*.jsonl --out "$O/agg";;
   ppv_by_breath)
@@ -108,7 +110,7 @@ print(",".join(str(c) for c in sorted(int(k) for k, v in d.items() if v and {"Pr
 PYC
     rec "examples/$NAME.py" agg "$O"/part_*.jsonl --out "$O/agg";;
   pulse_arrival_time)
-    FIT=${PAT_FIT:-$W/slip_rebuild/full3/fit.jsonl}; [ -e "$FIT" ] || { echo "missing $FIT"; exit 1; }
+    FIT=${PAT_FIT:-$W/examples_v3/slip_rebuild_fit/fit.jsonl}; [ -e "$FIT" ] || { echo "missing $FIT"; exit 1; }
     CASES=$(sed -n '/^CASES="/,/"$/p' scripts/run_pat_example.sh | tr -dc '0-9 \n' | tr '\n' ' ')
     FIG=5975; [ "$TEST" = 1 ] && { CASES="2173 3607"; FIG=""; }
     mkdir -p "${O}_detect"
@@ -137,6 +139,35 @@ PYC
     else rec examples/$NAME.py summarise --out "$O" --root "$R" --draws-csv "$D" --figure 136-1 16-3; fi
     rec examples/$NAME.py lagsummary --out "$O"
     rec examples/co2_gradient_spread.py "$O/parts" --out "$O/co2_gradient_spread.json";;
+  slip_rebuild_fit)
+    # The fit step of scripts/run_slip_rebuild_full.sh (5 Nov, into $W/slip_rebuild/full3), now with run records. It
+    # reuses the beat-quality folder of 4 Nov ($W/slip_rebuild/quality, hashed as an input); 6 parts as on 5 Nov, so
+    # the joined fit.jsonl lists the recordings in the same order and can be compared with full3 byte for byte.
+    Q=$W/slip_rebuild/quality; NP=6; LIMIT=0; [ "$TEST" = 1 ] && { NP=1; LIMIT=5; }
+    for f in $Q $W/sawtooth_char/scan_full $W/sawtooth_stats/recordings.csv $W/results/sync_full/snuadc_mode_label.json \
+             $W/label_quality_final/summary.json; do [ -e "$f" ] || { echo "missing input: $f"; exit 1; }; done
+    rec -c 'import json, sys
+from pathlib import Path
+cases = sorted(int(p.stem) for p in Path(sys.argv[1]).glob("*.npz"))
+cases = cases[: int(sys.argv[3])] if int(sys.argv[3]) else cases
+Path(sys.argv[2]).write_text(json.dumps({"cases": cases}) + "\n")
+print(len(cases), "recordings")' "$W/sawtooth_char/scan_full" "$O/cases.json" "$LIMIT" || { echo "case list failed"; exit 1; }
+    echo "$(date +%H:%M) fit, $NP parts"
+    for p in $(seq 0 $((NP - 1))); do
+      rec "$SCRIPT" fit --scan "$W/sawtooth_char/scan_full" --quality "$Q" --cases "$O/cases.json" \
+        --rates "$W/sawtooth_stats/recordings.csv" --modes "$W/results/sync_full/snuadc_mode_label.json" \
+        --rule "$W/label_quality_final/summary.json" --out "$O/fit_p$p.jsonl" --part $p --of $NP > "$O/log_fit_$p.txt" 2>&1 &
+    done
+    wait
+    if grep -l Traceback "$O"/log_fit_*.txt > /dev/null 2>&1; then echo "a fit part failed: see $O/log_fit_*.txt"; exit 1; fi
+    [ "$(ls "$O"/fit_p*.jsonl | wc -l)" -eq "$NP" ] || { echo "only $(ls "$O"/fit_p*.jsonl | wc -l) of $NP parts wrote a fit"; exit 1; }
+    rec -c 'import sys
+from pathlib import Path
+parts = [Path(p) for p in sys.argv[2:]]
+Path(sys.argv[1]).write_text("".join(p.read_text() for p in parts))
+rows = sum(1 for p in parts for _ in p.open())
+print(rows, "recordings in", sys.argv[1])' "$O/fit.jsonl" $(for p in $(seq 0 $((NP - 1))); do echo "$O/fit_p$p.jsonl"; done)
+    "$PY" -c "import json,sys; e=sum('error' in json.loads(l) for l in open(sys.argv[1])); print(e, 'recordings with an error row')" "$O/fit.jsonl";;
   delta_pat_hist)
     all_cases | test_cases | scan_parts
     rec "$SCRIPT" agg "$O"/part_*.jsonl --out "$O/agg";;
