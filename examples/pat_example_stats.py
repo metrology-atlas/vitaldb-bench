@@ -19,7 +19,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent))
-from pulse_arrival_time import usable  # noqa: E402
+from pulse_arrival_time import robust_sd, usable  # noqa: E402
 
 BY = 2.0
 
@@ -44,6 +44,37 @@ def spreads(ok: list[dict], key: str) -> dict:
             "cor_iqr": qs(cor, (25, 75)), "better": int(np.sum(raw - cor > BY)), "worse": int(np.sum(cor - raw > BY))}
 
 
+def teeth(ok: list[dict]) -> dict:
+    """Cases by their teeth: any corrected (A, B or C); else isolated slips (I); no slip (N); only unresolved (U)."""
+    t = [v.get("tiers", "") for v in ok]
+    corrected = [any(c in "ABC" for c in x) for x in t]
+    isolated = [not k and "I" in x for k, x in zip(corrected, t)]
+    no_slip = [x in ("", "N") for x in t]
+    unresolved = [bool(x) and set(x) <= set("U") for x in t]
+    return {"corrected": sum(corrected), "isolated_only": sum(isolated), "no_slip": sum(no_slip),
+            "unresolved_only": sum(unresolved),
+            "other": len(t) - sum(corrected) - sum(isolated) - sum(no_slip) - sum(unresolved)}
+
+
+def pooled_ab(out: Path, ok: list[dict]) -> dict:
+    """Finger minus arterial PAT, each case centred, pooled over the 30 s windows of the cases with an arterial line
+    and a tooth in tier A or B: robust SD as stored and with the sawtooth removed (as the cohort figure's panel C)."""
+    gap = {"raw": [], "saw": []}
+    n = 0
+    for v in ok:
+        if "minus_art_sd_ms" not in v or not any(t in "AB" for t in v.get("tiers", "")):
+            continue
+        z = np.load(out / "windows" / f"{v['case']}.npz")
+        if not all(k + "_k" in z.files for k in ("raw", "saw", "art")):
+            continue
+        n += 1
+        for k in gap:
+            _, iu, iv = np.intersect1d(z[k + "_k"], z["art_k"], return_indices=True)
+            d = (z[k][iu] - z["art"][iv]) * 1000
+            gap[k].extend((d - np.median(d)).tolist())
+    return {"cases": n, **{k: r1(robust_sd(g)) if g else None for k, g in gap.items()}}
+
+
 def stats(out: Path, case: int | None) -> dict:
     s, ok = load(out)
     S = {"run": str(out), "cases": len(s), "usable": len(ok),
@@ -56,6 +87,9 @@ def stats(out: Path, case: int | None) -> dict:
     S["slips_per_hour_median"] = r1(np.median([v["slips"] / v["minutes"] * 60 for v in ok]))
     S["cases_with_corrected_tooth"] = sum(any(t in "ABC" for t in v.get("tiers", "")) for v in ok)
     S["cases_with_ab_tooth"] = sum(any(t in "AB" for t in v.get("tiers", "")) for v in ok)
+    S["teeth"] = teeth(ok)
+    S["stored_case_median_ms"] = [r1(min(v["raw_median_ms"] for v in ok)), r1(max(v["raw_median_ms"] for v in ok))]
+    S["minus_art_pooled_ab"] = pooled_ab(out, ok)
     S["offset_ms"] = qs([v["offset_ms"] for v in ok], (10, 50, 90))
     S["case_median_corrected_ms"] = qs([v["raw_median_ms"] - v["offset_ms"] for v in ok], (25, 50, 75))
     S["within_case_sd_ms"] = spreads(ok, "within_case_sd_ms")
@@ -108,7 +142,8 @@ def compare(a: Path, b: Path) -> dict:
     sa, _ = load(a)
     sb, _ = load(b)
     c = [k for k in sa if k in sb and usable(sa[k]) and usable(sb[k])]
-    C = {"cases": len(c), "level_difference_ms_max": r1(max(abs(sa[k]["offset_ms"] - sb[k]["offset_ms"]) for k in c))}
+    C = {"cases": len(c), "level_difference_ms_max": r1(max(abs(sa[k]["offset_ms"] - sb[k]["offset_ms"]) for k in c)),
+         "b_teeth": teeth([sb[k] for k in c])}
     for key in ("within_case_sd_ms", "minus_art_sd_ms"):
         cc = [k for k in c if sa[k].get(key) and sb[k].get(key)]
         ca = np.array([sa[k][key]["cor"] for k in cc])
